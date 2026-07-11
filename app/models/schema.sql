@@ -50,7 +50,7 @@ CREATE TABLE doctors (
     email                  VARCHAR(255) NOT NULL UNIQUE,
     phone                  VARCHAR(30) NOT NULL,
     password_hash          TEXT NOT NULL,
-    specialization         VARCHAR(150) NOT NULL,
+    specialization         VARCHAR(150),
     certificate_url        TEXT NOT NULL,          -- مستند إثبات كونه دكتور (إلزامي)
     profile_image_url      TEXT,                    -- اختياري
 

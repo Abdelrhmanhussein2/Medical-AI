@@ -1,0 +1,240 @@
+{
+  "info": {
+    "name": "Medical AI APIs",
+    "description": "Postman Collection for testing Auth, Doctors, and Admins Endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Login Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@medical-ai.com\",\n  \"password\": \"adminpassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login?role=admin",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "admin"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login Doctor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"doctor@example.com\",\n  \"password\": \"docpass123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login?role=doctor",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "doctor"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Request OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"doctor@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/request-otp",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "request-otp"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"doctor@example.com\",\n  \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/verify-otp",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "verify-otp"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Doctors",
+      "item": [
+        {
+          "name": "Register Doctor",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "Dr. Ahmed Hassan",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "doctor@example.com",
+                  "type": "text"
+                },
+                {
+                  "key": "phone",
+                  "value": "01012345678",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "docpass123",
+                  "type": "text"
+                },
+                {
+                  "key": "certificate_file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/doctors/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "doctors",
+                "register"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Admins",
+      "item": [
+        {
+          "name": "Get Pending Doctors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admins/doctors/pending",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admins",
+                "doctors",
+                "pending"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Review Doctor (Approve)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"admin_id\": \"ADMIN_ID_HERE\",\n  \"status\": \"approved\",\n  \"rejection_reason\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admins/doctors/DOCTOR_ID_HERE/review",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admins",
+                "doctors",
+                "DOCTOR_ID_HERE",
+                "review"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    }
+  ]
+}

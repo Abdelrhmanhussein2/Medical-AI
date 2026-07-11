@@ -13,7 +13,7 @@ class DoctorBase(BaseModel):
     name: str
     email: EmailStr
     phone: str
-    specialization: str
+    specialization: Optional[str] = None
     certificate_url: str
     profile_image_url: Optional[str] = None
     calendar_provider: Optional[str] = None

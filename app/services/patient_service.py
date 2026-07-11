@@ -27,3 +27,22 @@ class PatientService:
         async with db.pool.acquire() as connection:
             row = await connection.fetchrow(query, patient_id)
             return dict(row) if row else None
+
+    @staticmethod
+    async def search_patients(q: str):
+        """
+        البحث عن مريض بالاسم أو رقم التليفون.
+        البحث في الاسم يكون partial (يكفي جزء من الاسم).
+        """
+        query = """
+            SELECT * FROM patients
+            WHERE
+                phone ILIKE $1
+                OR name ILIKE $1
+            ORDER BY created_at DESC
+            LIMIT 20
+        """
+        search_term = f"%{q}%"
+        async with db.pool.acquire() as connection:
+            rows = await connection.fetch(query, search_term)
+            return [dict(r) for r in rows]

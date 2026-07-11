@@ -1,11 +1,19 @@
-fastapi
-uvicorn[standard]
-asyncpg
-pydantic[email]
-pydantic-settings
-python-dotenv
-bcrypt
-python-jose[cryptography]
-redis
-python-multipart
-aiofiles
+
+      _____
+     /     \
+    | () () |
+     \  ^  /
+      |||||
+      |||||
+
+   /\_/\
+  ( o.o )
+   > ^ <
+
+  __
+ /  \
+| () |
+ \__/
+
+
+This sample TXT file is provided by Sample-Files.com. Visit us for more sample files and resources.

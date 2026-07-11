@@ -228,6 +228,212 @@
           }
         }
       ]
+    },
+    {
+      "name": "4. Patients",
+      "item": [
+        {
+          "name": "Create Patient",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"محمد علي\",\n  \"phone\": \"01012345678\",\n  \"email\": \"patient@example.com\",\n  \"national_id\": \"30001011234567\",\n  \"date_of_birth\": \"2000-01-01\",\n  \"gender\": \"male\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/patients/",
+              "host": ["{{base_url}}"],
+              "path": ["patients", ""]
+            }
+          }
+        },
+        {
+          "name": "Search Patient (by name or phone)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/patients/?q=محمد",
+              "host": ["{{base_url}}"],
+              "path": ["patients", ""],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "محمد",
+                  "description": "ابحث بالاسم أو رقم التليفون"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Patient by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/patients/PATIENT_ID_HERE",
+              "host": ["{{base_url}}"],
+              "path": ["patients", "PATIENT_ID_HERE"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Appointments",
+      "item": [
+        {
+          "name": "Create Appointment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"doctor_id\": \"DOCTOR_ID_HERE\",\n  \"patient_id\": \"PATIENT_ID_HERE\",\n  \"appointment_date\": \"2026-07-15\",\n  \"appointment_time\": \"10:00:00\",\n  \"duration_minutes\": 30,\n  \"description\": \"كشف دوري\",\n  \"patient_phone\": \"01012345678\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/appointments/",
+              "host": ["{{base_url}}"],
+              "path": ["appointments", ""]
+            }
+          }
+        },
+        {
+          "name": "Get My Appointments (all)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/appointments/my?doctor_id=DOCTOR_ID_HERE",
+              "host": ["{{base_url}}"],
+              "path": ["appointments", "my"],
+              "query": [
+                {
+                  "key": "doctor_id",
+                  "value": "DOCTOR_ID_HERE"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get My Appointments (by date)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/appointments/my?doctor_id=DOCTOR_ID_HERE&date=2026-07-15",
+              "host": ["{{base_url}}"],
+              "path": ["appointments", "my"],
+              "query": [
+                {
+                  "key": "doctor_id",
+                  "value": "DOCTOR_ID_HERE"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-07-15"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Appointment by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/appointments/APPOINTMENT_ID_HERE",
+              "host": ["{{base_url}}"],
+              "path": ["appointments", "APPOINTMENT_ID_HERE"]
+            }
+          }
+        },
+        {
+          "name": "Update Appointment Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"confirmed\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/appointments/APPOINTMENT_ID_HERE/status",
+              "host": ["{{base_url}}"],
+              "path": ["appointments", "APPOINTMENT_ID_HERE", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Visits (Medical Summary)",
+      "item": [
+        {
+          "name": "Create Visit Summary",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patient_id\": \"PATIENT_ID_HERE\",\n  \"doctor_id\": \"DOCTOR_ID_HERE\",\n  \"appointment_id\": null,\n  \"visit_date\": \"2026-07-11\",\n  \"description\": \"المريض يشكو من صداع مستمر لمدة 3 أيام\",\n  \"diagnosis\": \"صداع توتري\",\n  \"notes\": \"تم وصف مسكنات وراحة تامة لمدة يومين\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/visits/",
+              "host": ["{{base_url}}"],
+              "path": ["visits", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Patient Medical History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/visits/patient/PATIENT_ID_HERE",
+              "host": ["{{base_url}}"],
+              "path": ["visits", "patient", "PATIENT_ID_HERE"]
+            }
+          }
+        },
+        {
+          "name": "Get Visit by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/visits/VISIT_ID_HERE",
+              "host": ["{{base_url}}"],
+              "path": ["visits", "VISIT_ID_HERE"]
+            }
+          }
+        }
+      ]
     }
   ],
   "variable": [

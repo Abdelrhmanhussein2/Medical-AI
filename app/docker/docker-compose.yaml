@@ -14,10 +14,10 @@ services:
     ports:
       - "${DB_PORT}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - medical_postgres_data:/var/lib/postgresql/data
       - ../models/schema.sql:/docker-entrypoint-initdb.d/schema.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -30,4 +30,5 @@ services:
       - "${REDIS_PORT:-6379}:6379"
 
 volumes:
-  postgres_data:
+  medical_postgres_data:
+

@@ -5,3 +5,12 @@ app/docker/.env
 .pytest_cache/
 venv/
 .venv/
+project-photos
+
+# Frontend React App (web)
+web/node_modules/
+web/dist/
+web/dist-ssr/
+web/.vite/
+web/*.local
+web/npm-debug.log*

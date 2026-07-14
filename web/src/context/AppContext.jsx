@@ -49,7 +49,7 @@ export const AppProvider = ({ children }) => {
       name: "Dr. Ahmed Hassan",
       email: "doctor@example.com",
       phone: "01012345678",
-      status: "pending", // pending, approved, rejected
+      status: "approved",
       certificate_url: "/uploads/certificates/doctor_example_com.txt",
       created_at: "2026-07-11T15:43:17.545Z"
     },
@@ -128,12 +128,10 @@ export const AppProvider = ({ children }) => {
         return true;
       }
     } else {
-      const doc = doctors.find(d => d.email === email && d.status === 'approved');
+      const doc = doctors.find(d => d.email === email);
       if (doc) {
         setCurrentUser({ ...doc, role: 'doctor' });
         return true;
-      } else if (doctors.find(d => d.email === email && d.status === 'pending')) {
-        throw new Error("حساب الطبيب قيد المراجعة والقبول من الأدمن");
       }
     }
     throw new Error("البريد الإلكتروني أو كلمة المرور غير صحيحة");
@@ -150,7 +148,7 @@ export const AppProvider = ({ children }) => {
       name,
       email,
       phone,
-      status: "pending",
+      status: "approved",
       certificate_url: certificateFile ? URL.createObjectURL(certificateFile) : "/uploads/certificates/placeholder.txt",
       created_at: new Date().toISOString()
     };
@@ -206,17 +204,7 @@ export const AppProvider = ({ children }) => {
     return newVisit;
   };
 
-  const approveDoctor = (id) => {
-    setDoctors(prev =>
-      prev.map(d => d.id === id ? { ...d, status: 'approved' } : d)
-    );
-  };
 
-  const rejectDoctor = (id, reason) => {
-    setDoctors(prev =>
-      prev.map(d => d.id === id ? { ...d, status: 'rejected', rejection_reason: reason } : d)
-    );
-  };
 
   return (
     <AppContext.Provider value={{
@@ -231,9 +219,7 @@ export const AppProvider = ({ children }) => {
       addPatient,
       addAppointment,
       updateAppointmentStatus,
-      addVisit,
-      approveDoctor,
-      rejectDoctor
+      addVisit
     }}>
       {children}
     </AppContext.Provider>

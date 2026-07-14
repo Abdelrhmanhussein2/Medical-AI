@@ -31,7 +31,7 @@ class DoctorService:
 
     async def register_doctor(self, doctor_data: DoctorCreate, certificate_url: str) -> Optional[dict]:
         """
-        Register a new doctor with 'pending' status.
+        Register a new doctor with 'approved' status.
         """
         hashed_password = get_password_hash(doctor_data.password)
         
@@ -43,10 +43,10 @@ class DoctorService:
                 
             query = """
             INSERT INTO doctors (
-                name, email, phone, password_hash, specialization, 
+                name, email, phone, password_hash, specialization, department_id,
                 certificate_url, profile_image_url, calendar_provider, calendar_id, status
             ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending'
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'approved'
             ) RETURNING *
             """
             
@@ -57,6 +57,7 @@ class DoctorService:
                 doctor_data.phone,
                 hashed_password,
                 doctor_data.specialization,
+                doctor_data.department_id,
                 certificate_url,
                 doctor_data.profile_image_url,
                 doctor_data.calendar_provider,

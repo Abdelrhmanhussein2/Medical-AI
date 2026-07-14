@@ -11,6 +11,8 @@ async def register_doctor(
     email: EmailStr = Form(...),
     phone: str = Form(...),
     password: str = Form(...),
+    specialization: str = Form(...),
+    department_id: str = Form(None),
     certificate_file: UploadFile = File(...),
 ):
     """
@@ -26,6 +28,8 @@ async def register_doctor(
             email=email,
             phone=phone,
             password=password,
+            specialization=specialization,
+            department_id=department_id,
             certificate_url=certificate_url
         )
         

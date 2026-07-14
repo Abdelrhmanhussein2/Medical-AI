@@ -5,6 +5,7 @@ from app.controllers.doctor_controller import router as doctor_router
 from app.controllers.admin_controller import router as admin_router
 from app.controllers.appointment_controller import router as appointment_router
 from app.controllers.visit_controller import router as visit_router
+from app.controllers.department_controller import router as department_router
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(patient_router)
@@ -13,3 +14,4 @@ api_router.include_router(doctor_router)
 api_router.include_router(admin_router)
 api_router.include_router(appointment_router)
 api_router.include_router(visit_router)
+api_router.include_router(department_router)

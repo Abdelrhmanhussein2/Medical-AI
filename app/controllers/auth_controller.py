@@ -19,12 +19,6 @@ async def login(request: LoginRequest, role: str = "doctor"):
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Check if doctor is pending (we might want to restrict them)
-    if role == "doctor" and user["status"] == "pending":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account is pending admin approval",
-        )
 
     return auth_service.create_token(user_email=user["email"], role=role)
 

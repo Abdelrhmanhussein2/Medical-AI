@@ -12,6 +12,7 @@ class AuthService:
         """
         table_map = {
             "admin": "admins",
+            "department": "departments",
             "doctor": "doctors",
             "patient": "patients"
         }

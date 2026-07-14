@@ -123,6 +123,38 @@
               ]
             }
           }
+        },
+        {
+          "name": "Login Department",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"deptadmin@example.com\",\n  \"password\": \"pass123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login?role=department",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "department"
+                }
+              ]
+            }
+          }
         }
       ]
     },
@@ -161,6 +193,16 @@
                   "key": "certificate_file",
                   "type": "file",
                   "src": []
+                },
+                {
+                  "key": "specialization",
+                  "value": "Cardiology",
+                  "type": "text"
+                },
+                {
+                  "key": "department_id",
+                  "value": "DEPARTMENT_ID_HERE",
+                  "type": "text"
                 }
               ]
             },
@@ -182,47 +224,36 @@
       "name": "3. Admins",
       "item": [
         {
-          "name": "Get Pending Doctors",
+          "name": "Get Admin Dashboard Stats",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/admins/doctors/pending",
+              "raw": "{{base_url}}/admins/dashboard/stats",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "admins",
-                "doctors",
-                "pending"
+                "dashboard",
+                "stats"
               ]
             }
           }
         },
         {
-          "name": "Review Doctor (Approve)",
+          "name": "Get All Doctors",
           "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"admin_id\": \"ADMIN_ID_HERE\",\n  \"status\": \"approved\",\n  \"rejection_reason\": \"\"\n}"
-            },
+            "method": "GET",
+            "header": [],
             "url": {
-              "raw": "{{base_url}}/admins/doctors/DOCTOR_ID_HERE/review",
+              "raw": "{{base_url}}/admins/doctors",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "admins",
-                "doctors",
-                "DOCTOR_ID_HERE",
-                "review"
+                "doctors"
               ]
             }
           }
@@ -248,8 +279,13 @@
             },
             "url": {
               "raw": "{{base_url}}/patients/",
-              "host": ["{{base_url}}"],
-              "path": ["patients", ""]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "patients",
+                ""
+              ]
             }
           }
         },
@@ -260,8 +296,13 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/patients/?q=محمد",
-              "host": ["{{base_url}}"],
-              "path": ["patients", ""],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "patients",
+                ""
+              ],
               "query": [
                 {
                   "key": "q",
@@ -279,8 +320,13 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/patients/PATIENT_ID_HERE",
-              "host": ["{{base_url}}"],
-              "path": ["patients", "PATIENT_ID_HERE"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "patients",
+                "PATIENT_ID_HERE"
+              ]
             }
           }
         }
@@ -305,8 +351,13 @@
             },
             "url": {
               "raw": "{{base_url}}/appointments/",
-              "host": ["{{base_url}}"],
-              "path": ["appointments", ""]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "appointments",
+                ""
+              ]
             }
           }
         },
@@ -317,8 +368,13 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/appointments/my?doctor_id=DOCTOR_ID_HERE",
-              "host": ["{{base_url}}"],
-              "path": ["appointments", "my"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "appointments",
+                "my"
+              ],
               "query": [
                 {
                   "key": "doctor_id",
@@ -335,8 +391,13 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/appointments/my?doctor_id=DOCTOR_ID_HERE&date=2026-07-15",
-              "host": ["{{base_url}}"],
-              "path": ["appointments", "my"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "appointments",
+                "my"
+              ],
               "query": [
                 {
                   "key": "doctor_id",
@@ -357,8 +418,13 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/appointments/APPOINTMENT_ID_HERE",
-              "host": ["{{base_url}}"],
-              "path": ["appointments", "APPOINTMENT_ID_HERE"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "appointments",
+                "APPOINTMENT_ID_HERE"
+              ]
             }
           }
         },
@@ -378,8 +444,14 @@
             },
             "url": {
               "raw": "{{base_url}}/appointments/APPOINTMENT_ID_HERE/status",
-              "host": ["{{base_url}}"],
-              "path": ["appointments", "APPOINTMENT_ID_HERE", "status"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "appointments",
+                "APPOINTMENT_ID_HERE",
+                "status"
+              ]
             }
           }
         }
@@ -404,8 +476,13 @@
             },
             "url": {
               "raw": "{{base_url}}/visits/",
-              "host": ["{{base_url}}"],
-              "path": ["visits", ""]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "visits",
+                ""
+              ]
             }
           }
         },
@@ -416,8 +493,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/visits/patient/PATIENT_ID_HERE",
-              "host": ["{{base_url}}"],
-              "path": ["visits", "patient", "PATIENT_ID_HERE"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "visits",
+                "patient",
+                "PATIENT_ID_HERE"
+              ]
             }
           }
         },
@@ -428,8 +511,81 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/visits/VISIT_ID_HERE",
-              "host": ["{{base_url}}"],
-              "path": ["visits", "VISIT_ID_HERE"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "visits",
+                "VISIT_ID_HERE"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Departments",
+      "item": [
+        {
+          "name": "Create Department",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cardiology\",\n  \"email\": \"cardio@example.com\",\n  \"password\": \"pass123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/departments/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "departments",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Department Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/departments/DEPARTMENT_ID_HERE/dashboard/stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "departments",
+                "DEPARTMENT_ID_HERE",
+                "dashboard",
+                "stats"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Department Doctors",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/departments/DEPARTMENT_ID_HERE/doctors",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "departments",
+                "DEPARTMENT_ID_HERE",
+                "doctors"
+              ]
             }
           }
         }

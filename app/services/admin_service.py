@@ -4,27 +4,80 @@ from app.core.database import db
 
 class AdminService:
     @staticmethod
-    async def get_pending_doctors() -> List[dict]:
+    async def get_dashboard_stats() -> dict:
+        """
+        Get statistics for the admin dashboard.
+        """
         async with db.pool.acquire() as connection:
-            rows = await connection.fetch("SELECT * FROM doctors WHERE status = 'pending'")
-            return [dict(row) for row in rows]
+            total_doctors = await connection.fetchval("SELECT COUNT(*) FROM doctors")
+            total_patients = await connection.fetchval("SELECT COUNT(*) FROM patients")
+            total_appointments = await connection.fetchval("SELECT COUNT(*) FROM appointments")
+            
+            # Get departments stats
+            departments_rows = await connection.fetch("SELECT * FROM departments")
+            departments_stats = []
+            
+            for dept in departments_rows:
+                dept_dict = dict(dept)
+                
+                # Fetch stats for this department
+                dept_doctors = await connection.fetchval(
+                    "SELECT COUNT(*) FROM doctors WHERE department_id = $1", dept["id"]
+                )
+                
+                dept_appointments = await connection.fetchval(
+                    """
+                    SELECT COUNT(a.id) 
+                    FROM appointments a
+                    JOIN doctors d ON a.doctor_id = d.id
+                    WHERE d.department_id = $1
+                    """, dept["id"]
+                )
+
+                best_doctor_record = await connection.fetchrow(
+                    """
+                    SELECT d.name, COUNT(a.id) as appointment_count
+                    FROM doctors d
+                    LEFT JOIN appointments a ON d.id = a.doctor_id
+                    WHERE d.department_id = $1
+                    GROUP BY d.id, d.name
+                    ORDER BY appointment_count DESC
+                    LIMIT 1
+                    """, dept["id"]
+                )
+                
+                best_doctor_name = best_doctor_record["name"] if best_doctor_record and best_doctor_record["appointment_count"] > 0 else None
+                
+                # Fetch doctors list for this department
+                doctors_rows = await connection.fetch(
+                    "SELECT * FROM doctors WHERE department_id = $1 ORDER BY created_at DESC", dept["id"]
+                )
+                dept_doctors_list = [dict(r) for r in doctors_rows]
+                
+                departments_stats.append({
+                    "department": dept_dict,
+                    "stats": {
+                        "total_doctors": dept_doctors,
+                        "total_appointments": dept_appointments,
+                        "best_doctor": best_doctor_name
+                    },
+                    "doctors": dept_doctors_list
+                })
+
+            return {
+                "total_doctors": total_doctors,
+                "total_patients": total_patients,
+                "total_appointments": total_appointments,
+                "departments_breakdown": departments_stats
+            }
 
     @staticmethod
-    async def review_doctor(doctor_id: UUID, admin_id: UUID, status: str, rejection_reason: Optional[str] = None) -> Optional[dict]:
+    async def get_all_doctors() -> List[dict]:
         """
-        Approve or reject a doctor. Status should be 'approved' or 'rejected'.
+        Get a list of all doctors.
         """
-        if status not in ['approved', 'rejected']:
-            raise ValueError("Status must be either 'approved' or 'rejected'")
-
         async with db.pool.acquire() as connection:
-            query = """
-            UPDATE doctors
-            SET status = $1::doctor_status, approved_by = $2, approved_at = now(), rejection_reason = $3
-            WHERE id = $4
-            RETURNING *
-            """
-            row = await connection.fetchrow(query, status, admin_id, rejection_reason, doctor_id)
-            return dict(row) if row else None
+            rows = await connection.fetch("SELECT * FROM doctors ORDER BY created_at DESC")
+            return [dict(row) for row in rows]
 
 admin_service = AdminService()

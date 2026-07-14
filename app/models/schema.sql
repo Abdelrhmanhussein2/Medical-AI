@@ -41,6 +41,19 @@ CREATE TABLE admins (
 );
 
 -- =====================================================================
+-- DEPARTMENTS
+-- =====================================================================
+
+CREATE TABLE departments (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name          VARCHAR(100) NOT NULL UNIQUE,
+    email         VARCHAR(255) NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- =====================================================================
 -- DOCTORS
 -- =====================================================================
 
@@ -50,11 +63,12 @@ CREATE TABLE doctors (
     email                  VARCHAR(255) NOT NULL UNIQUE,
     phone                  VARCHAR(30) NOT NULL,
     password_hash          TEXT NOT NULL,
-    specialization         VARCHAR(150),
+    specialization         VARCHAR(150) NOT NULL,   -- تخصص الطبيب أصبح إلزامي
+    department_id          UUID REFERENCES departments(id) ON DELETE SET NULL, -- الإدارة التابع لها
     certificate_url        TEXT NOT NULL,          -- مستند إثبات كونه دكتور (إلزامي)
     profile_image_url      TEXT,                    -- اختياري
 
-    status                 doctor_status NOT NULL DEFAULT 'pending',
+    status                 doctor_status NOT NULL DEFAULT 'approved',
     approved_by            UUID REFERENCES admins(id) ON DELETE SET NULL,
     approved_at            TIMESTAMPTZ,
     rejection_reason       TEXT,
@@ -73,6 +87,7 @@ CREATE TABLE doctors (
 
 CREATE INDEX idx_doctors_status ON doctors(status);
 CREATE INDEX idx_doctors_specialization ON doctors(specialization);
+CREATE INDEX idx_doctors_department ON doctors(department_id);
 
 -- =====================================================================
 -- PATIENTS
@@ -221,6 +236,12 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_admins_updated_at BEFORE UPDATE ON admins
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_departments_updated_at BEFORE UPDATE ON departments
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_department_admins_updated_at BEFORE UPDATE ON department_admins
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 CREATE TRIGGER trg_doctors_updated_at BEFORE UPDATE ON doctors

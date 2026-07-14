@@ -8,7 +8,17 @@ import Dashboard from './pages/Dashboard';
 import Patients from './pages/Patients';
 import Appointments from './pages/Appointments';
 import Visits from './pages/Visits';
-import Admin from './pages/Admin';
+
+// Admin pages
+import AdminOverview from './pages/admin/AdminOverview';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminSubscriptions from './pages/admin/AdminSubscriptions';
+
+// Org pages
+import OrgDashboard from './pages/org/OrgDashboard';
+import OrgDoctors from './pages/org/OrgDoctors';
+import OrgAnalytics from './pages/org/OrgAnalytics';
+import OrgSubscriptions from './pages/org/OrgSubscriptions';
 
 function AppContent() {
   const { currentUser } = useApp();
@@ -22,12 +32,20 @@ function AppContent() {
       }
     } else {
       if (currentUser.role === 'admin') {
-        setActivePage('admin');
-      } else if (activePage === 'login' || activePage === 'register' || activePage === 'landing') {
-        setActivePage('dashboard');
+        if (!activePage.startsWith('admin-')) {
+          setActivePage('admin-overview');
+        }
+      } else if (currentUser.role === 'org') {
+        if (!activePage.startsWith('org-')) {
+          setActivePage('org-dashboard');
+        }
+      } else {
+        if (activePage === 'login' || activePage === 'register' || activePage === 'landing' || activePage.startsWith('admin-') || activePage.startsWith('org-')) {
+          setActivePage('dashboard');
+        }
       }
     }
-  }, [currentUser]);
+  }, [currentUser, activePage]);
 
   const renderPage = () => {
     switch (activePage) {
@@ -45,8 +63,25 @@ function AppContent() {
         return <Appointments />;
       case 'visits':
         return <Visits />;
-      case 'admin':
-        return <Admin />;
+      
+      // Admin
+      case 'admin-overview':
+        return <AdminOverview setActivePage={setActivePage} />;
+      case 'admin-users':
+        return <AdminUsers />;
+      case 'admin-subscriptions':
+        return <AdminSubscriptions />;
+      
+      // Org
+      case 'org-dashboard':
+        return <OrgDashboard setActivePage={setActivePage} />;
+      case 'org-doctors':
+        return <OrgDoctors />;
+      case 'org-analytics':
+        return <OrgAnalytics />;
+      case 'org-subscriptions':
+        return <OrgSubscriptions />;
+
       default:
         return <Landing setActivePage={setActivePage} />;
     }
@@ -66,3 +101,4 @@ export default function App() {
     </AppProvider>
   );
 }
+

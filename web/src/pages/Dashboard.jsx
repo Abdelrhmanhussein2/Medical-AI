@@ -167,7 +167,7 @@ export default function Dashboard({ setActivePage }) {
                 <span class="material-symbols-outlined fill">psychology</span>
               </div>
               <div>
-                <h3 class="font-headline-md text-base text-primary font-bold mb-2">MedAI Assistant</h3>
+                <h3 class="font-headline-md text-base text-primary font-bold mb-2">SBR AI Assistant</h3>
                 <p class="font-body-sm text-sm text-secondary mb-4 leading-relaxed">
                   I've analyzed the lab results for Marcus Johnson (11:15 AM). There are slight anomalies in the hepatic panel that might warrant further discussion.
                 </p>

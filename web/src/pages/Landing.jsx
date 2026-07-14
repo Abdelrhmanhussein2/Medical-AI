@@ -1,4 +1,5 @@
 import React from 'react';
+import SbrLogo from '../components/SbrLogo';
 
 export default function Landing({ setActivePage }) {
   return (
@@ -7,11 +8,8 @@ export default function Landing({ setActivePage }) {
       <nav class="fixed w-full top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-border-subtle transition-all duration-300">
         <div class="max-w-container-max mx-auto px-margin-desktop flex items-center justify-between h-16">
           <div class="flex items-center gap-stack-lg">
-            <a class="font-headline-md text-headline-md font-bold text-primary flex items-center gap-stack-sm group" href="#">
-              <span class="material-symbols-outlined text-primary-container group-hover:rotate-12 transition-transform duration-300" style={{ fontVariationSettings: "'FILL' 1" }}>
-                medical_services
-              </span>
-              MedAI Core
+            <a class="flex items-center gap-stack-sm group" href="#">
+              <SbrLogo size={36} color="#24564C" showText={true} textClass="text-primary" />
             </a>
             <div class="hidden md:flex items-center gap-stack-lg ml-stack-lg font-body-md text-body-md">
               <a class="text-on-surface-variant hover:text-primary-hover transition-colors" href="#platform">Platform</a>
@@ -47,7 +45,7 @@ export default function Landing({ setActivePage }) {
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-container opacity-75"></span>
                   <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
                 </span>
-                Introducing MedAI Assistant 2.0
+                Introducing SBR AI Assistant 2.0
               </div>
               <h1 class="font-display-lg text-display-lg text-on-surface font-bold max-w-2xl leading-tight">
                 AI becomes the doctor's assistant
@@ -143,7 +141,7 @@ export default function Landing({ setActivePage }) {
             <div class="text-center max-w-3xl mx-auto mb-16">
               <h2 class="font-headline-lg text-headline-lg text-on-surface font-bold mb-stack-md">Intelligent Clinical Engine</h2>
               <p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
-                MedAI Core is an AI-powered clinical engine designed from the ground up to automate complex documentation, intuitively streamline your daily workflows, and strictly ensure HIPAA compliance across all operations.
+                SBR AI is an AI-powered clinical engine designed from the ground up to automate complex documentation, intuitively streamline your daily workflows, and strictly ensure HIPAA compliance across all operations.
               </p>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
@@ -323,13 +321,10 @@ export default function Landing({ setActivePage }) {
       <footer class="bg-white border-t border-border-subtle mt-auto">
         <div class="max-w-container-max mx-auto px-margin-desktop py-stack-lg flex flex-col md:flex-row justify-between items-center gap-stack-md">
           <div class="flex flex-col items-center md:items-start gap-stack-sm">
-            <div class="font-label-caps text-xs font-black text-on-surface flex items-center gap-2">
-              <span class="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>
-                medical_services
-              </span>
-              MEDAI CORE
+            <div class="flex items-center gap-2">
+              <SbrLogo size={30} color="#24564C" showText={true} textClass="text-on-surface" />
             </div>
-            <p class="font-body-sm text-xs text-on-surface-variant">© 2026 MedAI Systems. HIPAA Compliant & SOC2 Certified.</p>
+            <p class="font-body-sm text-xs text-on-surface-variant">© 2026 SBR AI Systems. HIPAA Compliant & SOC2 Certified.</p>
           </div>
           <div class="flex flex-wrap justify-center gap-stack-md font-body-sm text-xs text-on-surface-variant">
             <a class="hover:text-primary transition-colors" href="#">Privacy Policy</a>

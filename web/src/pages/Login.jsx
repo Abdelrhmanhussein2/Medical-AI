@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import SbrLogo from '../components/SbrLogo';
 
 export default function Login({ setActivePage }) {
   const { login } = useApp();
-  const [role, setRole] = useState('doctor'); // doctor or admin
+  const [role, setRole] = useState('doctor'); // doctor, org, or admin
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -13,20 +14,29 @@ export default function Login({ setActivePage }) {
     setError('');
     try {
       login(email, password, role);
-      setActivePage(role === 'admin' ? 'admin' : 'dashboard');
+      if (role === 'admin') {
+        setActivePage('admin-overview');
+      } else if (role === 'org') {
+        setActivePage('org-dashboard');
+      } else {
+        setActivePage('dashboard');
+      }
     } catch (err) {
       setError(err.message);
     }
   };
 
   return (
-    <div class="min-h-screen flex bg-bg-canvas font-body-md">
+    <div class="min-h-screen flex bg-bg-canvas font-body-md animate-fade-in">
       {/* Left side: Premium Branding & Illustration Panel */}
       <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-tr from-primary-light via-white to-primary/10 items-center justify-center p-16 relative overflow-hidden border-r border-border-subtle">
         <div class="absolute -top-20 -left-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
         <div class="absolute -bottom-20 -right-20 w-96 h-96 bg-tertiary-fixed-dim/5 rounded-full blur-3xl"></div>
         
-        <div class="max-w-md space-y-8 relative z-10">
+        <div class="max-w-md space-y-8 relative z-10 text-left">
+          <div class="flex items-center gap-3">
+            <SbrLogo size={56} color="#24564C" showText={true} textClass="text-primary" />
+          </div>
           <div class="inline-flex items-center gap-2 px-3.5 py-1 bg-white border border-border-subtle rounded-full text-xs font-semibold text-primary shadow-sm">
             <span class="material-symbols-outlined text-[16px] fill">shield_locked</span>
             HIPAA Compliant & SOC2 Certified
@@ -36,7 +46,7 @@ export default function Login({ setActivePage }) {
               Elevating Clinical Precision with Generative AI
             </h2>
             <p class="text-sm text-secondary leading-relaxed">
-              Capture patient consultations naturally, auto-generate high-quality SOAP notes, and manage your schedules seamlessly with MedAI Core.
+              Capture patient consultations naturally, auto-generate high-quality SOAP notes, and manage your schedules seamlessly with SBR AI.
             </p>
           </div>
           
@@ -56,39 +66,65 @@ export default function Login({ setActivePage }) {
       {/* Right side: Login Form Container */}
       <div class="w-full lg:w-1/2 flex flex-col justify-center py-12 px-6 sm:px-12 lg:px-24 bg-white">
         <div class="mx-auto w-full max-w-sm">
-          <div class="text-center lg:text-left mb-8">
+          <div class="text-center lg:text-left mb-8 flex flex-col items-center lg:items-start">
+            <div class="mb-4 lg:hidden">
+              <SbrLogo size={44} color="#24564C" showText={true} textClass="text-primary" />
+            </div>
             <h2 class="font-display-lg text-headline-lg text-primary font-bold">
               Welcome back
             </h2>
-            <p class="mt-2 text-sm text-secondary">
+            <p class="mt-2 text-sm text-secondary text-center lg:text-left">
               Please enter your credentials to access your workspace.
             </p>
           </div>
 
           <div class="bg-white border border-border-subtle rounded-xl p-6 shadow-sm">
             {/* Role Switcher */}
-            <div class="flex gap-2 mb-6 p-1 bg-surface-container-low rounded-lg">
+            <div class="flex gap-1 mb-6 p-1 bg-surface-container-low rounded-lg">
               <button
-                onClick={() => setRole('doctor')}
+                onClick={() => {
+                  setRole('doctor');
+                  setEmail('');
+                  setPassword('');
+                }}
                 type="button"
-                class={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                class={`flex-1 py-1.5 text-[11px] font-bold rounded-md transition-colors ${
                   role === 'doctor' 
                     ? 'bg-white text-primary shadow-sm' 
                     : 'text-secondary hover:text-primary'
                 }`}
               >
-                Doctor Login
+                Doctor
               </button>
               <button
-                onClick={() => setRole('admin')}
+                onClick={() => {
+                  setRole('org');
+                  setEmail('');
+                  setPassword('');
+                }}
                 type="button"
-                class={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                class={`flex-1 py-1.5 text-[11px] font-bold rounded-md transition-colors ${
+                  role === 'org' 
+                    ? 'bg-white text-primary shadow-sm' 
+                    : 'text-secondary hover:text-primary'
+                }`}
+              >
+                Organization
+              </button>
+              <button
+                onClick={() => {
+                  setRole('admin');
+                  setEmail('');
+                  setPassword('');
+                }}
+                type="button"
+                class={`flex-1 py-1.5 text-[11px] font-bold rounded-md transition-colors ${
                   role === 'admin' 
                     ? 'bg-white text-primary shadow-sm' 
                     : 'text-secondary hover:text-primary'
                 }`}
               >
-                Admin Login
+                Admin
               </button>
             </div>
 
@@ -109,7 +145,13 @@ export default function Login({ setActivePage }) {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder={role === 'admin' ? 'admin@medical-ai.com' : 'doctor@example.com'}
+                  placeholder={
+                    role === 'admin' 
+                      ? 'admin@medical-ai.com' 
+                      : role === 'org' 
+                        ? 'org@cardiology.com' 
+                        : 'doctor@example.com'
+                  }
                   class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
                 />
               </div>
@@ -150,9 +192,25 @@ export default function Login({ setActivePage }) {
                 </p>
               </div>
             )}
+
+            {role === 'org' && (
+              <div class="mt-6 text-center">
+                <p class="text-xs text-secondary">
+                  New organization?{' '}
+                  <button
+                    onClick={() => setActivePage('register')}
+                    type="button"
+                    class="text-primary hover:underline font-semibold"
+                  >
+                    Register organization
+                  </button>
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 }
+

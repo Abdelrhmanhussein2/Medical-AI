@@ -258,3 +258,72 @@ CREATE TRIGGER trg_visits_updated_at BEFORE UPDATE ON visits
 
 CREATE TRIGGER trg_call_sessions_updated_at BEFORE UPDATE ON call_sessions
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- =====================================================================
+-- SUBSCRIPTION BUNDLES (الباقات)
+-- =====================================================================
+CREATE TYPE bundle_target AS ENUM ('department', 'doctor');
+
+CREATE TABLE subscription_bundles (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name          VARCHAR(150) NOT NULL,
+    target_type   bundle_target NOT NULL, -- هل هي للإدارات ولا للدكاترة المستقلين
+    max_doctors   INT,                    -- عدد الدكاترة المسموح (للإدارات), NULL لو للدكتور المستقل
+    duration_days INT NOT NULL,           -- مدة الباقة بالأيام
+    price         NUMERIC(10, 2) NOT NULL,
+    is_active     BOOLEAN NOT NULL DEFAULT true,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- =====================================================================
+-- SUBSCRIPTIONS (الاشتراكات الفعلية)
+-- =====================================================================
+CREATE TYPE subscription_status AS ENUM ('active', 'expired', 'cancelled');
+
+CREATE TABLE subscriptions (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    department_id UUID REFERENCES departments(id) ON DELETE CASCADE, -- لو الاشتراك تبع إدارة
+    doctor_id     UUID REFERENCES doctors(id) ON DELETE CASCADE,     -- لو الاشتراك تبع دكتور مستقل
+    bundle_id     UUID NOT NULL REFERENCES subscription_bundles(id),
+    
+    start_date    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    end_date      TIMESTAMPTZ NOT NULL,
+    status        subscription_status NOT NULL DEFAULT 'active',
+    
+    total_seats   INT, -- يتنسخ من الباقة وقت الاشتراك (عشان لو الباقة اتغيرت بعدين)
+    
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    -- لازم الاشتراك يكون مربوط بإدارة أو دكتور مش الاتنين مع بعض
+    CONSTRAINT chk_subscription_owner CHECK (
+        (department_id IS NOT NULL AND doctor_id IS NULL) OR
+        (department_id IS NULL AND doctor_id IS NOT NULL)
+    )
+);
+
+CREATE INDEX idx_subscriptions_department ON subscriptions(department_id);
+CREATE INDEX idx_subscriptions_doctor ON subscriptions(doctor_id);
+
+-- =====================================================================
+-- SUBSCRIPTION DOCTORS (الدكاترة المفعلين جوه اشتراك الإدارة)
+-- =====================================================================
+CREATE TABLE subscription_doctors (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    subscription_id UUID NOT NULL REFERENCES subscriptions(id) ON DELETE CASCADE,
+    doctor_id       UUID NOT NULL REFERENCES doctors(id) ON DELETE CASCADE,
+    assigned_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    
+    -- لضمان إن الدكتور مايتضافش لنفس الاشتراك مرتين
+    UNIQUE(subscription_id, doctor_id)
+);
+
+CREATE INDEX idx_subscription_doctors_sub ON subscription_doctors(subscription_id);
+CREATE INDEX idx_subscription_doctors_doc ON subscription_doctors(doctor_id);
+
+CREATE TRIGGER trg_subscription_bundles_updated_at BEFORE UPDATE ON subscription_bundles
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_subscriptions_updated_at BEFORE UPDATE ON subscriptions
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();

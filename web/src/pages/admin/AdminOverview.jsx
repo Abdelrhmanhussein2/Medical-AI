@@ -13,9 +13,57 @@ export default function AdminOverview({ setActivePage }) {
 
   // Statistics
   const totalDoctors = doctors.length;
-  const activeSubs = subscriptions.filter(s => s.status === 'active').length;
+  // Active subscriptions = active organizations + approved independent doctors
+  const activeSubs = organizations.filter(o => o.status === 'active').length + 
+                     doctors.filter(d => d.status === 'approved' && !d.department_id).length;
   const totalOrgs = organizations.length;
   const activeOrgs = organizations.filter(o => o.status === 'active').length;
+
+  // AI Usage Average
+  const aiUsageAvg = doctors.length > 0 
+    ? Math.round(doctors.reduce((sum, d) => sum + (d.ai_adoption || 0), 0) / doctors.length) 
+    : 0;
+
+  // Generate real administrative logs from state data
+  const adminLogs = [];
+  
+  // 1. Add logs for organizations
+  organizations.forEach(org => {
+    adminLogs.push({
+      id: `org-${org.id}`,
+      icon: 'corporate_fare',
+      iconClass: 'text-primary bg-primary-light',
+      text: `${org.name} department registered`,
+      time: 'Recently',
+      timestamp: Date.now() - 3600000
+    });
+  });
+
+  // 2. Add logs for doctors
+  doctors.forEach(doc => {
+    adminLogs.push({
+      id: `doc-${doc.id}`,
+      icon: 'person_add',
+      iconClass: 'text-primary bg-primary-light',
+      text: `Dr. ${doc.name} joined ${doc.department || 'Independent'}`,
+      time: 'Recently',
+      timestamp: Date.now() - 7200000
+    });
+  });
+
+  // 3. Sort logs by timestamp (newest first)
+  adminLogs.sort((a, b) => b.timestamp - a.timestamp);
+
+  // Fallback default logs if database is empty
+  const displayLogs = adminLogs.length > 0 ? adminLogs : [
+    {
+      id: 'init-log',
+      icon: 'info',
+      iconClass: 'text-secondary bg-surface-container',
+      text: 'SBR AI System initialized successfully',
+      time: 'Just now'
+    }
+  ];
 
   return (
     <div class="space-y-stack-lg font-body-md animate-fade-in">
@@ -35,10 +83,10 @@ export default function AdminOverview({ setActivePage }) {
           <div class="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
           <span class="text-xs font-semibold text-secondary uppercase tracking-wider block">Total Doctors</span>
           <div class="flex items-baseline gap-2">
-            <span class="text-4xl font-bold text-on-surface font-display-lg">142</span>
+            <span class="text-4xl font-bold text-on-surface font-display-lg">{totalDoctors}</span>
             <span class="text-xs font-semibold text-primary flex items-center gap-0.5">
               <span class="material-symbols-outlined text-xs">trending_up</span>
-              +4 this month
+              +0 this month
             </span>
           </div>
         </div>
@@ -47,10 +95,10 @@ export default function AdminOverview({ setActivePage }) {
           <div class="absolute right-0 top-0 w-24 h-24 bg-tertiary-fixed-dim/5 rounded-full blur-2xl"></div>
           <span class="text-xs font-semibold text-secondary uppercase tracking-wider block">Active Subscriptions</span>
           <div class="flex items-baseline gap-2">
-            <span class="text-4xl font-bold text-on-surface font-display-lg">138</span>
+            <span class="text-4xl font-bold text-on-surface font-display-lg">{activeSubs}</span>
             <span class="text-xs font-semibold text-status-warning flex items-center gap-0.5">
               <span class="material-symbols-outlined text-xs">schedule</span>
-              4 expiring
+              0 expiring
             </span>
           </div>
         </div>
@@ -59,7 +107,7 @@ export default function AdminOverview({ setActivePage }) {
           <div class="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
           <span class="text-xs font-semibold text-secondary uppercase tracking-wider block">AI Usage Avg</span>
           <div class="flex items-baseline gap-2">
-            <span class="text-4xl font-bold text-on-surface font-display-lg">98%</span>
+            <span class="text-4xl font-bold text-on-surface font-display-lg">{aiUsageAvg}%</span>
             <span class="text-xs font-semibold text-primary flex items-center gap-0.5">
               Top performing
             </span>
@@ -178,37 +226,15 @@ export default function AdminOverview({ setActivePage }) {
             </h3>
             
             <div class="space-y-4 text-xs leading-relaxed max-h-[360px] overflow-y-auto pr-1">
-              <div class="flex gap-3 items-start">
-                <span class="material-symbols-outlined text-primary bg-primary-light p-1 rounded">person_add</span>
-                <div>
-                  <p class="font-bold text-on-surface">Dr. Ahmed Hassan joined Cardiology</p>
-                  <span class="text-[10px] text-secondary">2 hours ago</span>
+              {displayLogs.map(log => (
+                <div key={log.id} class="flex gap-3 items-start">
+                  <span class={`material-symbols-outlined p-1 rounded ${log.iconClass}`}>{log.icon}</span>
+                  <div>
+                    <p class="font-bold text-on-surface">{log.text}</p>
+                    <span class="text-[10px] text-secondary">{log.time}</span>
+                  </div>
                 </div>
-              </div>
-              
-              <div class="flex gap-3 items-start">
-                <span class="material-symbols-outlined text-tertiary-fixed-variant bg-tertiary-fixed/30 p-1 rounded">sync_saved_locally</span>
-                <div>
-                  <p class="font-bold text-on-surface">Cardiology Specialists subscription renewed</p>
-                  <span class="text-[10px] text-secondary">Yesterday, 11:30 AM</span>
-                </div>
-              </div>
-
-              <div class="flex gap-3 items-start">
-                <span class="material-symbols-outlined text-error bg-error-container/30 p-1 rounded">block</span>
-                <div>
-                  <p class="font-bold text-on-surface">Pediatrics Clinic North suspended</p>
-                  <span class="text-[10px] text-secondary">Oct 12, 2026</span>
-                </div>
-              </div>
-
-              <div class="flex gap-3 items-start">
-                <span class="material-symbols-outlined text-secondary bg-surface-container p-1 rounded">settings</span>
-                <div>
-                  <p class="font-bold text-on-surface">Billing configuration adjusted</p>
-                  <span class="text-[10px] text-secondary">Oct 10, 2026</span>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 

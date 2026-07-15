@@ -17,7 +17,7 @@ export default function OrgAnalytics() {
         setLoading(true);
         const token = localStorage.getItem('accessToken');
         const res = await fetch(
-          `http://127.0.0.1:3000/api/v1/departments/${currentUser.id}/dashboard/stats`,
+          `/api/v1/departments/${currentUser.id}/dashboard/stats`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (!res.ok) throw new Error('Failed to load analytics');

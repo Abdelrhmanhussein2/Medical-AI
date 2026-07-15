@@ -8,6 +8,7 @@ export default function AdminUsers() {
     toggleDoctorStatus, 
     toggleOrgStatus, 
     registerOrg, 
+    registerDoctor,
     updateDoctor, 
     updateOrg, 
     deleteDoctor, 
@@ -23,8 +24,18 @@ export default function AdminUsers() {
   const [orgName, setOrgName] = useState('');
   const [orgEmail, setOrgEmail] = useState('');
   const [orgPhone, setOrgPhone] = useState('');
+  const [orgPassword, setOrgPassword] = useState('');
   const [orgSpecialty, setOrgSpecialty] = useState('Cardiology');
   const [error, setError] = useState('');
+
+  // Add Doctor Modal states
+  const [showDocModal, setShowDocModal] = useState(false);
+  const [docName, setDocName] = useState('');
+  const [docEmail, setDocEmail] = useState('');
+  const [docPhone, setDocPhone] = useState('');
+  const [docPassword, setDocPassword] = useState('');
+  const [docSpecialty, setDocSpecialty] = useState('Cardiology');
+  const [docDept, setDocDept] = useState(''); // Empty means Independent
 
   // Editing states
   const [editingOrg, setEditingOrg] = useState(null);
@@ -50,22 +61,53 @@ export default function AdminUsers() {
   const [editDocStatus, setEditDocStatus] = useState('approved');
 
   // Handle Add Org submit
-  const handleAddOrgSubmit = (e) => {
+  const handleAddOrgSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!orgName || !orgEmail || !orgPhone) {
+    if (!orgName || !orgEmail || !orgPhone || !orgPassword) {
       setError('Please fill in all required fields');
       return;
     }
     try {
-      registerOrg(orgName, orgEmail, orgPhone, orgSpecialty);
+      await registerOrg(orgName, orgEmail, orgPhone, orgSpecialty, orgPassword);
       setOrgName('');
       setOrgEmail('');
       setOrgPhone('');
+      setOrgPassword('');
       setOrgSpecialty('Cardiology');
       setShowOrgModal(false);
     } catch (err) {
-      setError('Failed to register new organization');
+      setError(err.message || 'Failed to register new organization');
+    }
+  };
+
+  // Handle Add Doctor submit
+  const handleAddDocSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!docName || !docEmail || !docPhone || !docPassword) {
+      setError('Please fill in all required fields');
+      return;
+    }
+    try {
+      await registerDoctor(
+        docName,
+        docEmail,
+        docPhone,
+        docPassword,
+        docSpecialty,
+        docDept || null,
+        'approved'
+      );
+      setDocName('');
+      setDocEmail('');
+      setDocPhone('');
+      setDocPassword('');
+      setDocSpecialty('Cardiology');
+      setDocDept('');
+      setShowDocModal(false);
+    } catch (err) {
+      setError(err.message || 'Failed to register new doctor');
     }
   };
 
@@ -172,6 +214,15 @@ export default function AdminUsers() {
           >
             <span class="material-symbols-outlined text-[18px]">add_business</span>
             Add New Department
+          </button>
+        )}
+        {activeTab === 'doctors' && (
+          <button
+            onClick={() => setShowDocModal(true)}
+            class="bg-primary hover:bg-primary-hover text-on-primary font-button text-xs py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm font-semibold"
+          >
+            <span class="material-symbols-outlined text-[18px]">person_add</span>
+            Add New Doctor
           </button>
         )}
       </header>
@@ -428,7 +479,7 @@ export default function AdminUsers() {
                 />
               </div>
 
-              <div>
+               <div>
                 <label class="block text-xs font-semibold text-on-surface-variant mb-1">Contact Phone *</label>
                 <input
                   type="text"
@@ -436,6 +487,18 @@ export default function AdminUsers() {
                   value={orgPhone}
                   onChange={(e) => setOrgPhone(e.target.value)}
                   placeholder="e.g. 01012345678"
+                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Password *</label>
+                <input
+                  type="password"
+                  required
+                  value={orgPassword}
+                  onChange={(e) => setOrgPassword(e.target.value)}
+                  placeholder="••••••••"
                   class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
                 />
               </div>
@@ -468,6 +531,125 @@ export default function AdminUsers() {
                   class="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-button py-2 rounded-lg text-xs transition-colors shadow-sm font-semibold"
                 >
                   Save Department
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Doctor Modal */}
+      {showDocModal && (
+        <div class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div class="bg-white rounded-xl border border-border-subtle shadow-lg max-w-md w-full overflow-hidden animate-fade-in">
+            <div class="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas">
+              <h3 class="font-headline-md text-base text-primary font-bold">Add Clinical Doctor</h3>
+              <button 
+                onClick={() => setShowDocModal(false)}
+                class="p-1 hover:bg-surface-container rounded-full text-secondary"
+              >
+                <span class="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+            
+            <form onSubmit={handleAddDocSubmit} class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              {error && (
+                <div class="bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2">
+                  <span class="material-symbols-outlined text-[16px]">error</span>
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <div>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Doctor Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={docName}
+                  onChange={(e) => setDocName(e.target.value)}
+                  placeholder="e.g. Dr. Ahmed Hassan"
+                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Contact Email *</label>
+                <input
+                  type="email"
+                  required
+                  value={docEmail}
+                  onChange={(e) => setDocEmail(e.target.value)}
+                  placeholder="e.g. doctor@example.com"
+                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Contact Phone *</label>
+                <input
+                  type="text"
+                  required
+                  value={docPhone}
+                  onChange={(e) => setDocPhone(e.target.value)}
+                  placeholder="e.g. 01012345678"
+                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Password *</label>
+                <input
+                  type="password"
+                  required
+                  value={docPassword}
+                  onChange={(e) => setDocPassword(e.target.value)}
+                  placeholder="••••••••"
+                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Medical Specialty</label>
+                <select
+                  value={docSpecialty}
+                  onChange={(e) => setDocSpecialty(e.target.value)}
+                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                >
+                  <option value="Cardiology">Cardiology</option>
+                  <option value="Neurology">Neurology</option>
+                  <option value="Pediatrics">Pediatrics</option>
+                  <option value="Oncology">Oncology</option>
+                  <option value="General Practice">General Practice</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Assign Clinical Department</label>
+                <select
+                  value={docDept}
+                  onChange={(e) => setDocDept(e.target.value)}
+                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                >
+                  <option value="">None (Independent Doctor)</option>
+                  {organizations.map(org => (
+                    <option key={org.id} value={org.id}>{org.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
+                <button
+                  type="button"
+                  onClick={() => setShowDocModal(false)}
+                  class="flex-1 bg-white border border-border-subtle text-secondary font-button py-2 rounded-lg text-xs hover:bg-surface-container-low transition-colors font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  class="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-button py-2 rounded-lg text-xs transition-colors shadow-sm font-semibold"
+                >
+                  Save Doctor
                 </button>
               </div>
             </form>

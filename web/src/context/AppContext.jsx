@@ -35,7 +35,7 @@ export const AppProvider = ({ children }) => {
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    const response = await fetch(`http://127.0.0.1:3000/api/v1${url}`, {
+    const response = await fetch(`/api/v1${url}`, {
       ...options,
       headers
     });
@@ -63,7 +63,21 @@ export const AppProvider = ({ children }) => {
             const docs = await apiFetch(`/departments/${currentUser.id}/doctors`);
             setDoctors(docs || []);
           } else if (currentUser.role === 'admin') {
-            const docs = await apiFetch(`/admin/doctors`);
+            const stats = await apiFetch(`/admins/dashboard/stats`);
+            const orgs = (stats.departments_breakdown || []).map(item => ({
+              id: item.department.id,
+              name: item.department.name,
+              email: item.department.email,
+              phone: item.department.phone || '01012345678',
+              specialty: item.department.specialty || 'General Medicine',
+              subscription_plan: item.department.subscription_plan || 'Pro AI Suite',
+              subscription_expiry: item.department.subscription_expiry || '2026-12-31',
+              status: item.department.status || 'active',
+              created_at: item.department.created_at
+            }));
+            setOrganizations(orgs);
+
+            const docs = await apiFetch(`/admins/doctors`);
             setDoctors(docs || []);
           } else if (currentUser.role === 'doctor') {
             const appts = await apiFetch(`/appointments/my?doctor_id=${currentUser.id}`);
@@ -106,15 +120,20 @@ export const AppProvider = ({ children }) => {
     setCurrentUser(null);
   };
 
-  const registerDoctor = async (name, email, phone, password, certificateFile) => {
+  const registerDoctor = async (name, email, phone, password, specialization = 'General', departmentId = null, status = 'approved', certificateFile = null) => {
     const formData = new FormData();
     formData.append('name', name);
     formData.append('email', email);
     formData.append('phone', phone);
     formData.append('password', password);
-    formData.append('specialization', "General");
-    if (currentUser?.role === 'department') {
+    formData.append('specialization', specialization);
+    if (departmentId) {
+      formData.append('department_id', departmentId);
+    } else if (currentUser?.role === 'department') {
       formData.append('department_id', currentUser.id);
+    }
+    if (status) {
+      formData.append('status', status);
     }
     if (certificateFile) {
       formData.append('certificate_file', certificateFile);
@@ -134,11 +153,22 @@ export const AppProvider = ({ children }) => {
       body: JSON.stringify({
         name,
         email,
-        password: password
+        password: password || "defaultpassword123"
       })
     });
-    setOrganizations(prev => [newOrg, ...prev]);
-    return newOrg;
+    const mappedOrg = {
+      id: newOrg.id,
+      name: newOrg.name,
+      email: newOrg.email,
+      phone: phone || '01012345678',
+      specialty: specialty || 'General Medicine',
+      subscription_plan: 'Pro AI Suite',
+      subscription_expiry: '2026-12-31',
+      status: 'active',
+      created_at: newOrg.created_at
+    };
+    setOrganizations(prev => [mappedOrg, ...prev]);
+    return mappedOrg;
   };
 
   const addPatient = async (patientData) => {

@@ -10,7 +10,7 @@ export default function OrgDashboard({ setActivePage }) {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch(`http://127.0.0.1:3000/api/v1/departments/${currentUser.id}/dashboard/stats`);
+        const response = await fetch(`/api/v1/departments/${currentUser.id}/dashboard/stats`);
         if (!response.ok) {
           throw new Error('Failed to fetch dashboard stats');
         }

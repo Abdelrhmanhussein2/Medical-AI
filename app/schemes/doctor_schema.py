@@ -15,7 +15,7 @@ class DoctorBase(BaseModel):
     phone: str
     specialization: str
     department_id: Optional[UUID] = None
-    certificate_url: str
+    certificate_url: Optional[str] = None
     profile_image_url: Optional[str] = None
     calendar_provider: Optional[str] = None
     calendar_id: Optional[str] = None
@@ -23,6 +23,9 @@ class DoctorBase(BaseModel):
 
 class DoctorCreate(DoctorBase):
     password: str
+    status: Optional[str] = None
+    subscription_plan: Optional[str] = None
+    subscription_expiry: Optional[str] = None
 
 class DoctorResponse(DoctorBase):
     id: UUID
@@ -30,6 +33,9 @@ class DoctorResponse(DoctorBase):
     approved_by: Optional[UUID] = None
     approved_at: Optional[datetime] = None
     rejection_reason: Optional[str] = None
+    subscription_plan: Optional[str] = None
+    subscription_expiry: Optional[str] = None
+    subscription_activated_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 

@@ -46,7 +46,7 @@ class DoctorService:
                 name, email, phone, password_hash, specialization, department_id,
                 certificate_url, profile_image_url, calendar_provider, calendar_id, status
             ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'approved'
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
             ) RETURNING *
             """
             
@@ -61,7 +61,8 @@ class DoctorService:
                 certificate_url,
                 doctor_data.profile_image_url,
                 doctor_data.calendar_provider,
-                doctor_data.calendar_id
+                doctor_data.calendar_id,
+                doctor_data.status if doctor_data.status else 'pending'
             )
             return dict(row) if row else None
 

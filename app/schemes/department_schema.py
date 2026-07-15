@@ -19,10 +19,32 @@ class DepartmentResponse(DepartmentBase):
     class Config:
         from_attributes = True
 
+class TopDoctor(BaseModel):
+    id: UUID
+    name: str
+    patients_count: int
+    ai_adoption: int
+    status: str
+
+class ExpiringDoctor(BaseModel):
+    id: UUID
+    name: str
+    days_left: int
+
+class ActivityLog(BaseModel):
+    id: str
+    message: str
+    time_ago: str
+
 class DepartmentDashboardStats(BaseModel):
     total_doctors: int
-    total_appointments: int
-    best_doctor: Optional[str] = None
+    active_licenses: int
+    ai_adoption_rate: int
+    monthly_consults: int
+    consultation_trends: List[int]
+    top_performing_doctors: List[TopDoctor]
+    expiring_doctors: List[ExpiringDoctor]
+    department_activity: List[ActivityLog]
 
 class AdminDepartmentStatItem(BaseModel):
     department: DepartmentResponse

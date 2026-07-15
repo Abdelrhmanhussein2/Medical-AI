@@ -24,13 +24,14 @@ export default function OrgDoctors() {
   const [editDocExpiry, setEditDocExpiry] = useState('');
   const [editDocStatus, setEditDocStatus] = useState('approved');
 
-  // Get department doctors
-  const deptDocs = doctors.filter(d => d.org_id === currentUser.id);
+  // All doctors in state are already scoped to this department
+  // (loaded via /departments/{id}/doctors endpoint)
+  const deptDocs = doctors;
 
-  // Filter roster
-  const filteredDocs = deptDocs.filter(d => 
-    d.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    d.email.toLowerCase().includes(searchQuery.toLowerCase())
+  // Filter roster by search only
+  const filteredDocs = deptDocs.filter(d =>
+    d.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    d.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Stats calculations
@@ -39,7 +40,7 @@ export default function OrgDoctors() {
     ? Math.round(deptDocs.reduce((acc, curr) => acc + (curr.ai_consults || 0), 0) / deptDocs.length)
     : 0;
 
-  const handleAddDoctorSubmit = (e) => {
+  const handleAddDoctorSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -49,13 +50,13 @@ export default function OrgDoctors() {
     }
 
     try {
-      addOrgDoctor(name, email, phone, currentUser.id, currentUser.specialty);
+      await addOrgDoctor(name, email, phone, currentUser.id, currentUser.specialty);
       setName('');
       setEmail('');
       setPhone('');
       setShowAddModal(false);
     } catch (err) {
-      setError('Failed to assign doctor');
+      setError(err.message || 'Failed to assign doctor');
     }
   };
 
@@ -187,7 +188,7 @@ export default function OrgDoctors() {
                     </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-secondary font-semibold">
-                    {doc.department}
+                    {doc.specialization || doc.department}
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-secondary font-bold text-sm">
                     {doc.ai_consults}

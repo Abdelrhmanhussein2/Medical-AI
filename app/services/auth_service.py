@@ -45,8 +45,20 @@ class AuthService:
             return dict(user)
 
     @staticmethod
-    def create_token(user_email: str, role: str) -> Token:
-        access_token = create_access_token(subject=user_email)
-        return Token(access_token=access_token, token_type="bearer")
+    def create_token(user: dict, role: str) -> Token:
+        access_token = create_access_token(subject=user["email"])
+        user_copy = dict(user)
+        if "password_hash" in user_copy:
+            del user_copy["password_hash"]
+        user_copy["role"] = role
+        # convert UUID to str
+        import uuid
+        for k, v in user_copy.items():
+            if isinstance(v, uuid.UUID):
+                user_copy[k] = str(v)
+            elif hasattr(v, 'isoformat'):
+                user_copy[k] = v.isoformat()
+        
+        return Token(access_token=access_token, token_type="bearer", user=user_copy)
 
 auth_service = AuthService()

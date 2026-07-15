@@ -19,8 +19,7 @@ async def login(request: LoginRequest, role: str = "doctor"):
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-
-    return auth_service.create_token(user_email=user["email"], role=role)
+    return auth_service.create_token(user=user, role=role)
 
 @router.post("/request-otp")
 async def request_otp(request: OTPRequest):

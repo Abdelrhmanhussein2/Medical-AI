@@ -14,7 +14,7 @@ export default function Register({ setActivePage }) {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -25,7 +25,7 @@ export default function Register({ setActivePage }) {
       }
 
       try {
-        registerDoctor(name, email, phone, password, file);
+        await registerDoctor(name, email, phone, password, file);
         setSuccess(true);
       } catch (err) {
         setError(err.message || 'حدث خطأ أثناء التسجيل');
@@ -33,7 +33,7 @@ export default function Register({ setActivePage }) {
     } else {
       // Organization registration
       try {
-        registerOrg(name, email, phone, specialty);
+        await registerOrg(name, email, phone, specialty, password);
         setSuccess(true);
       } catch (err) {
         setError(err.message || 'حدث خطأ أثناء تسجيل المنظمة');

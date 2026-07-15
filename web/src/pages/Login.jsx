@@ -9,11 +9,11 @@ export default function Login({ setActivePage }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     try {
-      login(email, password, role);
+      await login(email, password, role);
       if (role === 'admin') {
         setActivePage('admin-overview');
       } else if (role === 'org') {

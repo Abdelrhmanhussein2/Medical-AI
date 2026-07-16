@@ -9,3 +9,6 @@ python-jose[cryptography]
 redis
 python-multipart
 aiofiles
+alembic
+sqlalchemy
+psycopg2-binary

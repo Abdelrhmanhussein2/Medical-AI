@@ -40,6 +40,17 @@ class DoctorService:
             existing_doctor = await connection.fetchrow("SELECT id FROM doctors WHERE email = $1", doctor_data.email)
             if existing_doctor:
                 raise ValueError("Email already registered")
+
+            if doctor_data.department_id:
+                # Convert string department_id to UUID if needed
+                from uuid import UUID
+                dept_uuid = UUID(doctor_data.department_id) if isinstance(doctor_data.department_id, str) else doctor_data.department_id
+                dept_active = await connection.fetchval(
+                    "SELECT is_active FROM departments WHERE id = $1", 
+                    dept_uuid
+                )
+                if dept_active is False:
+                    raise ValueError("القسم المطلوب معطل حالياً من قبل الإدارة.")
                 
             query = """
             INSERT INTO doctors (

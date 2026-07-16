@@ -8,13 +8,18 @@ export default function AdminSubscriptions() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Filtering logic
-  const filteredSubs = subscriptions.filter(sub => {
-    const matchesSearch = sub.entity_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          sub.plan_name.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredSubs = (subscriptions || []).filter(sub => {
+    const matchesSearch = (sub.entity_name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          (sub.plan_name || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = filterType === 'all' || sub.entity_type === filterType;
     const matchesStatus = filterStatus === 'all' || sub.status === filterStatus;
     return matchesSearch && matchesType && matchesStatus;
   });
+
+  const activeLicenses = (subscriptions || []).filter(sub => sub.status === 'active').length;
+  const expiringCount = (subscriptions || []).filter(sub => sub.status === 'active' && sub.days_remaining <= 7 && sub.days_remaining > 0).length;
+  const expiredCount = (subscriptions || []).filter(sub => sub.status === 'expired' || sub.days_remaining <= 0).length;
+  const totalMRR = (subscriptions || []).reduce((sum, sub) => sum + (sub.status === 'active' ? sub.monthly_cost : 0), 0);
 
   return (
     <div class="space-y-stack-lg font-body-md animate-fade-in">
@@ -34,10 +39,10 @@ export default function AdminSubscriptions() {
           <div class="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
           <span class="text-xs font-semibold text-secondary uppercase tracking-wider block">Active Licenses</span>
           <div class="flex items-baseline gap-2">
-            <span class="text-4xl font-bold text-on-surface font-display-lg">1,248</span>
+            <span class="text-4xl font-bold text-on-surface font-display-lg">{activeLicenses}</span>
             <span class="text-xs font-semibold text-primary flex items-center gap-0.5">
               <span class="material-symbols-outlined text-xs">trending_up</span>
-              +10% vs last month
+              active now
             </span>
           </div>
         </div>
@@ -46,7 +51,7 @@ export default function AdminSubscriptions() {
           <div class="absolute right-0 top-0 w-24 h-24 bg-tertiary-fixed-dim/5 rounded-full blur-2xl"></div>
           <span class="text-xs font-semibold text-secondary uppercase tracking-wider block">Expiring (7 days)</span>
           <div class="flex items-baseline gap-2">
-            <span class="text-4xl font-bold text-on-surface font-display-lg font-bold text-status-warning">42</span>
+            <span class="text-4xl font-bold text-on-surface font-display-lg font-bold text-status-warning">{expiringCount}</span>
             <span class="text-xs font-semibold text-status-warning flex items-center gap-0.5">
               Action Required
             </span>
@@ -57,20 +62,20 @@ export default function AdminSubscriptions() {
           <div class="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
           <span class="text-xs font-semibold text-secondary uppercase tracking-wider block">Expired Plans</span>
           <div class="flex items-baseline gap-2">
-            <span class="text-4xl font-bold text-on-surface font-display-lg text-error">18</span>
+            <span class="text-4xl font-bold text-on-surface font-display-lg text-error">{expiredCount}</span>
             <span class="text-xs font-semibold text-error flex items-center gap-0.5">
-              -3% retention drop
+              requires attention
             </span>
           </div>
         </div>
 
         <div class="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
           <div class="absolute right-0 top-0 w-24 h-24 bg-tertiary-fixed-dim/5 rounded-full blur-2xl"></div>
-          <span class="text-xs font-semibold text-secondary uppercase tracking-wider block">YTD Total Revenue</span>
+          <span class="text-xs font-semibold text-secondary uppercase tracking-wider block">Monthly MRR</span>
           <div class="flex items-baseline gap-2">
-            <span class="text-4xl font-bold text-on-surface font-display-lg">$1.2M</span>
+            <span class="text-4xl font-bold text-on-surface font-display-lg">${totalMRR.toLocaleString()}</span>
             <span class="text-xs font-semibold text-secondary">
-              ARR Run Rate
+              ARR Run Rate: ${(totalMRR * 12).toLocaleString()}
             </span>
           </div>
         </div>

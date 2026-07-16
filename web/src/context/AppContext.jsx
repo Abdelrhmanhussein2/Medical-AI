@@ -70,15 +70,18 @@ export const AppProvider = ({ children }) => {
               email: item.department.email,
               phone: item.department.phone || '01012345678',
               specialty: item.department.specialty || 'General Medicine',
-              subscription_plan: item.department.subscription_plan || 'Pro AI Suite',
-              subscription_expiry: item.department.subscription_expiry || '2026-12-31',
-              status: item.department.status || 'active',
+              subscription_plan: item.department.subscription_plan || 'N/A',
+              subscription_expiry: item.department.subscription_expiry || 'N/A',
+              is_active: item.department.is_active !== undefined ? item.department.is_active : true,
               created_at: item.department.created_at
             }));
             setOrganizations(orgs);
 
             const docs = await apiFetch(`/admins/doctors`);
             setDoctors(docs || []);
+
+            const subs = await apiFetch(`/admins/subscriptions`);
+            setSubscriptions(subs || []);
           } else if (currentUser.role === 'doctor') {
             const appts = await apiFetch(`/appointments/my?doctor_id=${currentUser.id}`);
             setAppointments(appts || []);
@@ -208,27 +211,46 @@ export const AppProvider = ({ children }) => {
     return newVisit;
   };
 
-  // Remaining mock toggle functions (if backend doesn't support them yet)
-  const toggleDoctorStatus = (id) => {
-    setDoctors(prev => prev.map(d => {
-      if (d.id === id) {
-        return { ...d, status: d.status === 'approved' ? 'disabled' : 'approved' };
-      }
-      return d;
-    }));
+  const toggleDoctorStatus = async (id) => {
+    try {
+      const updated = await apiFetch(`/admins/doctors/${id}/toggle-status`, {
+        method: 'PATCH'
+      });
+      setDoctors(prev => prev.map(d => d.id === id ? { ...d, is_active: updated.is_active } : d));
+      return updated;
+    } catch (err) {
+      console.error("Failed to toggle doctor status", err);
+      alert(err.message || "Failed to toggle doctor status");
+    }
   };
 
-  const toggleOrgStatus = (id) => {
-    setOrganizations(prev => prev.map(o => {
-      if (o.id === id) {
-        return { ...o, status: o.status === 'active' ? 'suspended' : 'active' };
-      }
-      return o;
-    }));
+  const toggleOrgStatus = async (id) => {
+    try {
+      const updated = await apiFetch(`/admins/departments/${id}/toggle-status`, {
+        method: 'PATCH'
+      });
+      setOrganizations(prev => prev.map(o => o.id === id ? { ...o, is_active: updated.is_active } : o));
+      return updated;
+    } catch (err) {
+      console.error("Failed to toggle organization status", err);
+      alert(err.message || "Failed to toggle organization status");
+    }
   };
 
-  const renewSubscription = (subId) => {
-    console.log("Mock renew sub:", subId);
+  const renewSubscription = async (subId) => {
+    try {
+      const updated = await apiFetch(`/subscriptions/${subId}/renew`, {
+        method: 'POST'
+      });
+      if (currentUser && currentUser.role === 'admin') {
+        const subs = await apiFetch(`/admins/subscriptions`);
+        setSubscriptions(subs || []);
+      }
+      return updated;
+    } catch (err) {
+      console.error("Failed to renew subscription", err);
+      alert(err.message || "Failed to renew subscription");
+    }
   };
 
   const addOrgDoctor = async (name, email, phone, orgId, specialty) => {
@@ -266,12 +288,32 @@ export const AppProvider = ({ children }) => {
     return updated;
   };
 
-  const deleteDoctor = (id) => {
-    setDoctors(prev => prev.filter(d => d.id !== id));
+  const deleteDoctor = async (id) => {
+    try {
+      await apiFetch(`/admins/doctors/${id}`, {
+        method: 'DELETE'
+      });
+      setDoctors(prev => prev.filter(d => d.id !== id));
+      return true;
+    } catch (err) {
+      console.error("Failed to delete doctor", err);
+      alert(err.message || "Failed to delete doctor");
+      return false;
+    }
   };
 
-  const deleteOrg = (id) => {
-    setOrganizations(prev => prev.filter(o => o.id !== id));
+  const deleteOrg = async (id) => {
+    try {
+      await apiFetch(`/admins/departments/${id}`, {
+        method: 'DELETE'
+      });
+      setOrganizations(prev => prev.filter(o => o.id !== id));
+      return true;
+    } catch (err) {
+      console.error("Failed to delete organization", err);
+      alert(err.message || "Failed to delete organization");
+      return false;
+    }
   };
 
   return (

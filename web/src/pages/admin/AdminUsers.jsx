@@ -42,6 +42,9 @@ export default function AdminUsers() {
   const [editingDoctor, setEditingDoctor] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
 
+  // Confirmation Modal state
+  const [confirmModal, setConfirmModal] = useState(null); // { title, description, icon, onConfirm }
+
   // Org edit form states
   const [editOrgName, setEditOrgName] = useState('');
   const [editOrgEmail, setEditOrgEmail] = useState('');
@@ -163,42 +166,61 @@ export default function AdminUsers() {
     setEditingDoctor(null);
   };
 
-  const handleDeleteDoctor = (id) => {
-    if (window.confirm("Are you sure you want to delete this doctor?")) {
-      deleteDoctor(id);
-      setEditingDoctor(null);
-    }
+  const handleDeleteDoctor = (id, name) => {
+    setConfirmModal({
+      title: 'Delete Doctor Account',
+      description: `Are you sure you want to permanently delete Dr. ${name}'s account from the database? All associated appointments, visits, and subscriptions will be removed. This action cannot be undone.`,
+      icon: 'delete_forever',
+      iconColor: 'text-error',
+      confirmLabel: 'Yes, Delete Permanently',
+      confirmClass: 'bg-error text-white hover:bg-error/90',
+      onConfirm: () => {
+        deleteDoctor(id);
+        setEditingDoctor(null);
+        setConfirmModal(null);
+      }
+    });
   };
 
-  const handleDeleteOrg = (id) => {
-    if (window.confirm("Are you sure you want to delete this organization?")) {
-      deleteOrg(id);
-      setEditingOrg(null);
-    }
+  const handleDeleteOrg = (id, name) => {
+    setConfirmModal({
+      title: 'Delete Department',
+      description: `Are you sure you want to permanently delete "${name}" from the database? All associated records will be removed. This action cannot be undone.`,
+      icon: 'domain_disabled',
+      iconColor: 'text-error',
+      confirmLabel: 'Yes, Delete Permanently',
+      confirmClass: 'bg-error text-white hover:bg-error/90',
+      onConfirm: () => {
+        deleteOrg(id);
+        setEditingOrg(null);
+        setConfirmModal(null);
+      }
+    });
   };
 
   // Filter Doctors
-  const filteredDoctors = doctors.filter(doc => {
-    const matchesSearch = doc.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          doc.email.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredDoctors = (doctors || []).filter(doc => {
+    const matchesSearch = (doc.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          (doc.email || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || 
-                          (statusFilter === 'active' && doc.status === 'approved') || 
-                          (statusFilter === 'disabled' && doc.status === 'disabled');
+                          (statusFilter === 'active' && doc.is_active) || 
+                          (statusFilter === 'disabled' && !doc.is_active);
     return matchesSearch && matchesStatus;
   });
 
   // Filter Organizations
-  const filteredOrgs = organizations.filter(org => {
-    const matchesSearch = org.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          org.specialty.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredOrgs = (organizations || []).filter(org => {
+    const matchesSearch = (org.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          (org.specialty || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || 
-                          (statusFilter === 'active' && org.status === 'active') || 
-                          (statusFilter === 'disabled' && org.status === 'suspended');
+                          (statusFilter === 'active' && org.is_active) || 
+                          (statusFilter === 'disabled' && !org.is_active);
     return matchesSearch && matchesStatus;
   });
 
   return (
-    <div class="space-y-stack-lg font-body-md animate-fade-in">
+    <>
+      <div class="space-y-stack-lg font-body-md animate-fade-in">
       {/* Header */}
       <header class="flex justify-between items-end border-b border-border-subtle pb-stack-md">
         <div>
@@ -298,7 +320,7 @@ export default function AdminUsers() {
                 <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Department</th>
                 <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Subscription Plan</th>
                 <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Status</th>
-                <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Last Login</th>
+                <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Join Date</th>
                 <th scope="col" class="relative px-6 py-3">
                   <span class="sr-only">Actions</span>
                 </th>
@@ -335,15 +357,15 @@ export default function AdminUsers() {
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                       <span class={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${
-                        doc.status === 'approved' 
+                        doc.is_active 
                           ? 'bg-primary-light text-primary' 
                           : 'bg-error-container text-error'
                       }`}>
-                        {doc.status === 'approved' ? 'Active' : 'Disabled'}
+                        {doc.is_active ? 'Active' : 'Disabled'}
                       </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-secondary">
-                      {doc.last_login || 'Never'}
+                      {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : 'N/A'}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-xs font-semibold">
                       <div class="flex gap-2 justify-end">
@@ -407,11 +429,11 @@ export default function AdminUsers() {
                       </td>
                       <td class="px-6 py-4 whitespace-nowrap">
                         <span class={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${
-                          org.status === 'active' 
+                          org.is_active 
                             ? 'bg-primary-light text-primary' 
                             : 'bg-error-container text-error'
                         }`}>
-                          {org.status}
+                          {org.is_active ? 'Active' : 'Suspended'}
                         </span>
                       </td>
                       <td class="px-6 py-4 whitespace-nowrap text-right text-xs font-semibold">
@@ -809,11 +831,11 @@ export default function AdminUsers() {
                   <div>
                     <span class="block font-semibold text-on-surface-variant mb-0.5">Status</span>
                     <span class={`px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize ${
-                      editingOrg.status === 'active' 
+                      editingOrg.is_active 
                         ? 'bg-primary-light text-primary' 
                         : 'bg-error-container text-error'
                     }`}>
-                      {editingOrg.status}
+                      {editingOrg.is_active ? 'Active' : 'Suspended'}
                     </span>
                   </div>
                 </div>
@@ -827,22 +849,24 @@ export default function AdminUsers() {
                       Edit Profile
                     </button>
                     <button
-                      onClick={() => {
-                        toggleOrgStatus(editingOrg.id);
-                        setEditingOrg(null);
+                      onClick={async () => {
+                        const res = await toggleOrgStatus(editingOrg.id);
+                        if (res) {
+                          setEditingOrg(prev => ({ ...prev, is_active: res.is_active }));
+                        }
                       }}
                       class={`flex-1 py-2 rounded-lg font-bold transition-colors ${
-                        editingOrg.status === 'active'
+                        editingOrg.is_active
                           ? 'bg-status-warning/10 hover:bg-status-warning/20 text-status-warning'
                           : 'bg-primary-light text-primary hover:bg-primary/20'
                       }`}
                     >
-                      {editingOrg.status === 'active' ? 'Suspend Org' : 'Activate Org'}
+                      {editingOrg.is_active ? 'Suspend Org' : 'Activate Org'}
                     </button>
                   </div>
                   
                   <button
-                    onClick={() => handleDeleteOrg(editingOrg.id)}
+                    onClick={() => handleDeleteOrg(editingOrg.id, editingOrg.name)}
                     class="w-full py-2 bg-error-container text-error hover:bg-error/10 rounded-lg font-bold transition-colors text-center"
                   >
                     Delete Organization
@@ -1001,11 +1025,11 @@ export default function AdminUsers() {
                   <div>
                     <span class="block font-semibold text-on-surface-variant mb-0.5">Status</span>
                     <span class={`px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize ${
-                      editingDoctor.status === 'approved' 
+                      editingDoctor.is_active 
                         ? 'bg-primary-light text-primary' 
                         : 'bg-error-container text-error'
                     }`}>
-                      {editingDoctor.status === 'approved' ? 'Active' : 'Disabled'}
+                      {editingDoctor.is_active ? 'Active' : 'Disabled'}
                     </span>
                   </div>
                 </div>
@@ -1019,22 +1043,24 @@ export default function AdminUsers() {
                       Edit Profile
                     </button>
                     <button
-                      onClick={() => {
-                        toggleDoctorStatus(editingDoctor.id);
-                        setEditingDoctor(null);
+                      onClick={async () => {
+                        const res = await toggleDoctorStatus(editingDoctor.id);
+                        if (res) {
+                          setEditingDoctor(prev => ({ ...prev, is_active: res.is_active }));
+                        }
                       }}
                       class={`flex-1 py-2 rounded-lg font-bold transition-colors ${
-                        editingDoctor.status === 'approved'
+                        editingDoctor.is_active
                           ? 'bg-status-warning/10 hover:bg-status-warning/20 text-status-warning'
                           : 'bg-primary-light text-primary hover:bg-primary/20'
                       }`}
                     >
-                      {editingDoctor.status === 'approved' ? 'Disable Doctor' : 'Enable Doctor'}
+                      {editingDoctor.is_active ? 'Disable Doctor' : 'Enable Doctor'}
                     </button>
                   </div>
                   
                   <button
-                    onClick={() => handleDeleteDoctor(editingDoctor.id)}
+                    onClick={() => handleDeleteDoctor(editingDoctor.id, editingDoctor.name)}
                     class="w-full py-2 bg-error-container text-error hover:bg-error/10 rounded-lg font-bold transition-colors text-center"
                   >
                     Delete Doctor Account
@@ -1046,5 +1072,44 @@ export default function AdminUsers() {
         </div>
       )}
     </div>
+
+      {/* Custom Confirmation Modal */}
+      {confirmModal && (
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4" onClick={() => setConfirmModal(null)}>
+          <div
+            class="bg-white rounded-2xl border border-border-subtle shadow-2xl max-w-sm w-full overflow-hidden animate-fade-in"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div class="px-6 pt-6 pb-4 text-center">
+              <div class="w-14 h-14 rounded-full bg-error-container flex items-center justify-center mx-auto mb-4">
+                <span class={`material-symbols-outlined text-3xl ${confirmModal.iconColor}`}>{confirmModal.icon}</span>
+              </div>
+              <h3 class="font-bold text-base text-on-surface mb-2">{confirmModal.title}</h3>
+              <p class="text-xs text-secondary leading-relaxed">{confirmModal.description}</p>
+            </div>
+
+            {/* Divider */}
+            <div class="h-px bg-border-subtle mx-6" />
+
+            {/* Actions */}
+            <div class="px-6 py-4 flex gap-3">
+              <button
+                onClick={() => setConfirmModal(null)}
+                class="flex-1 py-2.5 rounded-xl border border-border-subtle text-secondary font-semibold text-sm hover:bg-surface-container transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmModal.onConfirm}
+                class={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-colors shadow-sm ${confirmModal.confirmClass}`}
+              >
+                {confirmModal.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

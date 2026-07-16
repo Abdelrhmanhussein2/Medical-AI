@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 
 export default function Visits() {
@@ -12,11 +12,38 @@ export default function Visits() {
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Fetch visits of selected patient
-  const patientHistory = visits.filter(v => v.patient_id === selectedPatientId)
-    .sort((a, b) => new Date(b.visit_date) - new Date(a.visit_date));
+  const [patientHistory, setPatientHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
-  const handleCreateVisit = (e) => {
+  useEffect(() => {
+    if (selectedPatientId) {
+      const getHistory = async () => {
+        setLoadingHistory(true);
+        try {
+          const token = localStorage.getItem("accessToken");
+          const response = await fetch(`/api/v1/visits/patient/${selectedPatientId}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            const sorted = (data || []).sort((a, b) => new Date(b.visit_date) - new Date(a.visit_date));
+            setPatientHistory(sorted);
+          }
+        } catch (err) {
+          console.error("Failed to fetch patient history", err);
+        } finally {
+          setLoadingHistory(false);
+        }
+      };
+      getHistory();
+    } else {
+      setPatientHistory([]);
+    }
+  }, [selectedPatientId]);
+
+  const handleCreateVisit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
@@ -27,7 +54,7 @@ export default function Visits() {
     }
 
     try {
-      addVisit({
+      const newVisit = await addVisit({
         patient_id: selectedPatientId,
         doctor_id: currentUser.id,
         description,
@@ -36,6 +63,9 @@ export default function Visits() {
       });
 
       setSuccessMsg('تم حفظ ملخص الزيارة الطبية بنجاح');
+      if (newVisit) {
+        setPatientHistory(prev => [newVisit, ...prev]);
+      }
       setDescription('');
       setDiagnosis('');
       setNotes('');
@@ -148,6 +178,11 @@ export default function Visits() {
                   history
                 </span>
                 <p>اختر مريضاً من القائمة لعرض تاريخه الطبي</p>
+              </div>
+            ) : loadingHistory ? (
+              <div class="flex flex-col items-center justify-center h-64 text-secondary text-sm">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+                <p>جاري تحميل التاريخ الطبي...</p>
               </div>
             ) : patientHistory.length === 0 ? (
               <div class="flex flex-col items-center justify-center h-64 text-secondary text-sm">

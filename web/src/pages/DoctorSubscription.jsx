@@ -21,36 +21,14 @@ export default function DoctorSubscription() {
           if (response.status !== 404) {
             throw new Error('Failed to fetch subscription');
           } else {
-            setSubscription({
-              id: 'fake-123',
-              bundle_name: 'Pro AI Clinical Suite',
-              status: 'active',
-              managed_by_org: false,
-              start_date: new Date().toISOString(),
-              end_date: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString()
-            });
+            setSubscription(null);
           }
         } else {
-          // If response is 204 No Content, there's no active subscription.
           if (response.status !== 204) {
              const data = await response.json();
-             setSubscription(data || {
-                id: 'fake-123',
-                bundle_name: 'Pro AI Clinical Suite',
-                status: 'active',
-                managed_by_org: false,
-                start_date: new Date().toISOString(),
-                end_date: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString()
-             });
+             setSubscription(data || null);
           } else {
-             setSubscription({
-                id: 'fake-123',
-                bundle_name: 'Pro AI Clinical Suite',
-                status: 'active',
-                managed_by_org: false,
-                start_date: new Date().toISOString(),
-                end_date: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString()
-             });
+             setSubscription(null);
           }
         }
       } catch (err) {

@@ -1,6 +1,7 @@
 from app.core.database import db
 from app.schemes.visit_schema import VisitCreate
 from datetime import date
+from typing import Optional
 
 
 class VisitService:
@@ -30,19 +31,23 @@ class VisitService:
             return dict(row) if row else None
 
     @staticmethod
-    async def get_patient_visits(patient_id: str):
+    async def get_patient_visits(patient_id: str, doctor_id: Optional[str] = None):
         """
-        جلب كل سجل الزيارات لمريض معين مرتبة من الأحدث للأقدم.
+        جلب كل سجل الزيارات لمريض معين مصفى بالطبيب الحالي، مرتبة من الأحدث للأقدم.
         """
+        from uuid import UUID
+        doc_uuid = UUID(doctor_id) if doctor_id else None
+        
         query = """
             SELECT v.*, d.name as doctor_name
             FROM visits v
             JOIN doctors d ON v.doctor_id = d.id
             WHERE v.patient_id = $1
+              AND ($2::uuid IS NULL OR v.doctor_id = $2::uuid)
             ORDER BY v.visit_date DESC, v.created_at DESC
         """
         async with db.pool.acquire() as conn:
-            rows = await conn.fetch(query, patient_id)
+            rows = await conn.fetch(query, UUID(patient_id), doc_uuid)
             return [dict(r) for r in rows]
 
     @staticmethod

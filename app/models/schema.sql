@@ -65,7 +65,7 @@ CREATE TABLE doctors (
     password_hash          TEXT NOT NULL,
     specialization         VARCHAR(150) NOT NULL,   -- تخصص الطبيب أصبح إلزامي
     department_id          UUID REFERENCES departments(id) ON DELETE SET NULL, -- الإدارة التابع لها
-    certificate_url        TEXT NOT NULL,          -- مستند إثبات كونه دكتور (إلزامي)
+    certificate_url        TEXT,                   -- مستند إثبات كونه دكتور (اختياري)
     profile_image_url      TEXT,                    -- اختياري
 
     status                 doctor_status NOT NULL DEFAULT 'approved',
@@ -95,6 +95,7 @@ CREATE INDEX idx_doctors_department ON doctors(department_id);
 
 CREATE TABLE patients (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    doctor_id    UUID REFERENCES doctors(id) ON DELETE SET NULL, -- الطبيب الذي أضاف المريض
     name         VARCHAR(150) NOT NULL,
     phone        VARCHAR(30) NOT NULL,
     email        VARCHAR(255),
@@ -105,6 +106,7 @@ CREATE TABLE patients (
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE INDEX idx_patients_doctor ON patients(doctor_id);
 CREATE INDEX idx_patients_phone ON patients(phone);
 CREATE INDEX idx_patients_name ON patients USING gin (to_tsvector('simple', name));
 

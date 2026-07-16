@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 
 export default function Patients() {
@@ -50,10 +50,35 @@ export default function Patients() {
     }
   };
 
-  // Filter visits for selected patient details modal
-  const patientVisits = selectedPatient 
-    ? visits.filter(v => v.patient_id === selectedPatient.id)
-    : [];
+  const [patientVisits, setPatientVisits] = useState([]);
+  const [loadingVisits, setLoadingVisits] = useState(false);
+
+  useEffect(() => {
+    if (selectedPatient) {
+      const getVisits = async () => {
+        setLoadingVisits(true);
+        try {
+          const token = localStorage.getItem("accessToken");
+          const response = await fetch(`/api/v1/visits/patient/${selectedPatient.id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setPatientVisits(data || []);
+          }
+        } catch (err) {
+          console.error("Failed to fetch patient visits", err);
+        } finally {
+          setLoadingVisits(false);
+        }
+      };
+      getVisits();
+    } else {
+      setPatientVisits([]);
+    }
+  }, [selectedPatient]);
 
   return (
     <div>
@@ -292,7 +317,12 @@ export default function Patients() {
               <div class="md:col-span-8 space-y-4">
                 <h4 class="font-button text-sm text-on-surface font-bold">Consultation History ({patientVisits.length})</h4>
                 
-                {patientVisits.length === 0 ? (
+                {loadingVisits ? (
+                  <div class="text-center py-12 text-secondary text-xs">
+                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+                    Loading consultation history...
+                  </div>
+                ) : patientVisits.length === 0 ? (
                   <div class="text-center py-12 bg-bg-canvas border border-border-subtle rounded-lg text-xs text-secondary">
                     <span class="material-symbols-outlined text-[32px] text-outline-variant block mb-1">history</span>
                     No recorded medical visits for this patient yet.

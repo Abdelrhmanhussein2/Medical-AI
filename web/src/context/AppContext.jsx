@@ -121,6 +121,12 @@ export const AppProvider = ({ children }) => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("currentUser");
     setCurrentUser(null);
+    setPatients([]);
+    setOrganizations([]);
+    setDoctors([]);
+    setSubscriptions([]);
+    setAppointments([]);
+    setVisits([]);
   };
 
   const registerDoctor = async (name, email, phone, password, specialization = 'General', departmentId = null, status = 'approved', certificateFile = null) => {

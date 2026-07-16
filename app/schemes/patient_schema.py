@@ -10,6 +10,7 @@ class PatientBase(BaseModel):
     national_id: Optional[str] = None
     date_of_birth: Optional[date] = None
     gender: Optional[str] = None
+    doctor_id: Optional[UUID] = None
 
 class PatientCreate(PatientBase):
     pass

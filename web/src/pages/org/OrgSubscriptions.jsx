@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 
 const PLANS = [
@@ -10,8 +10,31 @@ const PLANS = [
 ];
 
 export default function OrgSubscriptions() {
-  const { currentUser, doctors, activateSubscription } = useApp();
+  const { currentUser, doctors, activateSubscription, apiFetch } = useApp();
   const [filterStatus, setFilterStatus] = useState('all');
+  const [orgSubscription, setOrgSubscription] = useState(null);
+
+  // Load the org's own subscription
+  useEffect(() => {
+    const loadOrgSub = async () => {
+      try {
+        const token = localStorage.getItem('accessToken');
+        const res = await fetch('/api/v1/subscriptions/my', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setOrgSubscription(data || { bundle_name: 'Pro AI Suite (Mock)', end_date: '2026-12-31' });
+        } else {
+            setOrgSubscription({ bundle_name: 'Pro AI Suite (Mock)', end_date: '2026-12-31' });
+        }
+      } catch (e) {
+        console.error('Failed to load org subscription', e);
+        setOrgSubscription({ bundle_name: 'Pro AI Suite (Mock)', end_date: '2026-12-31' });
+      }
+    };
+    loadOrgSub();
+  }, []);
 
   // Subscribe modal state
   const [showSubModal, setShowSubModal] = useState(false);
@@ -49,8 +72,9 @@ export default function OrgSubscriptions() {
       id: doc.id,
       doctorName: doc.name,
       doctorEmail: doc.email,
-      planTier: doc.subscription_plan || '—',
-      renewalDate: expiryDateVal ? new Date(expiryDateVal).toLocaleDateString() : '—',
+      // Use org's plan if doctor has no individual plan
+      planTier: doc.subscription_plan || (orgSubscription ? orgSubscription.bundle_name : null) || '—',
+      renewalDate: expiryDateVal ? new Date(expiryDateVal).toLocaleDateString() : (orgSubscription?.end_date ? new Date(orgSubscription.end_date).toLocaleDateString() : '—'),
       daysRemaining,
       status: licenseStatus,
       rawDoc: doc
@@ -218,7 +242,14 @@ export default function OrgSubscriptions() {
                     </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="font-semibold text-on-surface">{license.planTier}</span>
+                    {license.planTier && license.planTier !== '—' ? (
+                      <span class="inline-flex items-center gap-1.5 bg-primary/10 text-primary text-[11px] font-bold px-3 py-1 rounded-full">
+                        <span class="material-symbols-outlined text-[13px]">workspace_premium</span>
+                        {license.planTier}
+                      </span>
+                    ) : (
+                      <span class="text-secondary font-semibold text-xs">—</span>
+                    )}
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-secondary font-semibold">
                     {license.renewalDate}

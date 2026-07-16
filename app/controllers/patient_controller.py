@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Query
 from app.schemes.patient_schema import PatientCreate, PatientResponse
 from app.services.patient_service import PatientService
 from uuid import UUID
-from typing import List
+from typing import List, Optional
 
 router = APIRouter(prefix="/patients", tags=["Patients"])
 
@@ -23,7 +23,7 @@ async def get_patient(patient_id: UUID):
 
 @router.get("/", response_model=List[PatientResponse])
 async def search_patients(
-    q: str = Query(..., min_length=1, description="ابحث بالاسم أو رقم التليفون")
+    q: Optional[str] = Query(None, description="ابحث بالاسم أو رقم التليفون")
 ):
     """
     البحث عن مريض بالاسم أو رقم التليفون.

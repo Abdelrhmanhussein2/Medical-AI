@@ -6,6 +6,9 @@ export default function Layout({ children, activePage, setActivePage }) {
   const { currentUser, logout } = useApp();
 
   if (!currentUser) return <>{children}</>;
+  
+  const isLiveSession = activePage && activePage.startsWith('live-session');
+  if (isLiveSession) return <>{children}</>;
 
   let suiteSub = "";
   let menuItems = [];
@@ -30,7 +33,8 @@ export default function Layout({ children, activePage, setActivePage }) {
       { id: 'dashboard', name: 'Dashboard', icon: 'dashboard' },
       { id: 'patients', name: 'Patients', icon: 'group' },
       { id: 'appointments', name: 'Appointments', icon: 'calendar_month' },
-      { id: 'visits', name: 'Medical Visits', icon: 'medical_information' }
+      { id: 'visits', name: 'Medical Visits', icon: 'medical_information' },
+      { id: 'subscription', name: 'My Subscription', icon: 'card_membership' }
     ];
   }
 

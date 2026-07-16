@@ -24,6 +24,9 @@ export default function OrgDoctors() {
   const [editDocExpiry, setEditDocExpiry] = useState('');
   const [editDocStatus, setEditDocStatus] = useState('approved');
 
+  // Delete confirmation modal
+  const [docToDelete, setDocToDelete] = useState(null);
+
   // All doctors in state are already scoped to this department
   // (loaded via /departments/{id}/doctors endpoint)
   const deptDocs = doctors;
@@ -85,8 +88,13 @@ export default function OrgDoctors() {
   };
 
   const handleDeleteDoctor = (id) => {
-    if (window.confirm("Are you sure you want to remove this doctor from your department?")) {
-      deleteDoctor(id);
+    setDocToDelete(id);
+  };
+
+  const confirmDeleteDoctor = () => {
+    if (docToDelete) {
+      deleteDoctor(docToDelete);
+      setDocToDelete(null);
       setSelectedDoctor(null);
     }
   };
@@ -198,11 +206,11 @@ export default function OrgDoctors() {
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
                     <span class={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      doc.status === 'approved' 
+                      doc.is_active !== false
                         ? 'bg-primary-light text-primary' 
                         : 'bg-error-container text-error'
                     }`}>
-                      {doc.status === 'approved' ? 'Active' : 'Disabled'}
+                      {doc.is_active !== false ? 'Active' : 'Disabled'}
                     </span>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-secondary">
@@ -430,18 +438,18 @@ export default function OrgDoctors() {
               </form>
             ) : (
               <div class="p-6 space-y-6 text-xs text-secondary">
-                <div class="grid grid-cols-2 gap-y-4 gap-x-2">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-4">
                   <div>
                     <span class="block font-semibold text-on-surface-variant mb-0.5">Doctor Name</span>
                     <span class="text-sm font-bold text-on-surface">{selectedDoctor.name}</span>
                   </div>
                   <div>
                     <span class="block font-semibold text-on-surface-variant mb-0.5">Department</span>
-                    <span class="text-sm font-bold text-primary">{currentUser.specialty}</span>
+                    <span class="text-sm font-bold text-primary">{currentUser.specialty || 'General'}</span>
                   </div>
-                  <div>
+                  <div class="sm:col-span-2">
                     <span class="block font-semibold text-on-surface-variant mb-0.5">Clinic Email</span>
-                    <span class="text-sm font-semibold text-on-surface">{selectedDoctor.email}</span>
+                    <span class="text-sm font-semibold text-on-surface break-all">{selectedDoctor.email}</span>
                   </div>
                   <div>
                     <span class="block font-semibold text-on-surface-variant mb-0.5">Contact Phone</span>
@@ -455,14 +463,14 @@ export default function OrgDoctors() {
                     <span class="block font-semibold text-on-surface-variant mb-0.5">Expiry Date</span>
                     <span class="text-sm font-semibold text-on-surface">{selectedDoctor.subscription_expiry || 'N/A'}</span>
                   </div>
-                  <div>
+                  <div class="sm:col-span-2">
                     <span class="block font-semibold text-on-surface-variant mb-0.5">Status</span>
-                    <span class={`px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize ${
-                      selectedDoctor.status === 'approved' 
+                    <span class={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize mt-1 ${
+                      selectedDoctor.is_active !== false
                         ? 'bg-primary-light text-primary' 
                         : 'bg-error-container text-error'
                     }`}>
-                      {selectedDoctor.status === 'approved' ? 'Active' : 'Disabled'}
+                      {selectedDoctor.is_active !== false ? 'Active' : 'Disabled'}
                     </span>
                   </div>
                 </div>
@@ -481,12 +489,12 @@ export default function OrgDoctors() {
                         setSelectedDoctor(null);
                       }}
                       class={`flex-1 py-2 rounded-lg font-bold transition-colors ${
-                        selectedDoctor.status === 'approved'
+                        selectedDoctor.is_active !== false
                           ? 'bg-status-warning/10 hover:bg-status-warning/20 text-status-warning'
                           : 'bg-primary-light text-primary hover:bg-primary/20'
                       }`}
                     >
-                      {selectedDoctor.status === 'approved' ? 'Disable Doctor' : 'Enable Doctor'}
+                      {selectedDoctor.is_active !== false ? 'Disable Doctor' : 'Enable Doctor'}
                     </button>
                   </div>
                   
@@ -502,6 +510,36 @@ export default function OrgDoctors() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      {docToDelete && (
+        <div class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-fade-in">
+          <div class="bg-white rounded-xl shadow-2xl border border-border-subtle max-w-sm w-full p-6 text-center transform scale-100 animate-fade-in">
+            <div class="w-16 h-16 bg-error-container/50 text-error rounded-full flex items-center justify-center mx-auto mb-4">
+              <span class="material-symbols-outlined text-[32px]">warning</span>
+            </div>
+            <h3 class="text-lg font-bold text-on-surface mb-2">Remove Doctor?</h3>
+            <p class="text-sm text-on-surface-variant mb-6">
+              Are you sure you want to remove this doctor from your department? This action cannot be undone and will revoke their access immediately.
+            </p>
+            <div class="flex gap-3">
+              <button
+                onClick={() => setDocToDelete(null)}
+                class="flex-1 px-4 py-2 bg-surface-container-low text-secondary font-bold text-sm rounded-lg hover:bg-surface-container transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteDoctor}
+                class="flex-1 px-4 py-2 bg-error text-white font-bold text-sm rounded-lg hover:bg-error-hover transition-colors shadow-sm"
+              >
+                Yes, Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

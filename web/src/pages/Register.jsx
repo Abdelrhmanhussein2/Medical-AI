@@ -25,7 +25,7 @@ export default function Register({ setActivePage }) {
       }
 
       try {
-        await registerDoctor(name, email, phone, password, file);
+        await registerDoctor(name, email, phone, password, specialty, null, 'pending', file);
         setSuccess(true);
       } catch (err) {
         setError(err.message || 'حدث خطأ أثناء التسجيل');
@@ -227,24 +227,22 @@ export default function Register({ setActivePage }) {
                 />
               </div>
 
-              {role === 'org' && (
-                <div>
-                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">
-                    Specialty / Clinical Department
-                  </label>
-                  <select
-                    value={specialty}
-                    onChange={(e) => setSpecialty(e.target.value)}
-                    class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                  >
-                    <option value="Cardiology">Cardiology</option>
-                    <option value="Neurology">Neurology</option>
-                    <option value="Pediatrics">Pediatrics</option>
-                    <option value="Oncology">Oncology</option>
-                    <option value="General Practice">General Practice</option>
-                  </select>
-                </div>
-              )}
+              <div>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">
+                  {role === 'doctor' ? 'Specialization' : 'Specialty / Clinical Department'}
+                </label>
+                <select
+                  value={specialty}
+                  onChange={(e) => setSpecialty(e.target.value)}
+                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                >
+                  <option value="Cardiology">Cardiology</option>
+                  <option value="Neurology">Neurology</option>
+                  <option value="Pediatrics">Pediatrics</option>
+                  <option value="Oncology">Oncology</option>
+                  <option value="General Practice">General Practice</option>
+                </select>
+              </div>
 
               <div>
                 <label class="block text-xs font-semibold text-on-surface-variant mb-1">

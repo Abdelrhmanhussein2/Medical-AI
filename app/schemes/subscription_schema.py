@@ -39,6 +39,7 @@ class SubscriptionResponse(BaseModel):
     # Custom fields for frontend visibility
     bundle_name: Optional[str] = None
     seats_used: Optional[int] = None
+    managed_by_org: Optional[bool] = False
 
     class Config:
         from_attributes = True

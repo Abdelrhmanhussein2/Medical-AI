@@ -41,12 +41,18 @@ class SubscriptionService:
             else:
                 query = """
                 SELECT s.*, b.name as bundle_name,
-                       (SELECT COUNT(*) FROM subscription_doctors WHERE subscription_id = s.id) as seats_used
+                       (SELECT COUNT(*) FROM subscription_doctors WHERE subscription_id = s.id) as seats_used,
+                       (s.department_id IS NOT NULL) as managed_by_org
                 FROM subscriptions s
                 JOIN subscription_bundles b ON s.bundle_id = b.id
-                WHERE s.doctor_id = $1
+                WHERE (
+                    s.doctor_id = $1 
+                    OR 
+                    EXISTS (SELECT 1 FROM subscription_doctors sd WHERE sd.subscription_id = s.id AND sd.doctor_id = $1)
+                )
                   AND s.status = 'active'
                   AND s.end_date > now()
+                ORDER BY s.department_id NULLS FIRST
                 LIMIT 1
                 """
             row = await connection.fetchrow(query, owner_id)

@@ -8,6 +8,8 @@ import Dashboard from './pages/Dashboard';
 import Patients from './pages/Patients';
 import Appointments from './pages/Appointments';
 import Visits from './pages/Visits';
+import DoctorSubscription from './pages/DoctorSubscription';
+import LiveSession from './pages/LiveSession';
 
 // Admin pages
 import AdminOverview from './pages/admin/AdminOverview';
@@ -60,9 +62,11 @@ function AppContent() {
       case 'patients':
         return <Patients />;
       case 'appointments':
-        return <Appointments />;
+        return <Appointments setActivePage={setActivePage} />;
       case 'visits':
         return <Visits />;
+      case 'subscription':
+        return <DoctorSubscription />;
       
       // Admin
       case 'admin-overview':
@@ -83,9 +87,19 @@ function AppContent() {
         return <OrgSubscriptions />;
 
       default:
+        if (activePage.startsWith('live-session-')) {
+          const appointmentId = activePage.split('live-session-')[1];
+          return <LiveSession appointmentId={appointmentId} setActivePage={setActivePage} />;
+        }
         return <Landing setActivePage={setActivePage} />;
     }
   };
+
+  // Render LiveSession outside Layout for full-screen
+  if (activePage && activePage.startsWith('live-session-')) {
+    const appointmentId = activePage.split('live-session-')[1];
+    return <LiveSession appointmentId={appointmentId} setActivePage={setActivePage} />;
+  }
 
   return (
     <Layout activePage={activePage} setActivePage={setActivePage}>

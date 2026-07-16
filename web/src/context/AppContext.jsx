@@ -213,10 +213,27 @@ export const AppProvider = ({ children }) => {
 
   const toggleDoctorStatus = async (id) => {
     try {
-      const updated = await apiFetch(`/admins/doctors/${id}/toggle-status`, {
+      const endpoint = currentUser.role === 'admin' 
+        ? `/admins/doctors/${id}/toggle-status`
+        : `/departments/${currentUser.id}/doctors/${id}/toggle-status`;
+        
+      const updated = await apiFetch(endpoint, {
         method: 'PATCH'
       });
-      setDoctors(prev => prev.map(d => d.id === id ? { ...d, is_active: updated.is_active } : d));
+      // Ensure we update both is_active and status, and clear subscription if disabled
+      setDoctors(prev => prev.map(d => {
+        if (d.id === id) {
+          const isNowActive = updated.is_active;
+          return {
+            ...d, 
+            is_active: isNowActive, 
+            status: updated.status,
+            subscription_plan: isNowActive ? d.subscription_plan : null,
+            subscription_expiry: isNowActive ? d.subscription_expiry : null
+          };
+        }
+        return d;
+      }));
       return updated;
     } catch (err) {
       console.error("Failed to toggle doctor status", err);

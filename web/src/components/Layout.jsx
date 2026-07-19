@@ -18,7 +18,8 @@ export default function Layout({ children, activePage, setActivePage }) {
     menuItems = [
       { id: 'admin-overview', name: 'Organization Overview', icon: 'grid_view' },
       { id: 'admin-users', name: 'Department Management', icon: 'corporate_fare' },
-      { id: 'admin-subscriptions', name: 'Subscription Health', icon: 'credit_card' }
+      { id: 'admin-subscriptions', name: 'Subscription Health', icon: 'credit_card' },
+      { id: 'admin-aichat', name: 'SBR AI Chat', icon: 'smart_toy' }
     ];
   } else if (currentUser.role === 'org') {
     suiteSub = "ORG SUITE";
@@ -34,6 +35,7 @@ export default function Layout({ children, activePage, setActivePage }) {
       { id: 'patients', name: 'Patients', icon: 'group' },
       { id: 'appointments', name: 'Appointments', icon: 'calendar_month' },
       { id: 'visits', name: 'Medical Visits', icon: 'medical_information' },
+      { id: 'aichat', name: 'SBR AI Chat', icon: 'smart_toy' },
       { id: 'subscription', name: 'My Subscription', icon: 'card_membership' }
     ];
   }
@@ -125,7 +127,9 @@ export default function Layout({ children, activePage, setActivePage }) {
       </nav>
 
       {/* Main Content Area */}
-      <div class="flex-1 md:ml-64 p-margin-desktop bg-bg-canvas min-h-screen">
+      <div class={`flex-1 md:ml-64 bg-bg-canvas min-h-screen ${
+        (activePage === 'aichat' || activePage === 'admin-aichat') ? 'p-0' : 'p-margin-desktop'
+      }`}>
         {children}
       </div>
     </div>

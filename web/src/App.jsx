@@ -10,6 +10,7 @@ import Appointments from './pages/Appointments';
 import Visits from './pages/Visits';
 import DoctorSubscription from './pages/DoctorSubscription';
 import LiveSession from './pages/LiveSession';
+import AiChat from './pages/AiChat';
 
 // Admin pages
 import AdminOverview from './pages/admin/AdminOverview';
@@ -67,6 +68,9 @@ function AppContent() {
         return <Visits />;
       case 'subscription':
         return <DoctorSubscription />;
+      case 'aichat':
+      case 'admin-aichat':
+        return <AiChat />;
       
       // Admin
       case 'admin-overview':

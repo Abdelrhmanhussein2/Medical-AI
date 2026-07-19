@@ -5,150 +5,82 @@ export default function AiChat() {
   const { currentUser } = useApp();
   const messagesEndRef = useRef(null);
 
-  const initialThreads = [
-    {
-      id: 'thread-1',
-      title: 'Patient: J. Doe - MRI Review',
-      snippet: 'The AI analysis of the cervical spine MRI indicates subtle demyelination...',
-      dept: 'Neurology',
-      priority: true,
-      time: 'Just now',
-      messages: [
-        {
-          id: 'm1-1',
-          sender: 'ai',
-          senderName: 'SBR AI Assistant',
-          time: '09:41 AM',
-          avatarIcon: 'neurology',
-          content: "I've analyzed the uploaded MRI scans for patient John Doe. Here is the preliminary clinical summary based on the imaging data.",
-          bento: {
-            title1: 'FINDING 1',
-            desc1: 'Subtle hyperintense lesions in the periventricular white matter on T2/FLAIR sequences.',
-            title2: 'COMPARISON',
-            desc2: 'Slight progression compared to the previous scan dated 6 months ago.'
-          }
-        },
-        {
-          id: 'm1-2',
-          sender: 'user',
-          time: '09:45 AM',
-          content: 'Are there any signs of active inflammation? Check for gadolinium enhancement.'
-        },
-        {
-          id: 'm1-3',
-          sender: 'user',
-          time: '09:46 AM',
-          isAudio: true,
-          audioDuration: '0:12'
-        },
-        {
-          id: 'm1-4',
-          sender: 'ai',
-          senderName: 'SBR AI Assistant',
-          time: '09:46 AM',
-          avatarIcon: 'smart_toy',
-          content: 'Reviewing T1 post-contrast sequences...',
-          insight: {
-            title: 'No abnormal gadolinium enhancement detected.',
-            desc: 'This suggests the lesions are likely chronic rather than indicating an active acute inflammatory demyelinating process at this exact moment.'
-          },
-          actions: ['Generate Report', 'Find Similar Cases']
-        }
-      ]
-    },
-    {
-      id: 'thread-2',
-      title: 'Lab Results Analysis: P. Smith',
-      snippet: 'Can you summarize the anomalies in the latest complete blood count?',
-      dept: 'Hematology',
-      priority: false,
-      time: '2h ago',
-      messages: [
-        {
-          id: 'm2-1',
-          sender: 'user',
-          time: '02:15 PM',
-          content: 'Can you summarize the anomalies in the latest complete blood count for P. Smith?'
-        },
-        {
-          id: 'm2-2',
-          sender: 'ai',
-          senderName: 'SBR AI Assistant',
-          time: '02:16 PM',
-          avatarIcon: 'smart_toy',
-          content: 'Checking complete blood count (CBC) results for patient P. Smith.',
-          insight: {
-            title: 'Mild Leukocytosis Detected',
-            desc: 'White blood cell (WBC) count is elevated at 12.5 x 10^3/µL (normal range: 4.5 - 11.0). Hemoglobin and hematocrit levels are within normal limits. Platelets are normal at 250 x 10^3/µL. The elevated WBC may indicate a localized inflammatory or infectious response.'
-          }
-        }
-      ]
-    },
-    {
-      id: 'thread-3',
-      title: 'Differential Diagnosis: M. L.',
-      snippet: 'Symptoms: vertigo, tinnitus, and hearing loss in left ear.',
-      dept: 'ENT / Neurology',
-      priority: false,
-      time: 'Yesterday',
-      messages: [
-        {
-          id: 'm3-1',
-          sender: 'user',
-          time: '11:02 AM',
-          content: 'Differential diagnosis for a 45-year-old female presenting with persistent vertigo, tinnitus, and episodic hearing loss in the left ear.'
-        },
-        {
-          id: 'm3-2',
-          sender: 'ai',
-          senderName: 'SBR AI Assistant',
-          time: '11:03 AM',
-          avatarIcon: 'smart_toy',
-          content: 'Analyzing clinical presentation of unilateral vestibular-auditory symptoms.',
-          insight: {
-            title: 'Ménière\'s Disease (Primary Differential)',
-            desc: 'The triad of episodic vertigo, tinnitus, and sensorineural hearing loss strongly suggests Ménière\'s disease. Secondary differentials to consider include Vestibular Schwannoma (acoustic neuroma) - warranting an MRI of the internal auditory canals - and Vestibular Migraine.'
-          }
-        }
-      ]
-    },
-    {
-      id: 'thread-4',
-      title: 'Medication Interaction Check',
-      snippet: 'Checking contraindications between Warfarin and newly prescribed Amiodarone.',
-      dept: 'Cardiology',
-      priority: false,
-      time: 'Yesterday',
-      messages: [
-        {
-          id: 'm4-1',
-          sender: 'user',
-          time: '04:50 PM',
-          content: 'Checking contraindications between Warfarin and newly prescribed Amiodarone.'
-        },
-        {
-          id: 'm4-2',
-          sender: 'ai',
-          senderName: 'SBR AI Assistant',
-          time: '04:51 PM',
-          avatarIcon: 'smart_toy',
-          content: 'Running drug-drug interaction screening for Warfarin and Amiodarone.',
-          insight: {
-            title: 'Major Interaction Detected (CYP2C9 Inhibition)',
-            desc: 'Amiodarone inhibits CYP2C9, the primary enzyme responsible for metabolizing S-warfarin. This leads to increased Warfarin levels and a significant rise in INR (bleeding risk). Recommendation: Reduce Warfarin dose by 30% to 50% upon initiating Amiodarone, and monitor INR closely every 2-3 days for the first two weeks.'
-          }
-        }
-      ]
-    }
-  ];
-
-  const [threads, setThreads] = useState(initialThreads);
-  const [activeThreadId, setActiveThreadId] = useState('thread-1');
+  const [threads, setThreads] = useState([]);
+  const [activeThreadId, setActiveThreadId] = useState(null);
+  const [messages, setMessages] = useState([]);
+  
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const [loadingThreads, setLoadingThreads] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  
+  // New Thread Modal State
+  const [showNewModal, setShowNewModal] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newDept, setNewDept] = useState('');
 
-  const activeThread = threads.find(t => t.id === activeThreadId) || threads[0];
+  // Delete Thread Modal State
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [threadToDelete, setThreadToDelete] = useState(null);
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // 1. Fetch threads on mount
+  useEffect(() => {
+    const fetchThreads = async () => {
+      setLoadingThreads(true);
+      try {
+        const token = localStorage.getItem("accessToken");
+        const res = await fetch('/api/v1/chat/threads', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setThreads(data || []);
+          if (data && data.length > 0) {
+            setActiveThreadId(data[0].id);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch threads", err);
+      } finally {
+        setLoadingThreads(false);
+      }
+    };
+    fetchThreads();
+  }, []);
+
+  // 2. Fetch messages when activeThreadId changes
+  useEffect(() => {
+    if (!activeThreadId) {
+      setMessages([]);
+      return;
+    }
+    const fetchMessages = async () => {
+      setLoadingMessages(true);
+      try {
+        const token = localStorage.getItem("accessToken");
+        const res = await fetch(`/api/v1/chat/threads/${activeThreadId}/messages`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setMessages(data || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch messages", err);
+      } finally {
+        setLoadingMessages(false);
+      }
+    };
+    fetchMessages();
+  }, [activeThreadId]);
 
   // Scroll to bottom
   const scrollToBottom = () => {
@@ -157,61 +89,168 @@ export default function AiChat() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [activeThread.messages, isTyping]);
+  }, [messages, isTyping]);
 
-  const handleSendMessage = (e) => {
-    if (e) e.preventDefault();
-    if (!inputText.trim()) return;
+  const activeThread = threads.find(t => t.id === activeThreadId);
 
-    const userMessage = {
-      id: `m-user-${Date.now()}`,
-      sender: 'user',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      content: inputText
-    };
+  // 3. Create a new thread session
+  const handleCreateThreadSubmit = async (e) => {
+    e.preventDefault();
+    if (!newTitle.trim()) return;
 
-    const updatedThreads = threads.map(t => {
-      if (t.id === activeThreadId) {
-        return {
-          ...t,
-          snippet: inputText,
-          time: 'Just now',
-          messages: [...t.messages, userMessage]
-        };
+    try {
+      const token = localStorage.getItem("accessToken");
+      const res = await fetch('/api/v1/chat/threads', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: newTitle,
+          dept: newDept || null
+        })
+      });
+
+      if (res.ok) {
+        const newThreadObj = await res.json();
+        setThreads(prev => [newThreadObj, ...prev]);
+        setActiveThreadId(newThreadObj.id);
+        setNewTitle('');
+        setNewDept('');
+        setShowNewModal(false);
       }
-      return t;
-    });
+    } catch (err) {
+      console.error("Failed to create thread", err);
+    }
+  };
 
-    setThreads(updatedThreads);
+  // 4. Send user message and get static reply
+  const handleSendMessage = async (e) => {
+    if (e) e.preventDefault();
+    if (!inputText.trim() || !activeThreadId) return;
+
+    const messageText = inputText;
     setInputText('');
-    setIsTyping(true);
 
-    // Simulate AI response after 1.5 seconds
-    setTimeout(() => {
-      const aiMessage = {
-        id: `m-ai-${Date.now()}`,
-        sender: 'ai',
-        senderName: 'SBR AI Assistant',
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        avatarIcon: 'smart_toy',
-        content: `لقد تلقيت استفسارك الطبي: "${userMessage.content}". بصفتي المساعد الذكي لمنصة SBR AI، أقوم الآن بتحليل هذا الاستعلام بمقارنته مع السجلات الطبية. سأزودك بالإرشادات السريرية المناسبة في أقرب وقت.`,
-        insight: {
-          title: 'تحليل الاستفسار نشط',
-          desc: 'تم تسجيل ملاحظتك وجاري مراجعتها وتوليد التقرير السريري المناسب.'
-        }
-      };
+    try {
+      const token = localStorage.getItem("accessToken");
+      
+      // Save user message to backend
+      const res = await fetch(`/api/v1/chat/threads/${activeThreadId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          sender_type: 'user',
+          content: messageText
+        })
+      });
 
-      setThreads(prevThreads => prevThreads.map(t => {
-        if (t.id === activeThreadId) {
-          return {
-            ...t,
-            messages: [...t.messages, aiMessage]
-          };
+      if (res.ok) {
+        const newMsg = await res.json();
+        setMessages(prev => [...prev, newMsg]);
+
+        // Update last snippet in threads list locally
+        setThreads(prev => prev.map(t => {
+          if (t.id === activeThreadId) {
+            return { ...t, updated_at: new Date().toISOString() };
+          }
+          return t;
+        }).sort((a, b) => b.is_pinned - a.is_pinned || new Date(b.updated_at) - new Date(a.updated_at)));
+
+        // Simulate AI reply after 1.5 seconds
+        setIsTyping(true);
+        setTimeout(async () => {
+          try {
+            const aiRes = await fetch(`/api/v1/chat/threads/${activeThreadId}/messages`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                sender_type: 'ai',
+                content: `لقد تلقيت استفسارك الطبي: "${messageText}". بصفتي المساعد الذكي لمنصة SBR AI، أقوم الآن بتحليل هذا الاستعلام بمقارنته مع السجلات الطبية. سأزودك بالإرشادات السريرية المناسبة في أقرب وقت.`,
+                insight_data: {
+                  title: 'تحليل الاستفسار نشط',
+                  desc: 'تم تسجيل ملاحظتك وجاري مراجعتها وتوليد التقرير السريري المناسب.'
+                }
+              })
+            });
+            if (aiRes.ok) {
+              const aiMsg = await aiRes.json();
+              setMessages(prev => [...prev, aiMsg]);
+            }
+          } catch (err) {
+            console.error("Failed to save AI reply", err);
+          } finally {
+            setIsTyping(false);
+          }
+        }, 1500);
+      }
+    } catch (err) {
+      console.error("Failed to send message", err);
+    }
+  };
+
+  // 5. Toggle Pin Thread status
+  const handleTogglePin = async (e, threadId, currentPinStatus) => {
+    e.stopPropagation(); // prevent selecting
+    try {
+      const token = localStorage.getItem("accessToken");
+      const res = await fetch(`/api/v1/chat/threads/${threadId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          is_pinned: !currentPinStatus
+        })
+      });
+
+      if (res.ok) {
+        const updated = await res.json();
+        setThreads(prev => prev.map(t => t.id === threadId ? updated : t).sort((a, b) => b.is_pinned - a.is_pinned || new Date(b.updated_at) - new Date(a.updated_at)));
+      }
+    } catch (err) {
+      console.error("Failed to toggle pin", err);
+    }
+  };
+
+  // 6. Delete Thread - Open Modal
+  const handleDeleteThread = (e, threadId) => {
+    e.stopPropagation();
+    setThreadToDelete(threadId);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!threadToDelete) return;
+    try {
+      const token = localStorage.getItem("accessToken");
+      const res = await fetch(`/api/v1/chat/threads/${threadToDelete}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-        return t;
-      }));
-      setIsTyping(false);
-    }, 1500);
+      });
+
+      if (res.ok) {
+        setThreads(prev => prev.filter(t => t.id !== threadToDelete));
+        if (activeThreadId === threadToDelete) {
+          const remaining = threads.filter(t => t.id !== threadToDelete);
+          setActiveThreadId(remaining.length > 0 ? remaining[0].id : null);
+        }
+        setShowDeleteModal(false);
+        setThreadToDelete(null);
+      }
+    } catch (err) {
+      console.error("Failed to delete thread", err);
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -222,11 +261,8 @@ export default function AiChat() {
   };
 
   const filteredThreads = threads.filter(t => 
-    t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.snippet.toLowerCase().includes(searchQuery.toLowerCase())
+    t.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   return (
     <div className="flex h-screen bg-bg-card overflow-hidden relative animate-fade-in">
@@ -234,53 +270,84 @@ export default function AiChat() {
       <div className={`flex flex-col border-r border-border-subtle bg-white flex-shrink-0 transition-all duration-300 ${isSidebarOpen ? 'w-80' : 'w-0 overflow-hidden border-r-0'}`}>
         {/* Search & Filter Header */}
         <div className="p-4 border-b border-border-subtle bg-bg-canvas/50">
-          <div className="relative mb-3">
+          <button 
+            onClick={() => setShowNewModal(true)}
+            className="w-full bg-primary hover:bg-primary-hover text-on-primary font-bold text-xs py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 mb-4 transition-colors duration-300 active:scale-95 shadow-sm"
+          >
+            <span className="material-symbols-outlined text-[16px]">add</span>
+            New AI Session
+          </button>
+          <div className="relative">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-secondary text-[18px]">search</span>
             <input 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-white text-on-surface font-body-sm text-xs rounded-lg pl-9 pr-4 py-2.5 border border-border-subtle focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none" 
-              placeholder="Search patients or terms..." 
+              placeholder="Search chats..." 
               type="text" 
             />
-          </div>
-          {/* Mini Tabs */}
-          <div className="flex gap-2 p-1 bg-surface-container rounded-lg">
-            <button className="flex-1 py-1.5 px-3 bg-white text-primary font-bold rounded shadow-sm text-xs text-center">Recent</button>
-            <button className="flex-1 py-1.5 px-3 text-secondary hover:text-primary transition-colors font-semibold text-xs text-center">Pinned</button>
           </div>
         </div>
 
         {/* List of Threads */}
         <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
-          {filteredThreads.map(t => {
-            const isActive = t.id === activeThreadId;
-            return (
-              <div 
-                key={t.id}
-                onClick={() => setActiveThreadId(t.id)}
-                className={`p-3 rounded-xl cursor-pointer transition-all border ${
-                  isActive 
-                    ? 'bg-primary-light border-primary/20 shadow-sm' 
-                    : 'hover:bg-bg-canvas border-transparent group'
-                }`}
-              >
-                <div className="flex justify-between items-start mb-1 gap-2">
-                  <div className={`text-xs font-bold truncate ${isActive ? 'text-primary font-bold' : 'text-on-surface group-hover:text-primary'}`}>
-                    {t.title}
+          {loadingThreads ? (
+            <div className="text-center py-8 text-secondary text-xs">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary mx-auto mb-2"></div>
+              Loading chat sessions...
+            </div>
+          ) : filteredThreads.length === 0 ? (
+            <div className="text-center py-8 text-secondary text-xs">
+              No conversations found.
+            </div>
+          ) : (
+            filteredThreads.map(t => {
+              const isActive = t.id === activeThreadId;
+              return (
+                <div 
+                  key={t.id}
+                  onClick={() => setActiveThreadId(t.id)}
+                  className={`p-3 rounded-xl cursor-pointer transition-all border relative group ${
+                    isActive 
+                      ? 'bg-primary-light border-primary/20 shadow-sm' 
+                      : 'hover:bg-bg-canvas border-transparent'
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-1 gap-2 pr-12">
+                    <div className={`text-xs font-bold truncate ${isActive ? 'text-primary' : 'text-on-surface'}`}>
+                      {t.title}
+                    </div>
                   </div>
-                  <div className="text-[10px] text-secondary whitespace-nowrap">{t.time}</div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="px-2 py-0.5 rounded-full bg-white text-primary text-[9px] font-label-caps border border-border-subtle">
+                      {t.dept || 'General'}
+                    </span>
+                    {t.is_pinned && (
+                      <span className="px-2 py-0.5 rounded-full bg-primary-light text-primary text-[9px] font-label-caps font-bold">Pinned</span>
+                    )}
+                  </div>
+
+                  {/* Actions (hover triggers) */}
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 p-1 rounded-lg">
+                    <button 
+                      onClick={(e) => handleTogglePin(e, t.id, t.is_pinned)}
+                      className="p-1 hover:text-primary text-secondary rounded"
+                      title={t.is_pinned ? "Unpin" : "Pin"}
+                    >
+                      <span className="material-symbols-outlined text-[16px]">{t.is_pinned ? 'push_pin' : 'push_pin'}</span>
+                    </button>
+                    <button 
+                      onClick={(e) => handleDeleteThread(e, t.id)}
+                      className="p-1 hover:text-error text-secondary rounded"
+                      title="Delete"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">delete</span>
+                    </button>
+                  </div>
                 </div>
-                <p className="text-xs text-secondary line-clamp-2 leading-tight">{t.snippet}</p>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="px-2 py-0.5 rounded-full bg-white text-primary text-[9px] font-label-caps border border-border-subtle">{t.dept}</span>
-                  {t.priority && (
-                    <span className="px-2 py-0.5 rounded-full bg-status-warning/10 text-status-warning text-[9px] font-label-caps font-bold">Priority</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -298,126 +365,106 @@ export default function AiChat() {
                 {isSidebarOpen ? "menu_open" : "menu"}
               </span>
             </button>
-            <div>
-              <h2 className="text-sm font-bold text-on-surface leading-tight">{activeThread.title}</h2>
-              <div className="flex items-center gap-1.5 mt-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-tertiary-container animate-pulse"></div>
-                <span className="text-[11px] text-secondary font-medium">SBR AI Assistant Active</span>
+            {activeThread ? (
+              <div>
+                <h2 className="text-sm font-bold text-on-surface leading-tight">{activeThread.title}</h2>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-tertiary-container animate-pulse"></div>
+                  <span className="text-[11px] text-secondary font-medium">SBR AI Assistant Active</span>
+                </div>
               </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="p-2 text-secondary hover:text-primary hover:bg-primary-light rounded-full transition-colors" title="Patient Info">
-              <span className="material-symbols-outlined text-[20px]">info</span>
-            </button>
-            <button className="p-2 text-secondary hover:text-primary hover:bg-primary-light rounded-full transition-colors" title="Export Chat">
-              <span className="material-symbols-outlined text-[20px]">ios_share</span>
-            </button>
+            ) : (
+              <span className="text-xs text-secondary">Select or create a conversation to start</span>
+            )}
           </div>
         </div>
 
         {/* Chat History (Scrollable) */}
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
-          <div className="flex items-center justify-center">
-            <div className="bg-surface-container px-3 py-1 rounded-full text-[10px] font-bold text-secondary tracking-wider uppercase">TODAY</div>
-          </div>
+          {!activeThreadId ? (
+            <div className="flex flex-col items-center justify-center h-full text-secondary">
+              <span className="material-symbols-outlined text-5xl text-outline-variant mb-2">chat</span>
+              <p className="text-xs">اضغط على "New AI Session" لبدء محادثة سريرية مشفرة جديدة.</p>
+            </div>
+          ) : loadingMessages ? (
+            <div className="flex flex-col items-center justify-center h-full text-secondary">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+              <p className="text-xs">جاري تحميل سجل المحادثة المشفرة...</p>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-center">
+                <div className="bg-surface-container px-3 py-1 rounded-full text-[10px] font-bold text-secondary tracking-wider uppercase">TODAY</div>
+              </div>
 
-          {activeThread.messages.map((message) => {
-            const isAi = message.sender === 'ai';
-            if (isAi) {
-              return (
-                <div key={message.id} className="flex gap-4 max-w-[85%] animate-fade-in">
-                  <div className="w-8 h-8 rounded-full bg-primary-container text-white flex items-center justify-center flex-shrink-0 shadow-sm relative overflow-hidden">
-                    <span className="material-symbols-outlined text-[16px] relative z-10">{message.avatarIcon || 'smart_toy'}</span>
-                    {message.hasShimmer && (
-                      <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/30 to-transparent animate-[shimmer_2s_infinite]"></div>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[11px] text-secondary ml-1">{message.senderName} • {message.time}</span>
-                    <div className="bg-white border border-border-subtle p-4 rounded-2xl rounded-tl-sm shadow-sm space-y-4">
-                      <p className="text-xs text-on-surface leading-relaxed">{message.content}</p>
-                      
-                      {message.bento && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                          <div className="bg-primary-light/50 p-3 rounded-xl border border-primary/10">
-                            <div className="flex items-center gap-1.5 mb-1 text-primary">
-                              <span className="material-symbols-outlined text-[14px]">visibility</span>
-                              <span className="font-label-caps text-[10px] font-bold">{message.bento.title1}</span>
+              {messages.map((message) => {
+                const isAi = message.sender_type === 'ai';
+                if (isAi) {
+                  return (
+                    <div key={message.id} className="flex gap-4 max-w-[85%] animate-fade-in">
+                      <div className="w-8 h-8 rounded-full bg-primary-container text-white flex items-center justify-center flex-shrink-0 shadow-sm relative overflow-hidden">
+                        <span className="material-symbols-outlined text-[16px] relative z-10">smart_toy</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[11px] text-secondary ml-1">SBR AI Assistant</span>
+                        <div className="bg-white border border-border-subtle p-4 rounded-2xl rounded-tl-sm shadow-sm space-y-4">
+                          <p className="text-xs text-on-surface leading-relaxed">{message.content}</p>
+                          
+                          {message.bento_data && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                              {message.bento_data.finding1 && (
+                                <div className="bg-primary-light/50 p-3 rounded-xl border border-primary/10">
+                                  <div className="flex items-center gap-1.5 mb-1 text-primary">
+                                    <span className="material-symbols-outlined text-[14px]">visibility</span>
+                                    <span className="font-label-caps text-[10px] font-bold">FINDING 1</span>
+                                  </div>
+                                  <div className="text-xs text-on-surface-variant leading-relaxed">{message.bento_data.finding1}</div>
+                                </div>
+                              )}
+                              {message.bento_data.comparison && (
+                                <div className="bg-bg-canvas p-3 rounded-xl border border-border-subtle">
+                                  <div className="flex items-center gap-1.5 mb-1 text-secondary">
+                                    <span className="material-symbols-outlined text-[14px]">timeline</span>
+                                    <span className="font-label-caps text-[10px] font-bold">COMPARISON</span>
+                                  </div>
+                                  <div className="text-xs text-on-surface-variant leading-relaxed">{message.bento_data.comparison}</div>
+                                </div>
+                              )}
                             </div>
-                            <div className="text-xs text-on-surface-variant leading-relaxed">{message.bento.desc1}</div>
-                          </div>
-                          <div className="bg-bg-canvas p-3 rounded-xl border border-border-subtle">
-                            <div className="flex items-center gap-1.5 mb-1 text-secondary">
-                              <span className="material-symbols-outlined text-[14px]">timeline</span>
-                              <span className="font-label-caps text-[10px] font-bold">{message.bento.title2}</span>
+                          )}
+
+                          {message.insight_data && (
+                            <div className="p-3 bg-bg-canvas rounded-xl border border-border-subtle flex items-start gap-3">
+                              <div className="text-primary mt-0.5">
+                                <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold text-on-surface mb-0.5">{message.insight_data.title}</p>
+                                <p className="text-xs text-secondary leading-relaxed">{message.insight_data.desc}</p>
+                              </div>
                             </div>
-                            <div className="text-xs text-on-surface-variant leading-relaxed">{message.bento.desc2}</div>
-                          </div>
+                          )}
                         </div>
-                      )}
-
-                      {message.insight && (
-                        <div className="p-3 bg-bg-canvas rounded-xl border border-border-subtle flex items-start gap-3">
-                          <div className="text-primary mt-0.5">
-                            <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                          </div>
-                          <div>
-                            <p className="text-xs font-bold text-on-surface mb-0.5">{message.insight.title}</p>
-                            <p className="text-xs text-secondary leading-relaxed">{message.insight.desc}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {message.actions && (
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          {message.actions.map((act, i) => (
-                            <button key={i} className="px-3 py-1.5 rounded-full border border-primary/30 text-primary font-semibold text-[11px] hover:bg-primary-light transition-colors flex items-center gap-1">
-                              <span className="material-symbols-outlined text-[12px]">{act.includes('Report') ? 'description' : 'search'}</span>
-                              {act}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                </div>
-              );
-            } else {
-              return (
-                <div key={message.id} className="flex gap-4 max-w-[75%] self-end flex-row-reverse animate-fade-in">
-                  <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center flex-shrink-0 shadow-sm uppercase font-bold text-xs">
-                    {currentUser.name ? currentUser.name.split(' ').map(n => n[0]).join('') : 'U'}
-                  </div>
-                  <div className="flex flex-col gap-1 items-end">
-                    <span className="text-[11px] text-secondary mr-1">{message.time}</span>
-                    {message.isAudio ? (
-                      <div className="bg-primary-container text-white p-3 rounded-2xl rounded-tr-sm shadow-sm flex items-center gap-3 min-w-[200px]">
-                        <button className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors">
-                          <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>play_arrow</span>
-                        </button>
-                        <div className="flex-1 flex items-center gap-0.5 h-5">
-                          <div className="w-0.5 h-3 bg-white/40 rounded-full"></div>
-                          <div className="w-0.5 h-5 bg-white/60 rounded-full"></div>
-                          <div className="w-0.5 h-4 bg-white rounded-full"></div>
-                          <div className="w-0.5 h-6 bg-white rounded-full"></div>
-                          <div className="w-0.5 h-3 bg-white/60 rounded-full"></div>
-                          <div className="w-0.5 h-5 bg-white/80 rounded-full"></div>
-                          <div className="w-0.5 h-4 bg-white rounded-full"></div>
-                          <div className="w-0.5 h-2 bg-white/40 rounded-full"></div>
+                  );
+                } else {
+                  return (
+                    <div key={message.id} className="flex gap-4 max-w-[75%] self-end flex-row-reverse animate-fade-in">
+                      <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center flex-shrink-0 shadow-sm uppercase font-bold text-xs">
+                        {currentUser.name ? currentUser.name.split(' ').map(n => n[0]).join('') : 'U'}
+                      </div>
+                      <div className="flex flex-col gap-1 items-end">
+                        <div className="bg-primary text-on-primary p-3.5 rounded-2xl rounded-tr-sm shadow-sm">
+                          <p className="text-xs leading-relaxed">{message.content}</p>
                         </div>
-                        <span className="text-[10px] font-semibold">{message.audioDuration}</span>
                       </div>
-                    ) : (
-                      <div className="bg-primary text-on-primary p-3.5 rounded-2xl rounded-tr-sm shadow-sm">
-                        <p className="text-xs leading-relaxed">{message.content}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            }
-          })}
+                    </div>
+                  );
+                }
+              })}
+            </>
+          )}
 
           {isTyping && (
             <div className="flex gap-4 max-w-[85%] animate-fade-in">
@@ -450,8 +497,9 @@ export default function AiChat() {
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="w-full bg-transparent border-none focus:ring-0 resize-none font-body-md text-xs text-on-surface py-2.5 max-h-24 min-h-[40px] outline-none" 
-                placeholder="Ask SBR AI or type clinical notes..." 
+                disabled={!activeThreadId}
+                className="w-full bg-transparent border-none focus:ring-0 resize-none font-body-md text-xs text-on-surface py-2.5 max-h-24 min-h-[40px] outline-none disabled:opacity-50" 
+                placeholder={activeThreadId ? "Ask SBR AI or type clinical notes..." : "اختر محادثة للكتابة فيها..."} 
                 rows="1"
               ></textarea>
               <div className="flex items-center gap-1.5 mb-0.5">
@@ -461,7 +509,8 @@ export default function AiChat() {
                 <button 
                   type="button"
                   onClick={() => handleSendMessage()}
-                  className="p-2 bg-primary text-on-primary hover:bg-primary-hover transition-colors rounded-lg shadow-sm flex items-center justify-center" 
+                  disabled={!activeThreadId}
+                  className="p-2 bg-primary text-on-primary hover:bg-primary-hover transition-colors rounded-lg shadow-sm flex items-center justify-center disabled:opacity-50" 
                   title="Send Message"
                 >
                   <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>send</span>
@@ -474,6 +523,97 @@ export default function AiChat() {
           </div>
         </div>
       </div>
+
+      {/* New Thread Modal */}
+      {showNewModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl border border-border-subtle shadow-lg max-w-sm w-full overflow-hidden">
+            <div className="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas">
+              <h3 className="text-sm text-primary font-bold">New Clinical Chat Session</h3>
+              <button 
+                onClick={() => setShowNewModal(false)}
+                className="p-1 hover:bg-surface-container rounded-full text-secondary"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+            <form onSubmit={handleCreateThreadSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Title / Patient Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  placeholder="e.g. Patient: J. Doe - MRI Review"
+                  className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Department / Specialty</label>
+                <input
+                  type="text"
+                  value={newDept}
+                  onChange={(e) => setNewDept(e.target.value)}
+                  placeholder="e.g. Neurology, Cardiology"
+                  className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                />
+              </div>
+              <div className="flex gap-3 pt-4 border-t border-border-subtle">
+                <button
+                  type="button"
+                  onClick={() => setShowNewModal(false)}
+                  className="flex-1 bg-white border border-border-subtle text-secondary py-2 rounded-lg text-xs hover:bg-surface-container-low transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-bold py-2 rounded-lg text-xs transition-colors shadow-sm"
+                >
+                  Create Chat
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl border border-border-subtle shadow-lg max-w-sm w-full overflow-hidden">
+            <div className="p-6 text-center">
+              <div className="w-12 h-12 rounded-full bg-status-danger/10 text-status-danger flex items-center justify-center mx-auto mb-4">
+                <span className="material-symbols-outlined text-[28px]">warning</span>
+              </div>
+              <h3 className="text-sm font-bold text-on-surface mb-2">تأكيد حذف المحادثة</h3>
+              <p className="text-xs text-secondary leading-relaxed mb-6">
+                هل أنت متأكد من رغبتك في حذف هذه المحادثة بالكامل؟ لا يمكن التراجع عن هذا الإجراء وسيتم حذف جميع الرسائل المرتبطة بها.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setThreadToDelete(null);
+                  }}
+                  className="flex-1 bg-white border border-border-subtle text-secondary py-2 rounded-lg text-xs hover:bg-surface-container-low transition-colors"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  className="flex-1 bg-status-danger hover:bg-status-danger/90 text-white font-bold py-2 rounded-lg text-xs transition-colors shadow-sm"
+                >
+                  نعم، احذف
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

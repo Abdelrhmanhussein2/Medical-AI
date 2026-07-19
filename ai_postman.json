@@ -1,0 +1,280 @@
+{
+	"info": {
+		"_postman_id": "a9f8b7c6-d5e4-4c3b-2a1a-0987654321ab",
+		"name": "SBR AI Chat API",
+		"description": "مجموعة طلبات Postman الخاصة بواجهات برمجة تطبيقات نظام الدردشة السريرية الآمنة والمشفرة (SBR AI Chat Endpoints).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Threads (محادثات الشات)",
+			"item": [
+				{
+					"name": "إنشاء محادثة جديدة (Create Thread)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"مراجعة الرنين المغناطيسي للمريض: أحمد محمد\",\n  \"dept\": \"Neurology\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/chat/threads",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"chat",
+								"threads"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "جلب قائمة محادثاتي (Get My Threads)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/chat/threads",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"chat",
+								"threads"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "جلب محادثة معينة بالمعرف (Get Thread By ID)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/chat/threads/{{active_thread_id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"chat",
+								"threads",
+								"{{active_thread_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "تعديل محادثة / تثبيت (Update / Pin Thread)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"مراجعة الرنين المغناطيسي للمريض: أحمد محمد (محدث)\",\n  \"is_pinned\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/chat/threads/{{active_thread_id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"chat",
+								"threads",
+								"{{active_thread_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "حذف محادثة بالكامل (Delete Thread)",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/chat/threads/{{active_thread_id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"chat",
+								"threads",
+								"{{active_thread_id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Messages (الرسائل)",
+			"item": [
+				{
+					"name": "إرسال رسالة جديدة (Send Message)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sender_type\": \"user\",\n  \"content\": \"ما هي موانع استعمال دواء الوارفارين مع المريض؟\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/chat/threads/{{active_thread_id}}/messages",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"chat",
+								"threads",
+								"{{active_thread_id}}",
+								"messages"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "جلب رسائل محادثة (Get Thread Messages)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/chat/threads/{{active_thread_id}}/messages?limit=50",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"chat",
+								"threads",
+								"{{active_thread_id}}",
+								"messages"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "50"
+								},
+								{
+									"key": "before",
+									"value": "",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "حذف رسالة معينة (Delete Message)",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/chat/threads/{{active_thread_id}}/messages/{{message_id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"chat",
+								"threads",
+								"{{active_thread_id}}",
+								"messages",
+								"{{message_id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{accessToken}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "token_here",
+			"type": "string"
+		},
+		{
+			"key": "active_thread_id",
+			"value": "uuid_here",
+			"type": "string"
+		},
+		{
+			"key": "message_id",
+			"value": "uuid_here",
+			"type": "string"
+		}
+	]
+}

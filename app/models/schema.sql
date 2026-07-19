@@ -329,3 +329,45 @@ CREATE TRIGGER trg_subscription_bundles_updated_at BEFORE UPDATE ON subscription
 
 CREATE TRIGGER trg_subscriptions_updated_at BEFORE UPDATE ON subscriptions
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- =====================================================================
+-- CHAT THREADS
+-- =====================================================================
+CREATE TABLE chat_threads (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_type          VARCHAR(10) NOT NULL CHECK (owner_type IN ('doctor', 'admin')),
+    owner_id            UUID NOT NULL,
+    title               VARCHAR(255) NOT NULL,
+    dept                VARCHAR(100),
+    is_pinned           BOOLEAN NOT NULL DEFAULT FALSE,
+    message_count       INTEGER NOT NULL DEFAULT 0,
+    ai_context_summary  TEXT,
+    summary_updated_at  TIMESTAMPTZ,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT chk_thread_owner_type CHECK (owner_type IN ('doctor', 'admin'))
+);
+
+CREATE INDEX idx_chat_threads_owner ON chat_threads(owner_type, owner_id);
+
+-- =====================================================================
+-- CHAT MESSAGES
+-- =====================================================================
+CREATE TABLE chat_messages (
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    thread_id      UUID NOT NULL REFERENCES chat_threads(id) ON DELETE CASCADE,
+    sender_type    VARCHAR(5) NOT NULL CHECK (sender_type IN ('user', 'ai')),
+    content        BYTEA NOT NULL, -- Encrypted content (AES-256 Fernet)
+    bento_data     JSONB,
+    insight_data   JSONB,
+    actions_data   TEXT[],
+    is_audio       BOOLEAN NOT NULL DEFAULT FALSE,
+    audio_duration VARCHAR(10),
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_chat_messages_thread ON chat_messages(thread_id, created_at);
+
+CREATE TRIGGER trg_chat_threads_updated_at BEFORE UPDATE ON chat_threads
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+

@@ -12,3 +12,7 @@ aiofiles
 alembic
 sqlalchemy
 psycopg2-binary
+cryptography
+pytest
+pytest-asyncio
+httpx

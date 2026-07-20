@@ -21,6 +21,10 @@ export default function Appointments({ setActivePage }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [openMenuId, setOpenMenuId] = useState(null);
 
+  // --- Calendar States ---
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+
   // --- Edit Modal States ---
   const [editAppt, setEditAppt] = useState(null);
   const [editDate, setEditDate] = useState('');
@@ -33,10 +37,17 @@ export default function Appointments({ setActivePage }) {
   const myAppts = appointments.filter(a => a.doctor_id === currentUser.id);
 
   const displayAppts = myAppts.filter(appt => {
-    if (!searchQuery) return true;
-    const p = patients.find(p => p.id === appt.patient_id);
-    if (!p) return false;
-    return p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    // Search query filter
+    if (searchQuery) {
+      const p = patients.find(p => p.id === appt.patient_id);
+      if (!p || !p.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+    }
+    
+    // Date filter
+    const selDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
+    return appt.appointment_date === selDateStr;
   }).sort((a, b) => {
      return a.appointment_time.localeCompare(b.appointment_time);
   });
@@ -252,10 +263,65 @@ export default function Appointments({ setActivePage }) {
       )
     : [];
 
-  // --- Calendar Mock Utilities ---
+  // --- Calendar Logic ---
+  const currentMonthName = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+  const prevMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+  };
+
+  const nextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+  };
+
+  const generateCalendarDays = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1).getDay(); // 0 (Sun) to 6 (Sat)
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const prevMonthDays = new Date(year, month, 0).getDate();
+    
+    // Convert Sunday-first to Monday-first
+    const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+    
+    const days = [];
+    
+    // Previous month padding
+    for (let i = startOffset - 1; i >= 0; i--) {
+      days.push({
+        date: new Date(year, month - 1, prevMonthDays - i),
+        isCurrentMonth: false
+      });
+    }
+    
+    // Current month days
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({
+        date: new Date(year, month, i),
+        isCurrentMonth: true
+      });
+    }
+    
+    // Next month padding to complete the grid (usually 42 cells total)
+    const remainingCells = 42 - days.length;
+    for (let i = 1; i <= remainingCells; i++) {
+      days.push({
+        date: new Date(year, month + 1, i),
+        isCurrentMonth: false
+      });
+    }
+    
+    return days;
+  };
+
+  const calendarDays = generateCalendarDays();
   const todayDate = new Date();
-  const currentMonthName = todayDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-  const currentDay = todayDate.getDate();
+
+  // Helper to check if a day has appointments
+  const hasAppointments = (dateObj) => {
+    const dStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+    return myAppts.some(a => a.appointment_date === dStr);
+  };
 
   return (
     <div class="max-w-7xl mx-auto py-2">
@@ -297,8 +363,8 @@ export default function Appointments({ setActivePage }) {
             <div class="flex justify-between items-center mb-6">
               <h2 class="text-xl font-bold text-on-surface">{currentMonthName}</h2>
               <div class="flex gap-2">
-                <button class="text-secondary hover:text-primary"><span class="material-symbols-outlined text-[20px]">chevron_left</span></button>
-                <button class="text-secondary hover:text-primary"><span class="material-symbols-outlined text-[20px]">chevron_right</span></button>
+                <button onClick={prevMonth} class="text-secondary hover:text-primary"><span class="material-symbols-outlined text-[20px]">chevron_left</span></button>
+                <button onClick={nextMonth} class="text-secondary hover:text-primary"><span class="material-symbols-outlined text-[20px]">chevron_right</span></button>
               </div>
             </div>
             
@@ -306,59 +372,29 @@ export default function Appointments({ setActivePage }) {
               <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
             </div>
             
-            <div class="grid grid-cols-7 gap-y-4 gap-x-2 text-center text-sm text-on-surface font-semibold">
-              <div class="text-outline-variant">29</div>
-              <div class="text-outline-variant">30</div>
-              <div>1</div>
-              <div>2</div>
-              <div>3</div>
-              <div>4</div>
-              <div>5</div>
-              
-              <div>6</div>
-              <div>7</div>
-              <div>8</div>
-              <div>9</div>
-              <div class="relative">
-                 10
-                 <span class="absolute bottom-[-8px] left-1/2 transform -translate-x-1/2 w-1 h-1 bg-secondary rounded-full"></span>
-              </div>
-              <div>11</div>
-              <div>12</div>
-              
-              <div class="relative">
-                 13
-                 <span class="absolute bottom-[-8px] left-1/2 transform -translate-x-1/2 w-1 h-1 bg-primary rounded-full"></span>
-              </div>
-              <div class="relative">
-                 <div class="bg-primary text-on-primary w-8 h-8 rounded-full flex items-center justify-center mx-auto shadow-sm">
-                   {currentDay}
-                 </div>
-              </div>
-              <div>15</div>
-              <div class="relative">
-                 16
-                 <span class="absolute bottom-[-8px] left-1/2 transform -translate-x-1/2 w-1 h-1 bg-primary rounded-full"></span>
-              </div>
-              <div>17</div>
-              <div>18</div>
-              <div>19</div>
-              
-              <div>20</div>
-              <div>21</div>
-              <div>22</div>
-              <div>23</div>
-              <div>24</div>
-              <div>25</div>
-              <div>26</div>
-              
-              <div>27</div>
-              <div>28</div>
-              <div>29</div>
-              <div>30</div>
-              <div>31</div>
-              <div class="text-outline-variant">1</div>
-              <div class="text-outline-variant">2</div>
+            <div class="grid grid-cols-7 gap-y-4 gap-x-2 text-center text-sm font-semibold">
+              {calendarDays.map((dayObj, i) => {
+                const isSelected = selectedDate.getDate() === dayObj.date.getDate() && selectedDate.getMonth() === dayObj.date.getMonth() && selectedDate.getFullYear() === dayObj.date.getFullYear();
+                const isToday = todayDate.getDate() === dayObj.date.getDate() && todayDate.getMonth() === dayObj.date.getMonth() && todayDate.getFullYear() === dayObj.date.getFullYear();
+                const hasAppts = hasAppointments(dayObj.date);
+                
+                return (
+                  <div key={i} class="relative flex justify-center cursor-pointer" onClick={() => setSelectedDate(dayObj.date)}>
+                    <div 
+                      class={`w-8 h-8 rounded-full flex items-center justify-center transition-colors
+                        ${!dayObj.isCurrentMonth ? 'text-outline-variant' : 'text-on-surface'}
+                        ${isSelected ? 'bg-primary text-on-primary shadow-sm' : 'hover:bg-surface-container'}
+                        ${isToday && !isSelected ? 'border border-primary text-primary' : ''}
+                      `}
+                    >
+                      {dayObj.date.getDate()}
+                    </div>
+                    {hasAppts && (
+                      <span class={`absolute bottom-[-6px] left-1/2 transform -translate-x-1/2 w-1 h-1 rounded-full ${isSelected ? 'bg-primary' : 'bg-secondary'}`}></span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -384,9 +420,11 @@ export default function Appointments({ setActivePage }) {
           
           <div class="flex justify-between items-end mb-6">
             <div>
-              <h2 class="text-xl font-bold text-on-surface inline-block">Today's Schedule</h2>
+              <h2 class="text-xl font-bold text-on-surface inline-block">
+                {selectedDate.toDateString() === todayDate.toDateString() ? "Today's Schedule" : "Schedule"}
+              </h2>
               <span class="text-outline-variant mx-3">|</span>
-              <span class="text-secondary font-medium">{todayDate.toLocaleString('default', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+              <span class="text-secondary font-medium">{selectedDate.toLocaleString('default', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
             </div>
             
             <div class="bg-surface-container-high rounded-lg p-1 flex items-center text-sm font-bold shadow-inner hidden sm:flex">

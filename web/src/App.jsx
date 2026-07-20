@@ -61,7 +61,7 @@ function AppContent() {
       case 'dashboard':
         return <Dashboard setActivePage={setActivePage} />;
       case 'patients':
-        return <Patients />;
+        return <Patients setActivePage={setActivePage} />;
       case 'appointments':
         return <Appointments setActivePage={setActivePage} />;
       case 'visits':
@@ -94,6 +94,10 @@ function AppContent() {
         if (activePage.startsWith('live-session-')) {
           const appointmentId = activePage.split('live-session-')[1];
           return <LiveSession appointmentId={appointmentId} setActivePage={setActivePage} />;
+        }
+        if (activePage.startsWith('aichat-patient-')) {
+          const patientId = activePage.split('aichat-patient-')[1];
+          return <AiChat initialPatientId={patientId} />;
         }
         return <Landing setActivePage={setActivePage} />;
     }

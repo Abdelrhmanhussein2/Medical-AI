@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 
-export default function Patients() {
+export default function Patients({ setActivePage }) {
   const { patients, addPatient, visits } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -47,6 +47,26 @@ export default function Patients() {
       setShowAddModal(false);
     } catch (err) {
       setError(err.message || 'حدث خطأ');
+    }
+  };
+
+  const startAiChatForPatient = async (patient) => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch('/api/v1/chat/threads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          title: `AI - ${patient.name}`,
+          patient_id: patient.id
+        })
+      });
+      if (res.ok) {
+        setSelectedPatient(null);
+        setActivePage(`aichat-patient-${patient.id}`);
+      }
+    } catch (err) {
+      console.error('Failed to create AI thread', err);
     }
   };
 
@@ -358,11 +378,19 @@ export default function Patients() {
               </div>
             </div>
 
-            <div class="px-6 py-4 bg-bg-canvas border-t border-border-subtle flex justify-end">
+            <div class="px-6 py-4 bg-bg-canvas border-t border-border-subtle flex justify-between items-center gap-3">
+              <button
+                type="button"
+                onClick={() => startAiChatForPatient(selectedPatient)}
+                class="flex items-center gap-2 bg-primary hover:bg-primary-hover text-on-primary font-button py-2 px-4 rounded-lg text-xs transition-colors shadow-sm"
+              >
+                <span class="material-symbols-outlined text-[16px]">smart_toy</span>
+                Chat with AI about this patient
+              </button>
               <button
                 type="button"
                 onClick={() => setSelectedPatient(null)}
-                class="bg-primary hover:bg-primary-hover text-on-primary font-button py-2 px-4 rounded-lg text-xs transition-colors shadow-sm"
+                class="border border-border-subtle text-secondary hover:bg-surface-container py-2 px-4 rounded-lg text-xs transition-colors"
               >
                 Close Profile
               </button>

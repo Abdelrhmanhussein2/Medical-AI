@@ -122,3 +122,17 @@ async def delete_message(
             detail="فشل حذف الرسالة."
         )
     return None
+
+@router.post("/threads/{thread_id}/generate", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
+async def generate_ai_reply(
+    thread_id: UUID,
+    current_user: dict = Depends(get_current_user)
+):
+    owner_id, owner_type = _verify_chat_user(current_user)
+    message = await ChatService.generate_ai_response(str(thread_id), owner_id, owner_type)
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="فشل إنشاء رد الذكاء الاصطناعي."
+        )
+    return message

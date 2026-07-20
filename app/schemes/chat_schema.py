@@ -6,10 +6,12 @@ from typing import Optional, List, Any
 class ThreadCreate(BaseModel):
     title: str
     dept: Optional[str] = None
+    patient_id: Optional[UUID] = None
 
 class ThreadUpdate(BaseModel):
     title: Optional[str] = None
     is_pinned: Optional[bool] = None
+    patient_id: Optional[UUID] = None
 
 class ThreadResponse(BaseModel):
     id: UUID
@@ -17,6 +19,7 @@ class ThreadResponse(BaseModel):
     owner_id: UUID
     title: str
     dept: Optional[str] = None
+    patient_id: Optional[UUID] = None
     is_pinned: bool
     message_count: int
     ai_context_summary: Optional[str] = None

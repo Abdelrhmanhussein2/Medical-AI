@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import StatsCard from '../components/StatsCard';
 
-export default function AiChat() {
+export default function AiChat({ initialPatientId }) {
   const { currentUser } = useApp();
   const messagesEndRef = useRef(null);
 
@@ -20,12 +23,14 @@ export default function AiChat() {
   const [showNewModal, setShowNewModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDept, setNewDept] = useState('');
+  const [newPatientId, setNewPatientId] = useState('');
 
   // Delete Thread Modal State
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [threadToDelete, setThreadToDelete] = useState(null);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [patients, setPatients] = useState([]);
 
   // 1. Fetch threads on mount
   useEffect(() => {
@@ -40,9 +45,21 @@ export default function AiChat() {
         });
         if (res.ok) {
           const data = await res.json();
-          setThreads(data || []);
           if (data && data.length > 0) {
+            setThreads(data);
             setActiveThreadId(data[0].id);
+          } else {
+            // Auto-create a General thread so chat is always available
+            const createRes = await fetch('/api/v1/chat/threads', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify({ title: 'General', dept: null })
+            });
+            if (createRes.ok) {
+              const newThread = await createRes.json();
+              setThreads([newThread]);
+              setActiveThreadId(newThread.id);
+            }
           }
         }
       } catch (err) {
@@ -51,8 +68,35 @@ export default function AiChat() {
         setLoadingThreads(false);
       }
     };
+    const fetchPatients = async () => {
+      try {
+        const token = localStorage.getItem("accessToken");
+        const res = await fetch('/api/v1/patients/', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPatients(data || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch patients", err);
+      }
+    };
     fetchThreads();
+    fetchPatients();
   }, []);
+
+  // Auto-open thread for a specific patient when navigated from Patients page
+  useEffect(() => {
+    if (!initialPatientId || loadingThreads) return;
+    // Check if a thread for this patient already exists
+    const existing = threads.find(t => t.patient_id === initialPatientId);
+    if (existing) {
+      setActiveThreadId(existing.id);
+    }
+    // If not, it was just created by Patients.jsx before navigation, so it should be in threads after reload
+    // We just activate the first thread that matches
+  }, [initialPatientId, loadingThreads, threads]);
 
   // 2. Fetch messages when activeThreadId changes
   useEffect(() => {
@@ -96,7 +140,16 @@ export default function AiChat() {
   // 3. Create a new thread session
   const handleCreateThreadSubmit = async (e) => {
     e.preventDefault();
-    if (!newTitle.trim()) return;
+    
+    let finalTitle = newTitle.trim();
+    if (!finalTitle) {
+      if (newPatientId) {
+        const patientName = patients.find(p => p.id === newPatientId)?.name || 'Patient';
+        finalTitle = `AI - ${patientName}`;
+      } else {
+        finalTitle = 'General Session';
+      }
+    }
 
     try {
       const token = localStorage.getItem("accessToken");
@@ -107,8 +160,9 @@ export default function AiChat() {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          title: newTitle,
-          dept: newDept || null
+          title: finalTitle,
+          dept: newDept || null,
+          patient_id: newPatientId || null
         })
       });
 
@@ -118,6 +172,7 @@ export default function AiChat() {
         setActiveThreadId(newThreadObj.id);
         setNewTitle('');
         setNewDept('');
+        setNewPatientId('');
         setShowNewModal(false);
       }
     } catch (err) {
@@ -161,35 +216,25 @@ export default function AiChat() {
           return t;
         }).sort((a, b) => b.is_pinned - a.is_pinned || new Date(b.updated_at) - new Date(a.updated_at)));
 
-        // Simulate AI reply after 1.5 seconds
+        // Fetch AI reply
         setIsTyping(true);
-        setTimeout(async () => {
-          try {
-            const aiRes = await fetch(`/api/v1/chat/threads/${activeThreadId}/messages`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({
-                sender_type: 'ai',
-                content: `لقد تلقيت استفسارك الطبي: "${messageText}". بصفتي المساعد الذكي لمنصة SBR AI، أقوم الآن بتحليل هذا الاستعلام بمقارنته مع السجلات الطبية. سأزودك بالإرشادات السريرية المناسبة في أقرب وقت.`,
-                insight_data: {
-                  title: 'تحليل الاستفسار نشط',
-                  desc: 'تم تسجيل ملاحظتك وجاري مراجعتها وتوليد التقرير السريري المناسب.'
-                }
-              })
-            });
-            if (aiRes.ok) {
-              const aiMsg = await aiRes.json();
-              setMessages(prev => [...prev, aiMsg]);
+        try {
+          const aiRes = await fetch(`/api/v1/chat/threads/${activeThreadId}/generate`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
             }
-          } catch (err) {
-            console.error("Failed to save AI reply", err);
-          } finally {
-            setIsTyping(false);
+          });
+          if (aiRes.ok) {
+            const aiMsg = await aiRes.json();
+            setMessages(prev => [...prev, aiMsg]);
           }
-        }, 1500);
+        } catch (err) {
+          console.error("Failed to generate AI reply", err);
+        } finally {
+          setIsTyping(false);
+        }
       }
     } catch (err) {
       console.error("Failed to send message", err);
@@ -218,6 +263,25 @@ export default function AiChat() {
       }
     } catch (err) {
       console.error("Failed to toggle pin", err);
+    }
+  };
+
+  // Set/clear patient context on the active thread
+  const handleSetPatientContext = async (patientId) => {
+    if (!activeThreadId) return;
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`/api/v1/chat/threads/${activeThreadId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ patient_id: patientId || null })
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setThreads(prev => prev.map(t => t.id === activeThreadId ? updated : t));
+      }
+    } catch (err) {
+      console.error('Failed to update patient context', err);
     }
   };
 
@@ -353,7 +417,7 @@ export default function AiChat() {
 
       {/* Right Area: Main Chat Window */}
       <div className="flex-1 flex flex-col bg-bg-canvas relative">
-        {/* Chat Header */}
+        {/* Chat Header - clean, no dropdown */}
         <div className="h-16 border-b border-border-subtle flex items-center justify-between px-6 bg-white flex-shrink-0 shadow-sm">
           <div className="flex items-center gap-3">
             <button 
@@ -408,7 +472,42 @@ export default function AiChat() {
                       <div className="flex flex-col gap-1">
                         <span className="text-[11px] text-secondary ml-1">SBR AI Assistant</span>
                         <div className="bg-white border border-border-subtle p-4 rounded-2xl rounded-tl-sm shadow-sm space-y-4">
-                          <p className="text-xs text-on-surface leading-relaxed">{message.content}</p>
+                          {(() => {
+                            let parsed = null;
+                            try {
+                              let cleanContent = message.content.trim();
+                              if (cleanContent.startsWith('```')) {
+                                cleanContent = cleanContent.replace(/^```(json)?\n?/, '').replace(/\n?```$/, '');
+                              }
+                              parsed = JSON.parse(cleanContent);
+                            } catch (e) {
+                              // Not JSON, fallback to raw text
+                            }
+                            
+                            if (parsed && parsed.type === 'stats') {
+                              return <StatsCard title={parsed.title} data={parsed.data} />;
+                            }
+                            
+                            const textToRender = parsed && parsed.type === 'text' ? parsed.content : message.content;
+                            
+                            return (
+                              <div 
+                                className="text-xs text-on-surface leading-relaxed prose prose-sm max-w-none 
+                                           prose-p:my-1.5 prose-p:leading-relaxed
+                                           prose-headings:my-3 prose-headings:text-primary prose-headings:font-bold
+                                           prose-table:w-full prose-table:border-collapse prose-table:rounded-xl prose-table:overflow-hidden prose-table:shadow-sm prose-table:border prose-table:border-border-subtle prose-table:my-3
+                                           prose-thead:bg-primary-light/50 prose-thead:text-primary prose-th:p-3 prose-th:text-right prose-th:font-bold prose-th:border-b prose-th:border-border-subtle
+                                           prose-tr:border-b prose-tr:border-border-subtle prose-tr:transition-colors hover:prose-tr:bg-surface-container-low/50
+                                           prose-td:p-3 prose-td:align-middle prose-td:text-on-surface-variant
+                                           prose-strong:text-primary prose-strong:font-bold
+                                           prose-ul:list-disc prose-ul:pr-5 prose-ul:my-2 prose-li:my-0.5 prose-li:marker:text-primary/70
+                                           text-right" 
+                                dir="rtl"
+                              >
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{textToRender}</ReactMarkdown>
+                              </div>
+                            );
+                          })()}
                           
                           {message.bento_data && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
@@ -433,17 +532,7 @@ export default function AiChat() {
                             </div>
                           )}
 
-                          {message.insight_data && (
-                            <div className="p-3 bg-bg-canvas rounded-xl border border-border-subtle flex items-start gap-3">
-                              <div className="text-primary mt-0.5">
-                                <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                              </div>
-                              <div>
-                                <p className="text-xs font-bold text-on-surface mb-0.5">{message.insight_data.title}</p>
-                                <p className="text-xs text-secondary leading-relaxed">{message.insight_data.desc}</p>
-                              </div>
-                            </div>
-                          )}
+
                         </div>
                       </div>
                     </div>
@@ -488,7 +577,10 @@ export default function AiChat() {
         {/* Input Area */}
         <div className="p-4 bg-white border-t border-border-subtle z-10 relative">
           <div className="absolute inset-x-0 top-0 h-4 -mt-4 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-4xl mx-auto space-y-2">
+
+
+
             <div className="relative flex items-end gap-2 bg-bg-canvas rounded-xl border border-border-subtle p-2 shadow-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
               <button className="p-2.5 text-secondary hover:text-primary transition-colors rounded-lg hover:bg-primary-light mb-0.5" title="Attach Medical File">
                 <span className="material-symbols-outlined text-[20px]">attach_file</span>
@@ -539,18 +631,32 @@ export default function AiChat() {
             </div>
             <form onSubmit={handleCreateThreadSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Title / Patient Name *</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Select Patient (Optional)</label>
+                <select
+                  value={newPatientId}
+                  onChange={(e) => setNewPatientId(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary text-on-surface cursor-pointer"
+                >
+                  <option value="">-- General Session (No specific patient) --</option>
+                  {patients.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} - {p.phone}</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-secondary mt-1 ml-1">If no patient is selected, this will be a general AI session.</p>
+              </div>
+              
+              <div className="pt-2 border-t border-border-subtle">
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Custom Title (Optional)</label>
                 <input
                   type="text"
-                  required
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="e.g. Patient: J. Doe - MRI Review"
+                  placeholder={newPatientId ? "e.g. MRI Review" : "e.g. Medical Guidelines Query"}
                   className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Department / Specialty</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Department / Specialty (Optional)</label>
                 <input
                   type="text"
                   value={newDept}
@@ -559,6 +665,7 @@ export default function AiChat() {
                   className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
                 />
               </div>
+
               <div className="flex gap-3 pt-4 border-t border-border-subtle">
                 <button
                   type="button"
@@ -614,6 +721,8 @@ export default function AiChat() {
           </div>
         </div>
       )}
+
+
     </div>
   );
 }

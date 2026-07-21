@@ -258,6 +258,9 @@ class ChatService:
                 "2. إذا طلب المستخدم حجز موعد لمريض (مثل محمد) وقمت بالبحث عنه ولم تجده، إياك أن تقوم بالحجز لمريض آخر (مثل المريض المحدد في الجلسة الحالية). في هذه الحالة، أخبر المستخدم أن المريض غير موجود واطلب منه تسجيله كمريض جديد أولاً.\n"
                 "3. إذا طلب المستخدم تنفيذ إجراء (مثل إضافة مريض جديد) ولم يقدم كل البيانات المطلوبة (مثل رقم الهاتف)، إياك أن تخترع رقم هاتف أو بيانات وهمية لتشغيل الأداة. اسأله أولاً عن البيانات الناقصة.\n"
                 "4. ركز دائماً وبدقة شديدة على الطلب الأخير للمستخدم. إذا طلب مريضاً باسم معين (مثل علي)، إياك أن تستخدم اسماً من محادثة سابقة (مثل محمد). لا تكرر إجاباتك السابقة بشكل أعمى.\n"
+                "5. عندما تقوم بسحب بيانات من قاعدة البيانات (مثل ملف المريض، أو جدول المواعيد، أو التقارير)، إياك أن تعرض البيانات على شكل JSON خام للمستخدم. قم بصياغتها دائماً في شكل نصي مرتب ومنسق باللغة العربية باستخدام Markdown (نقاط، خطوط عريضة، أو جداول).\n"
+                "6. إذا قمت بالبحث عن مريض ووجدت أكثر من مريض، يجب عليك التوقف وسؤال المستخدم: (لقد وجدت أكثر من مريض، أيهم تقصد؟) واعرض له أسماءهم وأرقام هواتفهم ليختار، ولا تختر مريضاً عشوائياً أبداً.\n"
+                "7. إياك أن تخترع (patient_id) من عندك. قبل استخدام أي أداة تتطلب (patient_id)، يجب عليك دائماً استخدام أداة (search_my_patients) للبحث عن المريض بالاسم أو الرقم للحصول على الـ (patient_id) الحقيقي الخاص به أولاً.\n"
                 "تعليمات هامة جداً لصياغة الرد:\n"
                 "يجب أن يكون ردك دائماً بصيغة JSON صحيحة (Valid JSON) بناءً على نوع الرد.\n"
                 "إذا كان الرد يحتوي على إحصائيات، استخدم هذا التنسيق (ويجب أن تكون كل المفاتيح في الـ data باللغة العربية):\n"
@@ -416,6 +419,222 @@ class ChatService:
                             "required": ["name", "phone"]
                         }
                     }
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "delete_patient",
+                        "description": "حذف مريض من قاعدة بيانات العيادة نهائياً. يجب البحث عن المريض أولاً باستخدام search_my_patients للحصول على الـ patient_id.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "patient_id": {
+                                    "type": "string",
+                                    "description": "معرف المريض (UUID) المراد حذفه"
+                                }
+                            },
+                            "required": ["patient_id"]
+                        }
+                    }
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "cancel_appointment",
+                        "description": "إلغاء موعد محجوز. ابحث أولاً عن المواعيد باستخدام get_my_appointments.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "appointment_id": {
+                                    "type": "string",
+                                    "description": "معرف الموعد (UUID) المراد إلغاؤه"
+                                }
+                            },
+                            "required": ["appointment_id"]
+                        }
+                    }
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "reschedule_appointment",
+                        "description": "تغيير تاريخ أو وقت موعد محجوز. يجب تحديد الموعد القديم والتاريخ/الوقت الجديد.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "appointment_id": {
+                                    "type": "string",
+                                    "description": "معرف الموعد (UUID) المراد تعديله"
+                                },
+                                "new_date": {
+                                    "type": "string",
+                                    "description": "التاريخ الجديد بصيغة YYYY-MM-DD"
+                                },
+                                "new_time": {
+                                    "type": "string",
+                                    "description": "الوقت الجديد بصيغة HH:MM (24 ساعة)"
+                                }
+                            },
+                            "required": ["appointment_id", "new_date", "new_time"]
+                        }
+                    }
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "update_appointment_status",
+                        "description": "تحديث حالة موعد (مثل: completed بعد الزيارة، أو no_show إذا لم يحضر المريض).",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "appointment_id": {
+                                    "type": "string",
+                                    "description": "معرف الموعد (UUID)"
+                                },
+                                "new_status": {
+                                    "type": "string",
+                                    "enum": ["confirmed", "completed", "no_show"],
+                                    "description": "الحالة الجديدة: confirmed (مؤكد)، completed (مكتمل)، no_show (لم يحضر)"
+                                }
+                            },
+                            "required": ["appointment_id", "new_status"]
+                        }
+                    }
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "add_visit_record",
+                        "description": "تسجيل زيارة جديدة لمريض مع التشخيص والملاحظات.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "patient_id": {
+                                    "type": "string",
+                                    "description": "معرف المريض (UUID)"
+                                },
+                                "diagnosis": {
+                                    "type": "string",
+                                    "description": "التشخيص"
+                                },
+                                "description": {
+                                    "type": "string",
+                                    "description": "وصف الحالة"
+                                },
+                                "notes": {
+                                    "type": "string",
+                                    "description": "ملاحظات إضافية (اختياري)"
+                                },
+                                "visit_date": {
+                                    "type": "string",
+                                    "description": "تاريخ الزيارة (YYYY-MM-DD). إذا لم يُحدد، يستخدم تاريخ اليوم."
+                                }
+                            },
+                            "required": ["patient_id", "diagnosis"]
+                        }
+                    }
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "search_visits_by_diagnosis",
+                        "description": "بحث في سجلات الزيارات بناءً على التشخيص أو وصف الحالة (مثلاً: البحث عن كل المرضى اللي عندهم ضغط عالي).",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "query": {
+                                    "type": "string",
+                                    "description": "كلمة البحث في التشخيص أو الوصف"
+                                }
+                            },
+                            "required": ["query"]
+                        }
+                    }
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "update_patient_info",
+                        "description": "تعديل بيانات مريض موجود (مثل تغيير رقم الهاتف أو الاسم). ابحث عن المريض أولاً للحصول على الـ patient_id.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "patient_id": {
+                                    "type": "string",
+                                    "description": "معرف المريض (UUID)"
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "description": "الاسم الجديد (اختياري)"
+                                },
+                                "phone": {
+                                    "type": "string",
+                                    "description": "رقم الهاتف الجديد (اختياري)"
+                                },
+                                "email": {
+                                    "type": "string",
+                                    "description": "البريد الإلكتروني (اختياري)"
+                                },
+                                "date_of_birth": {
+                                    "type": "string",
+                                    "description": "تاريخ الميلاد الجديد YYYY-MM-DD (اختياري)"
+                                },
+                                "gender": {
+                                    "type": "string",
+                                    "description": "الجنس: ذكر أو أنثى (اختياري)"
+                                }
+                            },
+                            "required": ["patient_id"]
+                        }
+                    }
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "get_patient_full_profile",
+                        "description": "عرض الملف الكامل للمريض: بياناته الشخصية + آخر زياراته + مواعيده القادمة.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "patient_id": {
+                                    "type": "string",
+                                    "description": "معرف المريض (UUID)"
+                                }
+                            },
+                            "required": ["patient_id"]
+                        }
+                    }
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "get_today_schedule",
+                        "description": "عرض جدول مواعيد اليوم بالتفصيل مرتبة بالوقت.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {}
+                        }
+                    }
+                },
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "get_monthly_report",
+                        "description": "تقرير شهري شامل: عدد المرضى الجدد، المواعيد، الإلغاءات، الزيارات المكتملة، ونسبة عدم الحضور.",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "month": {
+                                    "type": "integer",
+                                    "description": "رقم الشهر (1-12). إذا لم يُحدد يستخدم الشهر الحالي."
+                                },
+                                "year": {
+                                    "type": "integer",
+                                    "description": "السنة. إذا لم تُحدد تستخدم السنة الحالية."
+                                }
+                            }
+                        }
+                    }
                 }
             ]
 
@@ -424,7 +643,7 @@ class ChatService:
                 role = "assistant" if msg["sender_type"] == "ai" else "user"
                 groq_messages.append({"role": role, "content": msg["content"]})
 
-            MAX_ITERATIONS = 5
+            MAX_ITERATIONS = 8
             for _ in range(MAX_ITERATIONS):
                 response = await client.chat.completions.create(
                     model="llama-3.3-70b-versatile",
@@ -442,10 +661,12 @@ class ChatService:
                         "content": response_message.content or "",
                         "tool_calls": [t.model_dump() for t in response_message.tool_calls]
                     })
+                    print("TOOL CALLS BY AI:", [t.function.name for t in response_message.tool_calls])
                     
                     async with db.pool.acquire() as conn:
                         for tool_call in response_message.tool_calls:
                             fn_name = tool_call.function.name
+                            print(f"Executing tool: {fn_name} with args: {tool_call.function.arguments}")
                             try:
                                 import json
                                 fn_args = json.loads(tool_call.function.arguments)
@@ -604,6 +825,314 @@ class ChatService:
                                         result_data = {"status": "error", "message": f"حدث خطأ أثناء إضافة المريض: {str(e)}"}
                                 else:
                                     result_data = {"status": "error", "message": "اسم المريض ورقم الهاتف مطلوبان."}
+
+                            elif fn_name == "delete_patient":
+                                del_pid = fn_args.get("patient_id")
+                                if del_pid:
+                                    try:
+                                        # Delete related appointments first, then delete the patient
+                                        await conn.execute(
+                                            "DELETE FROM appointments WHERE patient_id = $1 AND doctor_id = $2",
+                                            UUID(del_pid), UUID(owner_id)
+                                        )
+                                        await conn.execute(
+                                            "DELETE FROM patient_visits WHERE patient_id = $1 AND doctor_id = $2",
+                                            UUID(del_pid), UUID(owner_id)
+                                        )
+                                        del_result = await conn.execute(
+                                            "DELETE FROM patients WHERE id = $1 AND doctor_id = $2",
+                                            UUID(del_pid), UUID(owner_id)
+                                        )
+                                        if "DELETE 1" in del_result:
+                                            result_data = {"status": "success", "message": "تم حذف المريض ومواعيده وزياراته بنجاح من قاعدة البيانات."}
+                                        else:
+                                            result_data = {"status": "error", "message": "لم يتم العثور على المريض أو ليس لديك صلاحية حذفه."}
+                                    except Exception as e:
+                                        result_data = {"status": "error", "message": f"حدث خطأ أثناء حذف المريض: {str(e)}"}
+                                else:
+                                    result_data = {"status": "error", "message": "معرف المريض مطلوب للحذف."}
+
+                            elif fn_name == "cancel_appointment":
+                                appt_id = fn_args.get("appointment_id")
+                                if appt_id:
+                                    try:
+                                        res = await conn.execute(
+                                            "UPDATE appointments SET status = 'cancelled' WHERE id = $1 AND doctor_id = $2 AND status != 'cancelled'",
+                                            UUID(appt_id), UUID(owner_id)
+                                        )
+                                        if "UPDATE 1" in res:
+                                            result_data = {"status": "success", "message": "تم إلغاء الموعد بنجاح."}
+                                        else:
+                                            result_data = {"status": "error", "message": "لم يتم العثور على الموعد أو أنه ملغي بالفعل."}
+                                    except Exception as e:
+                                        result_data = {"status": "error", "message": f"حدث خطأ: {str(e)}"}
+                                else:
+                                    result_data = {"status": "error", "message": "معرف الموعد مطلوب."}
+
+                            elif fn_name == "reschedule_appointment":
+                                appt_id = fn_args.get("appointment_id")
+                                new_date_str = fn_args.get("new_date")
+                                new_time_str = fn_args.get("new_time")
+                                if appt_id and new_date_str and new_time_str:
+                                    try:
+                                        from datetime import datetime
+                                        new_d = datetime.strptime(new_date_str, "%Y-%m-%d").date()
+                                        new_t = datetime.strptime(new_time_str, "%H:%M").time()
+                                        res = await conn.execute(
+                                            "UPDATE appointments SET appointment_date = $1, appointment_time = $2, status = 'scheduled' WHERE id = $3 AND doctor_id = $4",
+                                            new_d, new_t, UUID(appt_id), UUID(owner_id)
+                                        )
+                                        if "UPDATE 1" in res:
+                                            result_data = {"status": "success", "message": f"تم تغيير الموعد بنجاح إلى {new_date_str} الساعة {new_time_str}."}
+                                        else:
+                                            result_data = {"status": "error", "message": "لم يتم العثور على الموعد."}
+                                    except Exception as e:
+                                        result_data = {"status": "error", "message": f"حدث خطأ: {str(e)}"}
+                                else:
+                                    result_data = {"status": "error", "message": "معرف الموعد والتاريخ والوقت الجديد مطلوبون."}
+
+                            elif fn_name == "update_appointment_status":
+                                appt_id = fn_args.get("appointment_id")
+                                new_status = fn_args.get("new_status")
+                                if appt_id and new_status:
+                                    try:
+                                        res = await conn.execute(
+                                            "UPDATE appointments SET status = $1 WHERE id = $2 AND doctor_id = $3",
+                                            new_status, UUID(appt_id), UUID(owner_id)
+                                        )
+                                        status_map = {"confirmed": "مؤكد", "completed": "مكتمل", "no_show": "لم يحضر"}
+                                        if "UPDATE 1" in res:
+                                            result_data = {"status": "success", "message": f"تم تحديث حالة الموعد إلى: {status_map.get(new_status, new_status)}."}
+                                        else:
+                                            result_data = {"status": "error", "message": "لم يتم العثور على الموعد."}
+                                    except Exception as e:
+                                        result_data = {"status": "error", "message": f"حدث خطأ: {str(e)}"}
+                                else:
+                                    result_data = {"status": "error", "message": "معرف الموعد والحالة الجديدة مطلوبان."}
+
+                            elif fn_name == "add_visit_record":
+                                v_pid = fn_args.get("patient_id")
+                                v_diag = fn_args.get("diagnosis")
+                                v_desc = fn_args.get("description", "")
+                                v_notes = fn_args.get("notes", "")
+                                v_date_str = fn_args.get("visit_date")
+                                if v_pid and v_diag:
+                                    try:
+                                        from datetime import datetime, date
+                                        v_date = date.today()
+                                        if v_date_str:
+                                            try:
+                                                v_date = datetime.strptime(v_date_str, "%Y-%m-%d").date()
+                                            except:
+                                                pass
+                                        await conn.execute(
+                                            """
+                                            INSERT INTO visits (id, patient_id, doctor_id, visit_date, description, diagnosis, notes, created_at, updated_at)
+                                            VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                            """,
+                                            UUID(v_pid), UUID(owner_id), v_date, v_desc, v_diag, v_notes
+                                        )
+                                        result_data = {"status": "success", "message": f"تم تسجيل الزيارة بنجاح بتاريخ {v_date}. التشخيص: {v_diag}"}
+                                    except Exception as e:
+                                        result_data = {"status": "error", "message": f"حدث خطأ أثناء تسجيل الزيارة: {str(e)}"}
+                                else:
+                                    result_data = {"status": "error", "message": "معرف المريض والتشخيص مطلوبان."}
+
+                            elif fn_name == "search_visits_by_diagnosis":
+                                sq = fn_args.get("query", "")
+                                if sq:
+                                    try:
+                                        search_results = await conn.fetch(
+                                            """
+                                            SELECT v.visit_date, v.diagnosis, v.description, v.notes, p.name as patient_name
+                                            FROM visits v
+                                            JOIN patients p ON p.id = v.patient_id
+                                            WHERE v.doctor_id = $1 AND (
+                                                v.diagnosis ILIKE $2 OR v.description ILIKE $2 OR v.notes ILIKE $2
+                                            )
+                                            ORDER BY v.visit_date DESC
+                                            LIMIT 10
+                                            """,
+                                            UUID(owner_id), f"%{sq}%"
+                                        )
+                                        result_data = {
+                                            "results": [
+                                                {
+                                                    "patient_name": r['patient_name'],
+                                                    "visit_date": str(r['visit_date']),
+                                                    "diagnosis": r['diagnosis'],
+                                                    "description": r['description'],
+                                                    "notes": r['notes']
+                                                }
+                                                for r in search_results
+                                            ]
+                                        }
+                                    except Exception as e:
+                                        result_data = {"status": "error", "message": f"حدث خطأ: {str(e)}"}
+                                else:
+                                    result_data = {"status": "error", "message": "كلمة البحث مطلوبة."}
+
+                            elif fn_name == "update_patient_info":
+                                up_pid = fn_args.get("patient_id")
+                                if up_pid:
+                                    try:
+                                        updates = []
+                                        params = [UUID(up_pid), UUID(owner_id)]
+                                        param_idx = 3
+                                        for field in ["name", "phone", "email", "gender"]:
+                                            val = fn_args.get(field)
+                                            if val:
+                                                updates.append(f"{field} = ${param_idx}")
+                                                params.append(val)
+                                                param_idx += 1
+                                        dob_val = fn_args.get("date_of_birth")
+                                        if dob_val:
+                                            from datetime import datetime
+                                            try:
+                                                dob_obj = datetime.strptime(dob_val, "%Y-%m-%d").date()
+                                                updates.append(f"date_of_birth = ${param_idx}")
+                                                params.append(dob_obj)
+                                                param_idx += 1
+                                            except:
+                                                pass
+                                        if updates:
+                                            query = f"UPDATE patients SET {', '.join(updates)} WHERE id = $1 AND doctor_id = $2"
+                                            res = await conn.execute(query, *params)
+                                            if "UPDATE 1" in res:
+                                                result_data = {"status": "success", "message": "تم تحديث بيانات المريض بنجاح."}
+                                            else:
+                                                result_data = {"status": "error", "message": "لم يتم العثور على المريض."}
+                                        else:
+                                            result_data = {"status": "error", "message": "لم يتم تحديد أي بيانات للتعديل."}
+                                    except Exception as e:
+                                        result_data = {"status": "error", "message": f"حدث خطأ: {str(e)}"}
+                                else:
+                                    result_data = {"status": "error", "message": "معرف المريض مطلوب."}
+
+                            elif fn_name == "get_patient_full_profile":
+                                fp_pid = fn_args.get("patient_id")
+                                if fp_pid:
+                                    try:
+                                        patient = await conn.fetchrow(
+                                            "SELECT id, name, phone, email, date_of_birth, gender, created_at FROM patients WHERE id = $1 AND doctor_id = $2",
+                                            UUID(fp_pid), UUID(owner_id)
+                                        )
+                                        if patient:
+                                            recent_visits = await conn.fetch(
+                                                "SELECT visit_date, diagnosis, description, notes FROM visits WHERE patient_id = $1 AND doctor_id = $2 ORDER BY visit_date DESC LIMIT 5",
+                                                UUID(fp_pid), UUID(owner_id)
+                                            )
+                                            upcoming_appts = await conn.fetch(
+                                                "SELECT appointment_date, appointment_time, status, description FROM appointments WHERE patient_id = $1 AND doctor_id = $2 AND appointment_date >= CURRENT_DATE AND status != 'cancelled' ORDER BY appointment_date, appointment_time LIMIT 5",
+                                                UUID(fp_pid), UUID(owner_id)
+                                            )
+                                            result_data = {
+                                                "patient": {
+                                                    "name": patient['name'],
+                                                    "phone": patient['phone'],
+                                                    "email": patient['email'],
+                                                    "date_of_birth": str(patient['date_of_birth']) if patient['date_of_birth'] else None,
+                                                    "gender": patient['gender'],
+                                                    "registered_at": str(patient['created_at'].date())
+                                                },
+                                                "recent_visits": [
+                                                    {"date": str(v['visit_date']), "diagnosis": v['diagnosis'], "description": v['description']}
+                                                    for v in recent_visits
+                                                ],
+                                                "upcoming_appointments": [
+                                                    {"date": str(a['appointment_date']), "time": str(a['appointment_time']), "status": a['status'], "description": a['description']}
+                                                    for a in upcoming_appts
+                                                ]
+                                            }
+                                        else:
+                                            result_data = {"status": "error", "message": "لم يتم العثور على المريض."}
+                                    except Exception as e:
+                                        result_data = {"status": "error", "message": f"حدث خطأ: {str(e)}"}
+                                else:
+                                    result_data = {"status": "error", "message": "معرف المريض مطلوب."}
+
+                            elif fn_name == "get_today_schedule":
+                                try:
+                                    from datetime import date
+                                    today = date.today()
+                                    today_appts = await conn.fetch(
+                                        """
+                                        SELECT a.id, a.appointment_time, a.status, a.description, p.name as patient_name, p.phone as patient_phone
+                                        FROM appointments a
+                                        JOIN patients p ON p.id = a.patient_id
+                                        WHERE a.doctor_id = $1 AND a.appointment_date = $2
+                                        ORDER BY a.appointment_time
+                                        """,
+                                        UUID(owner_id), today
+                                    )
+                                    result_data = {
+                                        "date": str(today),
+                                        "total": len(today_appts),
+                                        "appointments": [
+                                            {
+                                                "id": str(a['id']),
+                                                "time": str(a['appointment_time']),
+                                                "patient_name": a['patient_name'],
+                                                "patient_phone": a['patient_phone'],
+                                                "status": a['status'],
+                                                "description": a['description']
+                                            }
+                                            for a in today_appts
+                                        ]
+                                    }
+                                except Exception as e:
+                                    result_data = {"status": "error", "message": f"حدث خطأ: {str(e)}"}
+
+                            elif fn_name == "get_monthly_report":
+                                try:
+                                    from datetime import date, datetime
+                                    m = fn_args.get("month") or date.today().month
+                                    y = fn_args.get("year") or date.today().year
+                                    start_date = date(y, m, 1)
+                                    if m == 12:
+                                        end_date = date(y + 1, 1, 1)
+                                    else:
+                                        end_date = date(y, m + 1, 1)
+
+                                    new_patients = await conn.fetchval(
+                                        "SELECT COUNT(*) FROM patients WHERE doctor_id = $1 AND created_at >= $2 AND created_at < $3",
+                                        UUID(owner_id), start_date, end_date
+                                    )
+                                    total_appts = await conn.fetchval(
+                                        "SELECT COUNT(*) FROM appointments WHERE doctor_id = $1 AND appointment_date >= $2 AND appointment_date < $3",
+                                        UUID(owner_id), start_date, end_date
+                                    )
+                                    completed = await conn.fetchval(
+                                        "SELECT COUNT(*) FROM appointments WHERE doctor_id = $1 AND appointment_date >= $2 AND appointment_date < $3 AND status = 'completed'",
+                                        UUID(owner_id), start_date, end_date
+                                    )
+                                    cancelled = await conn.fetchval(
+                                        "SELECT COUNT(*) FROM appointments WHERE doctor_id = $1 AND appointment_date >= $2 AND appointment_date < $3 AND status = 'cancelled'",
+                                        UUID(owner_id), start_date, end_date
+                                    )
+                                    no_show = await conn.fetchval(
+                                        "SELECT COUNT(*) FROM appointments WHERE doctor_id = $1 AND appointment_date >= $2 AND appointment_date < $3 AND status = 'no_show'",
+                                        UUID(owner_id), start_date, end_date
+                                    )
+                                    total_visits = await conn.fetchval(
+                                        "SELECT COUNT(*) FROM visits WHERE doctor_id = $1 AND visit_date >= $2 AND visit_date < $3",
+                                        UUID(owner_id), start_date, end_date
+                                    )
+                                    import calendar
+                                    month_name_ar = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"]
+                                    result_data = {
+                                        "month": month_name_ar[m - 1],
+                                        "year": y,
+                                        "new_patients": new_patients,
+                                        "total_appointments": total_appts,
+                                        "completed_appointments": completed,
+                                        "cancelled_appointments": cancelled,
+                                        "no_show": no_show,
+                                        "total_visits": total_visits,
+                                        "no_show_rate": f"{round((no_show / total_appts * 100) if total_appts > 0 else 0, 1)}%"
+                                    }
+                                except Exception as e:
+                                    result_data = {"status": "error", "message": f"حدث خطأ: {str(e)}"}
 
                             groq_messages.append({
                                 "role": "tool",

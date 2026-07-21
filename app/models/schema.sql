@@ -363,6 +363,7 @@ CREATE TABLE chat_messages (
     actions_data   TEXT[],
     is_audio       BOOLEAN NOT NULL DEFAULT FALSE,
     audio_duration VARCHAR(10),
+    audio_file_path TEXT,
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

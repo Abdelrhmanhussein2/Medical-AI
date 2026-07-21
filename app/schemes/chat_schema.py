@@ -38,6 +38,7 @@ class MessageCreate(BaseModel):
     actions_data: Optional[List[str]] = None
     is_audio: Optional[bool] = False
     audio_duration: Optional[str] = None
+    audio_file_path: Optional[str] = None
 
 class MessageResponse(BaseModel):
     id: UUID
@@ -49,6 +50,7 @@ class MessageResponse(BaseModel):
     actions_data: Optional[List[str]] = None
     is_audio: bool
     audio_duration: Optional[str] = None
+    audio_file_path: Optional[str] = None
     created_at: datetime
 
     class Config:

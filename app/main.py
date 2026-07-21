@@ -26,6 +26,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import os
+from fastapi.staticfiles import StaticFiles
+
+os.makedirs("app/uploads/audio", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="app/uploads"), name="uploads")
+
 app.include_router(api_router)
 
 @app.get("/")

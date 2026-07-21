@@ -4,7 +4,7 @@ from app.schemes.chat_schema import ThreadCreate, ThreadUpdate, MessageCreate
 from fastapi import HTTPException, status
 from uuid import UUID
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Any
 import json
 
 class ChatService:
@@ -162,6 +162,102 @@ class ChatService:
                 return res
 
     @staticmethod
+    async def process_audio_message(
+        thread_id: str,
+        owner_id: str,
+        owner_type: str,
+        file: Any,
+        audio_duration: Optional[Any] = 0.0
+    ) -> dict:
+        import os
+        from uuid import uuid4
+        from app.core.config import settings
+        from groq import AsyncGroq
+
+        api_key = settings.GROQ_API_KEY or os.environ.get("GROQ_API_KEY", "")
+        if not api_key:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Groq API Key is not configured."
+            )
+
+        upload_dir = os.path.join(os.getcwd(), "app", "uploads", "audio")
+        os.makedirs(upload_dir, exist_ok=True)
+
+        ext = os.path.splitext(file.filename)[1] if getattr(file, "filename", None) else ".webm"
+        if not ext:
+            ext = ".webm"
+        unique_name = f"{uuid4()}{ext}"
+        saved_file_path = os.path.join(upload_dir, unique_name)
+
+        contents = await file.read()
+        with open(saved_file_path, "wb") as f:
+            f.write(contents)
+
+        relative_audio_path = f"/uploads/audio/{unique_name}"
+
+        transcription_text = ""
+        try:
+            client = AsyncGroq(api_key=api_key.strip())
+            with open(saved_file_path, "rb") as audio_file:
+                transcription = await client.audio.transcriptions.create(
+                    file=(unique_name, audio_file.read()),
+                    model="whisper-large-v3",
+                    language="ar",
+                    response_format="text"
+                )
+                transcription_text = str(transcription).strip()
+        except Exception as e:
+            print(f"Error transcribing audio with Groq Whisper: {e}")
+            transcription_text = "[تسجيل صوتي]"
+
+        if not transcription_text:
+            transcription_text = "[تسجيل صوتي]"
+
+        duration_val = 0.0
+        if audio_duration is not None:
+            try:
+                duration_val = float(audio_duration)
+            except Exception:
+                duration_val = 0.0
+
+        async with db.pool.acquire() as connection:
+            await ChatService._assert_thread_owner(connection, thread_id, owner_id, owner_type)
+            encrypted_content = encrypt_text(transcription_text)
+
+            async with connection.transaction():
+                query = """
+                    INSERT INTO chat_messages (
+                        thread_id, sender_type, content, is_audio, audio_duration, audio_file_path
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6)
+                    RETURNING *
+                """
+                row = await connection.fetchrow(
+                    query,
+                    UUID(thread_id),
+                    "user",
+                    encrypted_content,
+                    True,
+                    str(duration_val),
+                    relative_audio_path
+                )
+
+                update_thread_query = """
+                    UPDATE chat_threads
+                    SET message_count = message_count + 1, updated_at = now()
+                    WHERE id = $1
+                """
+                await connection.execute(update_thread_query, UUID(thread_id))
+
+                res = dict(row) if row else None
+                if res:
+                    res["content"] = transcription_text
+                    res["bento_data"] = ChatService._parse_json(res.get("bento_data"))
+                    res["insight_data"] = ChatService._parse_json(res.get("insight_data"))
+                return res
+
+    @staticmethod
     async def get_messages(thread_id: str, owner_id: str, owner_type: str, limit: int = 50, before: Optional[datetime] = None) -> List[dict]:
         async with db.pool.acquire() as connection:
             # 1. التحقق من الملكية
@@ -222,13 +318,10 @@ class ChatService:
     async def generate_ai_response(thread_id: str, owner_id: str, owner_type: str) -> dict:
         try:
             import os
-            from dotenv import load_dotenv
+            from app.core.config import settings
             from groq import AsyncGroq
-            
-            env_path = os.path.join(os.getcwd(), "app", ".env")
-            load_dotenv(dotenv_path=env_path, override=True)
-            
-            api_key = os.environ.get("GROQ_API_KEY")
+
+            api_key = settings.GROQ_API_KEY or os.environ.get("GROQ_API_KEY", "")
             if not api_key:
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -256,11 +349,11 @@ class ChatService:
                 "تعليمات هامة جداً بخصوص حجز المواعيد وإضافة البيانات:\n"
                 "1. إياك أن تفترض وقتاً أو تاريخاً من عندك (مثلا لا تفترض الساعة 12:00 إذا لم تُذكر). إذا طلب المستخدم حجز موعد ولم يحدد الوقت بالضبط، يجب عليك أن تسأله (متى تفضل الحجز؟) قبل استدعاء الأداة.\n"
                 "2. إذا طلب المستخدم حجز موعد لمريض (مثل محمد) وقمت بالبحث عنه ولم تجده، إياك أن تقوم بالحجز لمريض آخر (مثل المريض المحدد في الجلسة الحالية). في هذه الحالة، أخبر المستخدم أن المريض غير موجود واطلب منه تسجيله كمريض جديد أولاً.\n"
-                "3. إذا طلب المستخدم تنفيذ إجراء (مثل إضافة مريض جديد) ولم يقدم كل البيانات المطلوبة (مثل رقم الهاتف)، إياك أن تخترع رقم هاتف أو بيانات وهمية لتشغيل الأداة. اسأله أولاً عن البيانات الناقصة.\n"
+                "3. إذا طلب المستخدم تنفيذ إجراء ولم يقدم كل البيانات المطلوبة، إياك أن تخترع أي بيانات وهمية. اسأله أولاً عن البيانات الناقصة. مثال: إذا طلب إضافة مريض ولم يعطك رقم هاتفه، اسأله: (ما هو رقم هاتف المريض؟) قبل استدعاء الأداة.\n"
                 "4. ركز دائماً وبدقة شديدة على الطلب الأخير للمستخدم. إذا طلب مريضاً باسم معين (مثل علي)، إياك أن تستخدم اسماً من محادثة سابقة (مثل محمد). لا تكرر إجاباتك السابقة بشكل أعمى.\n"
                 "5. عندما تقوم بسحب بيانات من قاعدة البيانات (مثل ملف المريض، أو جدول المواعيد، أو التقارير)، إياك أن تعرض البيانات على شكل JSON خام للمستخدم. قم بصياغتها دائماً في شكل نصي مرتب ومنسق باللغة العربية باستخدام Markdown (نقاط، خطوط عريضة، أو جداول).\n"
                 "6. إذا قمت بالبحث عن مريض ووجدت أكثر من مريض، يجب عليك التوقف وسؤال المستخدم: (لقد وجدت أكثر من مريض، أيهم تقصد؟) واعرض له أسماءهم وأرقام هواتفهم ليختار، ولا تختر مريضاً عشوائياً أبداً.\n"
-                "7. إياك أن تخترع (patient_id) من عندك. قبل استخدام أي أداة تتطلب (patient_id)، يجب عليك دائماً استخدام أداة (search_my_patients) للبحث عن المريض بالاسم أو الرقم للحصول على الـ (patient_id) الحقيقي الخاص به أولاً.\n"
+                "7. تنبيه مهم جداً: إياك أن تستدعي أداة تتطلب patient_id (مثل get_patient_visits أو book_appointment) بالتوازي في نفس الخطوة مع أداة search_my_patients! استدعِ search_my_patients أولاً، وانتظر النتيجة للحصول على الـ patient_id المكون من UUID حقيقي، ثم استدعِ الأداة التالية. وإذا كان طلب المستخدم صراحةً إضافة مريض جديد، استدعِ (add_new_patient) مباشرة دون بحث.\n"
                 "تعليمات هامة جداً لصياغة الرد:\n"
                 "يجب أن يكون ردك دائماً بصيغة JSON صحيحة (Valid JSON) بناءً على نوع الرد.\n"
                 "إذا كان الرد يحتوي على إحصائيات، استخدم هذا التنسيق (ويجب أن تكون كل المفاتيح في الـ data باللغة العربية):\n"
@@ -416,7 +509,7 @@ class ChatService:
                                     "description": "الجنس: ذكر أو أنثى (اختياري)"
                                 }
                             },
-                            "required": ["name", "phone"]
+                            "required": ["name"]
                         }
                     }
                 },
@@ -641,18 +734,33 @@ class ChatService:
             groq_messages = [{"role": "system", "content": system_instruction}]
             for msg in history:
                 role = "assistant" if msg["sender_type"] == "ai" else "user"
-                groq_messages.append({"role": role, "content": msg["content"]})
+                content = msg["content"] or ""
+                if msg.get("is_audio") and role == "user":
+                    content = f"[ملاحظة صوتية من الطبيب]: {content}"
+                groq_messages.append({"role": role, "content": content})
 
             MAX_ITERATIONS = 8
             for _ in range(MAX_ITERATIONS):
-                response = await client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
-                    messages=groq_messages,
-                    tools=tools,
-                    tool_choice="auto",
-                    temperature=0.3
-                )
-                
+                try:
+                    response = await client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        messages=groq_messages,
+                        tools=tools,
+                        tool_choice="auto",
+                        temperature=0.0
+                    )
+                except Exception as groq_err:
+                    err_str = str(groq_err).lower()
+                    if "tool" in err_str or "400" in err_str:
+                        # Fallback: retry without tools to avoid tool-call validation errors
+                        response = await client.chat.completions.create(
+                            model="llama-3.3-70b-versatile",
+                            messages=groq_messages,
+                            temperature=0.0
+                        )
+                    else:
+                        raise groq_err
+
                 response_message = response.choices[0].message
                 
                 if response_message.tool_calls:
@@ -698,21 +806,26 @@ class ChatService:
                             elif fn_name == "get_patient_visits":
                                 pid = fn_args.get("patient_id")
                                 if pid:
-                                    visits = await conn.fetch(
-                                        """
-                                        SELECT visit_date, diagnosis, notes, description
-                                        FROM patient_visits
-                                        WHERE patient_id = $1 AND doctor_id = $2
-                                        ORDER BY visit_date DESC LIMIT 5
-                                        """,
-                                        UUID(pid), UUID(owner_id)
-                                    )
-                                    result_data = {
-                                        "visits": [
-                                            {"date": str(v['visit_date']), "description": v['description'], "diagnosis": v['diagnosis']}
-                                            for v in visits
-                                        ]
-                                    }
+                                    try:
+                                        visits = await conn.fetch(
+                                            """
+                                            SELECT visit_date, diagnosis, notes, description
+                                            FROM patient_visits
+                                            WHERE patient_id = $1 AND doctor_id = $2
+                                            ORDER BY visit_date DESC LIMIT 5
+                                            """,
+                                            UUID(str(pid)), UUID(owner_id)
+                                        )
+                                        result_data = {
+                                            "visits": [
+                                                {"date": str(v['visit_date']), "description": v['description'], "diagnosis": v['diagnosis']}
+                                                for v in visits
+                                            ]
+                                        }
+                                    except Exception as e:
+                                        result_data = {"status": "error", "message": f"الـ patient_id غير صحيح أو حدث خطأ: {str(e)}. يرجى البحث أولاً باستخدام search_my_patients للحصول على الـ UUID الحقيقي."}
+                                else:
+                                    result_data = {"status": "error", "message": "الـ patient_id مطلوب للحصول على الزيارات."}
 
                             elif fn_name == "get_my_appointments":
                                 date_from_str = str(fn_args.get("date_from"))

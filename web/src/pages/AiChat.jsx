@@ -32,6 +32,16 @@ export default function AiChat({ initialPatientId }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [patients, setPatients] = useState([]);
 
+  // Voice Recording State
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const recordingTimeRef = useRef(0);
+  const startTimeRef = useRef(null);
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const timerRef = useRef(null);
+
   // 1. Fetch threads on mount
   useEffect(() => {
     const fetchThreads = async () => {
@@ -238,6 +248,116 @@ export default function AiChat({ initialPatientId }) {
       }
     } catch (err) {
       console.error("Failed to send message", err);
+    }
+  };
+
+  // Start Voice Recording
+  const startRecording = async () => {
+    if (!activeThreadId) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        stream.getTracks().forEach(track => track.stop());
+        await sendAudioMessage(audioBlob);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingTimeRef.current = 0;
+      startTimeRef.current = Date.now();
+
+      timerRef.current = setInterval(() => {
+        setRecordingTime(prev => {
+          const next = prev + 1;
+          recordingTimeRef.current = next;
+          return next;
+        });
+      }, 1000);
+    } catch (err) {
+      console.error("Microphone access denied or error", err);
+      alert("تعذر الوصول إلى الميكروفون. يرجى السماح للمتصفح باستخدام الميكروفون.");
+    }
+  };
+
+  // Stop Voice Recording
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    }
+  };
+
+  // Format recording duration counter
+  const formatDuration = (secs) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  // Send Audio File to Backend
+  const sendAudioMessage = async (audioBlob) => {
+    if (!activeThreadId) return;
+    setIsUploadingAudio(true);
+    try {
+      const token = localStorage.getItem("accessToken");
+      const formData = new FormData();
+      const elapsedSecs = startTimeRef.current ? Math.max(1, Math.round((Date.now() - startTimeRef.current) / 1000)) : (recordingTimeRef.current || 1);
+      const durationStr = formatDuration(elapsedSecs);
+      formData.append("file", audioBlob, "voice_message.webm");
+      formData.append("audio_duration", durationStr);
+
+      const res = await fetch(`/api/v1/chat/threads/${activeThreadId}/audio`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (res.ok) {
+        const audioMsg = await res.json();
+        setMessages(prev => [...prev, audioMsg]);
+
+        // Trigger AI reply generation
+        setIsTyping(true);
+        try {
+          const aiRes = await fetch(`/api/v1/chat/threads/${activeThreadId}/generate`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          if (aiRes.ok) {
+            const aiMsg = await aiRes.json();
+            setMessages(prev => [...prev, aiMsg]);
+          }
+        } catch (err) {
+          console.error("Failed to generate AI reply for audio", err);
+        } finally {
+          setIsTyping(false);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to upload audio message", err);
+    } finally {
+      setIsUploadingAudio(false);
+      setRecordingTime(0);
     }
   };
 
@@ -544,8 +664,27 @@ export default function AiChat({ initialPatientId }) {
                         {currentUser.name ? currentUser.name.split(' ').map(n => n[0]).join('') : 'U'}
                       </div>
                       <div className="flex flex-col gap-1 items-end">
-                        <div className="bg-primary text-on-primary p-3.5 rounded-2xl rounded-tr-sm shadow-sm">
-                          <p className="text-xs leading-relaxed">{message.content}</p>
+                        <div className="bg-primary text-on-primary p-3.5 rounded-2xl rounded-tr-sm shadow-sm max-w-md">
+                          {message.is_audio ? (
+                            <div className="space-y-2 text-right" dir="rtl">
+                              <div className="flex items-center gap-2 pb-1 border-b border-white/20 text-white/90">
+                                <span className="material-symbols-outlined text-[18px]">mic</span>
+                                <span className="text-[11px] font-bold">ملاحظة صوتية</span>
+                                {message.audio_duration && (
+                                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full mr-auto">{message.audio_duration}</span>
+                                )}
+                              </div>
+                              {message.audio_file_path && (
+                                <audio 
+                                  controls 
+                                  src={message.audio_file_path} 
+                                  className="w-full h-8 max-w-[240px] rounded-lg my-1 accent-white" 
+                                />
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-xs leading-relaxed">{message.content}</p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -579,7 +718,28 @@ export default function AiChat({ initialPatientId }) {
           <div className="absolute inset-x-0 top-0 h-4 -mt-4 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
           <div className="max-w-4xl mx-auto space-y-2">
 
+            {isRecording && (
+              <div className="flex items-center justify-between bg-error-container/40 border border-error/20 px-4 py-2 rounded-xl text-error animate-pulse">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-error animate-ping"></div>
+                  <span className="text-xs font-bold">جاري تسجيل التسجيل الصوتي... ({formatDuration(recordingTime)})</span>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={stopRecording}
+                  className="bg-error text-white text-xs font-bold px-3 py-1 rounded-lg hover:bg-error/90 transition-colors shadow-sm"
+                >
+                  إيقاف وإرسال ⏹️
+                </button>
+              </div>
+            )}
 
+            {isUploadingAudio && (
+              <div className="flex items-center gap-2 bg-primary-light/60 border border-primary/20 px-4 py-2 rounded-xl text-primary animate-pulse">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                <span className="text-xs font-semibold">جاري تحويل وتشفير الرسالة الصوتية بواسطة Groq Whisper AI...</span>
+              </div>
+            )}
 
             <div className="relative flex items-end gap-2 bg-bg-canvas rounded-xl border border-border-subtle p-2 shadow-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
               <button className="p-2.5 text-secondary hover:text-primary transition-colors rounded-lg hover:bg-primary-light mb-0.5" title="Attach Medical File">
@@ -589,19 +749,29 @@ export default function AiChat({ initialPatientId }) {
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyDown}
-                disabled={!activeThreadId}
+                disabled={!activeThreadId || isRecording || isUploadingAudio}
                 className="w-full bg-transparent border-none focus:ring-0 resize-none font-body-md text-xs text-on-surface py-2.5 max-h-24 min-h-[40px] outline-none disabled:opacity-50" 
                 placeholder={activeThreadId ? "Ask SBR AI or type clinical notes..." : "اختر محادثة للكتابة فيها..."} 
                 rows="1"
               ></textarea>
               <div className="flex items-center gap-1.5 mb-0.5">
-                <button type="button" className="p-2 bg-primary-light text-primary hover:bg-primary/10 transition-all rounded-lg flex items-center justify-center" title="Record Voice Message">
-                  <span className="material-symbols-outlined text-[20px]">mic</span>
+                <button 
+                  type="button" 
+                  onClick={isRecording ? stopRecording : startRecording}
+                  disabled={!activeThreadId || isUploadingAudio}
+                  className={`p-2 transition-all rounded-lg flex items-center justify-center disabled:opacity-50 ${
+                    isRecording 
+                      ? 'bg-error text-white animate-bounce' 
+                      : 'bg-primary-light text-primary hover:bg-primary/10'
+                  }`} 
+                  title={isRecording ? "Stop Recording" : "Record Voice Message"}
+                >
+                  <span className="material-symbols-outlined text-[20px]">{isRecording ? 'stop_circle' : 'mic'}</span>
                 </button>
                 <button 
                   type="button"
                   onClick={() => handleSendMessage()}
-                  disabled={!activeThreadId}
+                  disabled={!activeThreadId || isRecording || isUploadingAudio}
                   className="p-2 bg-primary text-on-primary hover:bg-primary-hover transition-colors rounded-lg shadow-sm flex items-center justify-center disabled:opacity-50" 
                   title="Send Message"
                 >

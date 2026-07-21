@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form
 from typing import List, Optional
 from datetime import datetime
 from uuid import UUID
@@ -95,6 +95,22 @@ async def add_message(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="فشل إرسال الرسالة."
+        )
+    return message
+
+@router.post("/threads/{thread_id}/audio", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
+async def upload_audio_message(
+    thread_id: UUID,
+    file: UploadFile = File(...),
+    audio_duration: Optional[str] = Form(None),
+    current_user: dict = Depends(get_current_user)
+):
+    owner_id, owner_type = _verify_chat_user(current_user)
+    message = await ChatService.process_audio_message(str(thread_id), owner_id, owner_type, file, audio_duration)
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="فشل معالجة وتسجيل الرسالة الصوتية."
         )
     return message
 

@@ -6,7 +6,7 @@ export default function Layout({ children, activePage, setActivePage }) {
   const { currentUser, logout } = useApp();
 
   if (!currentUser) return <>{children}</>;
-  
+
   const isLiveSession = activePage && activePage.startsWith('live-session');
   if (isLiveSession) return <>{children}</>;
 
@@ -51,7 +51,7 @@ export default function Layout({ children, activePage, setActivePage }) {
               <span class="text-[9px] font-black text-secondary tracking-widest block uppercase mt-1.5 ml-1">{suiteSub}</span>
             )}
           </div>
-          
+
           <div class="flex items-center gap-stack-sm px-stack-md mb-6">
             <div class="w-10 h-10 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold border border-border-subtle shadow-sm uppercase">
               {currentUser.name ? currentUser.name.split(' ').map(n => n[0]).join('') : 'U'}
@@ -59,9 +59,9 @@ export default function Layout({ children, activePage, setActivePage }) {
             <div>
               <p class="font-button text-button text-on-surface text-sm font-bold truncate max-w-[140px]">{currentUser.name}</p>
               <p class="font-body-sm text-body-sm text-on-surface-variant text-xs truncate max-w-[140px]">
-                {currentUser.role === 'admin' 
-                  ? 'Super Admin' 
-                  : currentUser.role === 'org' 
+                {currentUser.role === 'admin'
+                  ? 'Super Admin'
+                  : currentUser.role === 'org'
                     ? (currentUser.specialty || 'Organization')
                     : (currentUser.department || 'Doctor')
                 }
@@ -75,11 +75,10 @@ export default function Layout({ children, activePage, setActivePage }) {
             <li key={item.id}>
               <button
                 onClick={() => setActivePage(item.id)}
-                class={`w-full flex items-center gap-stack-md px-stack-md py-stack-sm cursor-pointer rounded-lg transition-colors text-left ${
-                  activePage === item.id 
-                    ? 'bg-primary-light text-primary font-bold shadow-sm' 
+                class={`w-full flex items-center gap-stack-md px-stack-md py-stack-sm cursor-pointer rounded-lg transition-colors text-left ${activePage === item.id
+                    ? 'bg-primary-light text-primary font-bold shadow-sm'
                     : 'text-secondary hover:bg-surface-container'
-                }`}
+                  }`}
               >
                 <span class="material-symbols-outlined text-[20px]">{item.icon}</span>
                 <span class="text-xs font-semibold">{item.name}</span>
@@ -115,7 +114,7 @@ export default function Layout({ children, activePage, setActivePage }) {
 
         <ul class="px-stack-sm mt-auto space-y-1">
           <li>
-            <button 
+            <button
               onClick={logout}
               class="w-full flex items-center gap-stack-md px-stack-md py-stack-sm cursor-pointer text-secondary hover:bg-surface-container rounded-lg transition-colors text-left"
             >
@@ -127,9 +126,8 @@ export default function Layout({ children, activePage, setActivePage }) {
       </nav>
 
       {/* Main Content Area */}
-      <div class={`flex-1 md:ml-64 bg-bg-canvas min-h-screen ${
-        (activePage === 'aichat' || activePage === 'admin-aichat') ? 'p-0' : 'p-margin-desktop'
-      }`}>
+      <div class={`flex-1 md:ml-64 bg-bg-canvas min-h-screen ${(activePage === 'aichat' || activePage === 'admin-aichat') ? 'p-0' : 'p-margin-desktop'
+        }`}>
         {children}
       </div>
     </div>

@@ -294,3 +294,36 @@ async def test_invalid_uuid(client, auth_headers_doc_a):
     # Verify invalid UUID format triggers FastAPI validation error (422 Unprocessable Entity)
     response = await client.get("/api/v1/chat/threads/not-a-valid-uuid", headers=auth_headers_doc_a)
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_upload_audio_message(client, auth_headers_doc_a):
+    # 1. Create thread
+    create_resp = await client.post(
+        "/api/v1/chat/threads",
+        json={"title": "Audio Test Session"},
+        headers=auth_headers_doc_a
+    )
+    assert create_resp.status_code == 201
+    thread_id = create_resp.json()["id"]
+
+    # 2. Upload dummy audio file
+    files = {"file": ("test_recording.webm", b"dummy audio content bytes", "audio/webm")}
+    data = {"audio_duration": "0:05"}
+
+    response = await client.post(
+        f"/api/v1/chat/threads/{thread_id}/audio",
+        files=files,
+        data=data,
+        headers=auth_headers_doc_a
+    )
+    assert response.status_code == 201
+    msg_data = response.json()
+    assert msg_data["is_audio"] is True
+    assert msg_data["audio_duration"] == "0:05"
+    assert msg_data["audio_file_path"].startswith("/uploads/audio/")
+
+    # 3. Verify message is stored encrypted in database
+    async with db.pool.acquire() as conn:
+        row = await conn.fetchrow("SELECT content, audio_file_path FROM chat_messages WHERE id = $1", UUID(msg_data["id"]))
+        assert row["audio_file_path"].startswith("/uploads/audio/")

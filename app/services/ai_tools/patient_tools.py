@@ -8,22 +8,34 @@ from typing import Any, Optional
 logger = logging.getLogger(__name__)
 
 async def tool_search_my_patients(fn_args: dict, owner_id: str, conn) -> dict:
-    q = fn_args.get("query", "")
+    q = fn_args.get("query", "").strip()
+    # Remove spaces from query for a normalized comparison
+    # This handles cases like "عبد الرحمن" vs "عبدالرحمن"
+    q_no_spaces = q.replace(" ", "")
     patients = await conn.fetch(
         """
         SELECT id, name, phone, date_of_birth
         FROM patients
-        WHERE doctor_id = $1 AND (name ILIKE $2 OR phone ILIKE $2)
-        LIMIT 5
+        WHERE doctor_id = $1
+          AND (
+            name ILIKE $2
+            OR phone ILIKE $2
+            OR REPLACE(name, ' ', '') ILIKE $3
+          )
+        LIMIT 10
         """,
-        UUID(owner_id), f"%{q}%"
+        UUID(owner_id), f"%{q}%", f"%{q_no_spaces}%"
     )
     return {
+        # phone is intentionally excluded — show only name.
+        # Use get_patient_full_profile if contact details are needed.
         "patients": [
-            {"id": str(p['id']), "name": p['name'], "phone": p['phone']}
+            {"id": str(p['id']), "name": p['name']}
             for p in patients
         ]
     }
+
+
 
 def safe_uuid(val: Any) -> Optional[UUID]:
     if not val:

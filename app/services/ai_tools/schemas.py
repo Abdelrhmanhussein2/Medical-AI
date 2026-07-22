@@ -5,6 +5,8 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
     """
     Returns the list of JSON schemas defining all tools available to the AI.
     """
+
+
     return [
         {
             "type": "function",

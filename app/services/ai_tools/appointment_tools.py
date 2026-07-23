@@ -80,7 +80,7 @@ async def tool_book_appointment(fn_args: dict, owner_id: str, conn) -> dict:
             """,
             UUID(owner_id), pid_uuid, d_obj, t_obj, desc
         )
-        return {"status": "success", "message": "تم حجز الموعد بنجاح وتحديث قاعدة البيانات."}
+        return {"status": "success", "message": "تم حجز الموعد بنجاح."}
     except Exception as e:
         if "unique constraint" in str(e).lower() or "uniqueviolationerror" in e.__class__.__name__.lower():
             return {"status": "error", "message": "هذا الموعد محجوز مسبقاً لمريض آخر في هذا اليوم والوقت. يرجى اختيار موعد آخر."}

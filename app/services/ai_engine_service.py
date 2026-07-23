@@ -4,7 +4,7 @@ import re
 import logging
 import json
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 from fastapi import HTTPException, status
 
@@ -19,7 +19,9 @@ MAX_ITERATIONS = 8
 MODEL_NAME = "llama-3.3-70b-versatile"
 HISTORY_LIMIT = 8  # reduced from 20 → saves ~60% tokens per request
 
-def _dbg(*args): pass  # debug disabled — remove calls gradually if needed
+def _dbg(*args):
+    msg = " ".join(str(a) for a in args)
+    print(f"\033[93m[AI DEBUG]\033[0m {msg}", flush=True)
 
 
 # Load system prompt template once at import time
@@ -37,10 +39,10 @@ except Exception as e:
 def _parse_groq_failed_generation(failed_gen: str) -> list[dict]:
     """
     Groq sometimes returns a malformed tool call in 'failed_generation'.
-    Format: <function=TOOL_NAME{"arg": "val"}</function>
+    Format: <function=TOOL_NAME {"arg": "val"}</function>
     This parser extracts the tool name and args so we can execute it manually.
     """
-    pattern = r'<function=(\w+)(\{.*?\})\s*</function>'
+    pattern = r'<function\s*=\s*(\w+)\s*(\{.*?\})\s*</function>'
     results = []
     for match in re.finditer(pattern, failed_gen, re.DOTALL):
         fn_name = match.group(1)
@@ -49,7 +51,12 @@ def _parse_groq_failed_generation(failed_gen: str) -> list[dict]:
             args = json.loads(args_str)
             results.append({"name": fn_name, "args": args})
         except json.JSONDecodeError:
-            logger.warning(f"[AI ENGINE] Could not parse args for {fn_name}: {args_str}")
+            try:
+                fixed_args_str = args_str.replace("'", '"')
+                args = json.loads(fixed_args_str)
+                results.append({"name": fn_name, "args": args})
+            except Exception:
+                logger.warning(f"[AI ENGINE] Could not parse args for {fn_name}: {args_str}")
     return results
 
 
@@ -108,7 +115,22 @@ class AIEngineService:
             # Fetch thread
             thread = await ChatService.get_thread_by_id(thread_id, owner_id, owner_type)
 
-            today_str = datetime.now().strftime("%Y-%m-%d")
+            today_dt = datetime.now()
+            ARABIC_WEEKDAYS = ["الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"]
+            today_day_name = ARABIC_WEEKDAYS[today_dt.weekday()]
+            today_formatted = f"{today_day_name} {today_dt.strftime('%Y-%m-%d')}"
+
+            calendar_lines = [
+                f"تاريخ اليوم: {today_formatted}",
+                "جدول التواريخ القادمة لحساب المواعيد بدقة:"
+            ]
+            for i in range(7):
+                d = today_dt + timedelta(days=i)
+                w_name = ARABIC_WEEKDAYS[d.weekday()]
+                rel_label = "اليوم" if i == 0 else ("غداً" if i == 1 else w_name)
+                calendar_lines.append(f"- {w_name} ({rel_label}): {d.strftime('%Y-%m-%d')}")
+
+            today_str = "\n".join(calendar_lines)
             patient_info = None
 
             # Fetch patient details if attached to thread for Context Anchoring
@@ -124,7 +146,23 @@ class AIEngineService:
             system_instruction = build_system_prompt(today_str, patient_info)
 
             # DYNAMIC TOOL ROUTING: Select only relevant tools to minimize token usage
-            tools = await HybridToolRouter.get_tools_for_query(user_msg)
+            user_messages = [msg["content"] for msg in history if msg["sender_type"] == "user" and msg["content"]]
+            # Since history includes the current user message as the last item, the actual previous user message is at index -2
+            previous_user_msg = user_messages[-2] if len(user_messages) >= 2 else ""
+            
+            routing_query = user_msg
+            if previous_user_msg:
+                routing_query = f"{previous_user_msg} {routing_query}"
+                
+            if len(history) >= 2:
+                last_ai = history[-2]
+                if last_ai.get("sender_type") == "ai" and last_ai.get("content"):
+                    routing_query = f"{last_ai['content']} {routing_query}"
+            
+            _dbg(f"ROUTING CONTEXT: '{routing_query}'")
+            tools = await HybridToolRouter.get_tools_for_query(routing_query)
+            if not tools:
+                tools = None
 
             groq_messages = [{"role": "system", "content": system_instruction}]
             for msg in history:
@@ -141,27 +179,42 @@ class AIEngineService:
             logger.info(f"[AI ENGINE] NEW GENERATE REQUEST")
             logger.info(f"[AI ENGINE] Thread ID: {thread_id}")
             logger.info(f"[AI ENGINE] User Query: {user_msg}")
-            logger.info(f"[AI ENGINE] Routed Tools ({len(tools)}): {[t['function']['name'] for t in tools]}")
+            logger.info(f"[AI ENGINE] Routed Tools ({len(tools) if tools else 0}): {[t['function']['name'] for t in tools] if tools else []}")
             logger.info(f"==================================================")
 
             _dbg("══════════════════════════════════════════════════")
             _dbg(f"QUERY    : {user_msg}")
             _dbg(f"MESSAGES : {len(groq_messages)} (system + history)")
-            _dbg(f"TOOLS    : {[t['function']['name'] for t in tools]}")
+            _dbg(f"TOOLS    : {[t['function']['name'] for t in tools] if tools else []}")
             _dbg("══════════════════════════════════════════════════")
+
+            # Token tracking initialization
+            total_calls = 0
+            accumulated_prompt = 0
+            accumulated_completion = 0
+            accumulated_total = 0
 
             # AI execution loop
             for idx in range(MAX_ITERATIONS):
                 logger.info(f"[AI ENGINE] Iteration {idx+1}/{MAX_ITERATIONS} - Sending prompt to LLM...")
                 _dbg(f"--- Iteration {idx+1}/{MAX_ITERATIONS} → calling Groq...")
                 try:
-                    response = await client.chat.completions.create(
-                        model=MODEL_NAME,
-                        messages=groq_messages,
-                        tools=tools,
-                        tool_choice="auto",
-                        temperature=0.0
-                    )
+                    total_calls += 1
+                    comp_kwargs = {
+                        "model": MODEL_NAME,
+                        "messages": groq_messages,
+                        "temperature": 0.0
+                    }
+                    if tools:
+                        comp_kwargs["tools"] = tools
+                        comp_kwargs["tool_choice"] = "auto"
+                        
+                    response = await client.chat.completions.create(**comp_kwargs)
+                    if hasattr(response, "usage") and response.usage:
+                        accumulated_prompt += response.usage.prompt_tokens
+                        accumulated_completion += response.usage.completion_tokens
+                        accumulated_total += response.usage.total_tokens
+                        logger.info(f"[AI ENGINE - TOKENS] API Call #{total_calls} -> Model: {MODEL_NAME} | Prompt: {response.usage.prompt_tokens} | Completion: {response.usage.completion_tokens} | Total: {response.usage.total_tokens}")
                 except Exception as groq_err:
                     groq_err_str = str(groq_err)
                     logger.warning(f"Groq tool call exception: {groq_err}")
@@ -216,6 +269,11 @@ class AIEngineService:
                             messages=groq_messages,
                             temperature=0.0
                         )
+                        if hasattr(response, "usage") and response.usage:
+                            accumulated_prompt += response.usage.prompt_tokens
+                            accumulated_completion += response.usage.completion_tokens
+                            accumulated_total += response.usage.total_tokens
+                            logger.info(f"[AI ENGINE - TOKENS] Retry Call #{total_calls} -> Model: {MODEL_NAME} | Prompt: {response.usage.prompt_tokens} | Completion: {response.usage.completion_tokens} | Total: {response.usage.total_tokens}")
 
 
                 response_message = response.choices[0].message
@@ -284,6 +342,11 @@ class AIEngineService:
                         temperature=0.0
                     )
                     response_message = final_response.choices[0].message
+                    if hasattr(final_response, "usage") and final_response.usage:
+                        accumulated_prompt += final_response.usage.prompt_tokens
+                        accumulated_completion += final_response.usage.completion_tokens
+                        accumulated_total += final_response.usage.total_tokens
+                        logger.info(f"[AI ENGINE - TOKENS] Final Error Call #{total_calls} -> Model: {MODEL_NAME} | Prompt: {final_response.usage.prompt_tokens} | Completion: {final_response.usage.completion_tokens} | Total: {final_response.usage.total_tokens}")
                 except Exception as final_err:
                     logger.exception(f"[AI ENGINE] Error generating final text response: {final_err}")
 
@@ -292,6 +355,12 @@ class AIEngineService:
                 ai_text = "لم أتمكن من إنشاء رد. يرجى المحاولة مرة أخرى."
 
             logger.info(f"[AI ENGINE] Final Response: {ai_text}")
+            logger.info(f"\n==================================================")
+            logger.info(f"[AI ENGINE - TRANSACTION COMPLETED SUMMARY]")
+            logger.info(f"  - Total API Calls: {total_calls}")
+            logger.info(f"  - Total Prompt (Input) Tokens: {accumulated_prompt}")
+            logger.info(f"  - Total Completion (Output) Tokens: {accumulated_completion}")
+            logger.info(f"  - Total Accumulated Tokens: {accumulated_total}")
             logger.info(f"==================================================\n")
 
             ai_message_data = MessageCreate(

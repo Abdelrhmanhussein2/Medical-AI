@@ -18,6 +18,25 @@ PREREQUISITE_MAP: Dict[str, List[str]] = {
     "add_visit_record": ["search_my_patients"],
 }
 
+ROUTER_SHORT_DESCS: Dict[str, str] = {
+    "search_my_patients": "البحث عن مريض بالاسم/الهاتف",
+    "get_patient_visits": "تاريخ زيارات وتشخيصات مريض",
+    "get_my_appointments": "جدول المواعيد لفترة محددة",
+    "get_clinic_stats": "إحصائيات العيادة العامة والمالية",
+    "book_appointment": "حجز موعد جديد لمريض",
+    "add_new_patient": "تسجيل مريض جديد بالعيادة",
+    "delete_patient": "حذف مريض نهائياً من السجلات",
+    "cancel_appointment": "إلغاء موعد محجوز",
+    "reschedule_appointment": "تعديل تاريخ أو وقت موعد",
+    "update_appointment_status": "تحديث حالة حضور الموعد",
+    "add_visit_record": "تسجيل زيارة وكشف جديد للمريض",
+    "search_visits_by_diagnosis": "البحث عن المرضى بتشخيص معين",
+    "update_patient_info": "تعديل بيانات مريض موجود",
+    "get_patient_full_profile": "الملف الطبي الكامل للمريض",
+    "get_today_schedule": "عرض جدول مواعيد اليوم فقط",
+    "get_monthly_report": "التقرير الشهري والمالي للعيادة"
+}
+
 class ToolRegistry:
     """
     Central registry for managing available tools, their schemas, 
@@ -36,7 +55,7 @@ class ToolRegistry:
         and including any prerequisite tools required by them.
         """
         if not tool_names:
-            return cls.get_all_schemas()
+            return []
 
         # Expand tool_names with prerequisites
         expanded_names: set[str] = set()
@@ -59,13 +78,9 @@ class ToolRegistry:
     def get_llm_router_prompt_summary(cls) -> str:
         """
         Generates an ultra-compact list of tool names and single-line descriptions
-        for the lightweight LLM router prompt (~150 tokens total).
+        for the lightweight LLM router prompt (~50-80 tokens total).
         """
-        all_tools = cls.get_all_schemas()
         lines = []
-        for t in all_tools:
-            fn = t.get("function", {})
-            name = fn.get("name", "")
-            desc = fn.get("description", "")
+        for name, desc in ROUTER_SHORT_DESCS.items():
             lines.append(f"- {name}: {desc}")
         return "\n".join(lines)

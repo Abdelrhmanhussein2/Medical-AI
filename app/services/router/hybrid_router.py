@@ -20,26 +20,47 @@ class HybridToolRouter:
         """
         Determines the list of tool names needed for a given user query.
         """
-        # Step 1: Attempt Rule-Based Routing
         rule_tools, is_confident = RuleBasedRouter.match_tools(user_query)
-
+        selected = []
         if is_confident and rule_tools:
             logger.info(f"[HYBRID ROUTER] Matched via RuleBasedRouter: {rule_tools}")
-            return rule_tools
+            selected = list(rule_tools)
+        else:
+            logger.info(f"[HYBRID ROUTER] Low confidence rule match. Invoking LLMRouter...")
+            llm_tools = await LLMRouter.route_query(user_query)
+            if llm_tools:
+                selected = list(set(rule_tools + llm_tools))
+                logger.info(f"[HYBRID ROUTER] Matched via LLMRouter: {selected}")
+            else:
+                logger.warning("[HYBRID ROUTER] Both routers returned empty. Using default fallback.")
+                selected = ["search_my_patients"]
 
-        # Step 2: Fallback to Lightweight LLM Router
-        logger.info(f"[HYBRID ROUTER] Low confidence rule match. Invoking LLMRouter...")
-        llm_tools = await LLMRouter.route_query(user_query)
+        # Check if query contains a phone number (6 or more digits, supporting Arabic/Eastern numerals)
+        import re
+        digits = re.findall(r"[0-9\u0660-\u0669\u06f0-\u06f9]", user_query)
+        has_phone = len(digits) >= 6
 
-        if llm_tools:
-            # Combine any partial rule matches with LLM tools if applicable
-            combined = list(set(rule_tools + llm_tools))
-            logger.info(f"[HYBRID ROUTER] Matched via LLMRouter: {combined}")
-            return combined
+        if has_phone:
+            # If a phone number is present in the query/context, automatically route phone-related tools
+            for t in ["search_my_patients", "add_new_patient", "update_patient_info"]:
+                if t not in selected:
+                    selected.append(t)
 
-        # Fallback if both return empty
-        logger.warning("[HYBRID ROUTER] Both routers returned empty. Using default fallback.")
-        return ["search_my_patients"]
+        # GATING: If 'add_new_patient' is selected but phone is missing and no skip confirmation is present,
+        # remove it so the LLM is forced to ask for the phone number.
+        if "add_new_patient" in selected:
+            # Check if query has skip confirmation keywords
+            unavailable_keywords = [
+                "مش معايا", "معيش", "مش متوفر", "معرفش", "من غير", "بدون رقم", "بدون هاتف", 
+                "غير متوفر", "لا يوجد", "لا املك", "سجله وخلاص", "سجل وخلاص", "معيش رقم"
+            ]
+            has_confirmation = any(kw in user_query for kw in unavailable_keywords)
+            
+            if not has_phone and not has_confirmation:
+                logger.info("[HYBRID ROUTER] Removing all tools because patient registration is pending phone number input.")
+                selected = []
+
+        return selected
 
     @classmethod
     async def get_tools_for_query(cls, user_query: str) -> List[Dict[str, Any]]:

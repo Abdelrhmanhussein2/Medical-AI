@@ -1,11 +1,36 @@
 # app/services/ai_tools/patient_tools.py
 import logging
+import re
 from uuid import UUID
 from datetime import datetime, date
 
 from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
+
+def is_dummy_phone(phone: Optional[str]) -> bool:
+    if not phone:
+        return True
+    p = phone.strip().lower()
+    # Arabic/English text markers for unavailable
+    text_markers = [
+        "none", "null", "n/a", "unknown",
+        "غير متوفر", "غير معروف", "لا يوجد", "بدون رقم", "مش متوفر"
+    ]
+    if p in text_markers:
+        return True
+    # Extract only digits
+    digits = re.sub(r"[^\d]", "", p)
+    if len(digits) < 6:
+        return True
+    # All same digit (e.g. 0000000000, 1111111111)
+    if len(set(digits)) <= 1:
+        return True
+    # Known dummy patterns (exact digit match)
+    dummy_numbers = {"0000000000", "00000000", "123456789", "12345678", "01000000000"}
+    if digits in dummy_numbers:
+        return True
+    return False
 
 async def tool_search_my_patients(fn_args: dict, owner_id: str, conn) -> dict:
     q = fn_args.get("query", "").strip()
@@ -80,8 +105,30 @@ async def tool_add_new_patient(fn_args: dict, owner_id: str, conn) -> dict:
     p_dob = fn_args.get("date_of_birth")
     p_gender = fn_args.get("gender")
 
-    if not (p_name and p_phone):
-        return {"status": "error", "message": "اسم المريض ورقم الهاتف مطلوبان."}
+    if not p_name:
+        return {"status": "error", "message": "اسم المريض مطلوب."}
+
+    # Explicit "unavailable" markers the AI sends AFTER user confirms no phone
+    ALLOWED_UNAVAILABLE = {"غير متوفر", "غير معروف", "لا يوجد", "بدون رقم", "مش متوفر"}
+
+    phone_str = (str(p_phone).strip() if p_phone else "")
+
+    if not phone_str or phone_str.lower() in ["none", "null", "n/a", "unknown", ""]:
+        # Phone was NOT provided at all → reject and force AI to ask user
+        return {
+            "status": "error",
+            "message": "رقم الهاتف غير موجود. يجب عليك سؤال الطبيب أولاً: 'ما هو رقم هاتف المريض؟' — إذا أكد الطبيب عدم توفر الرقم، أعد الاستدعاء مع phone='غير متوفر'."
+        }
+
+    if is_dummy_phone(phone_str) and phone_str not in ALLOWED_UNAVAILABLE:
+        # Phone looks fake (e.g. 0000000000) but is NOT an explicit unavailable marker
+        return {
+            "status": "error",
+            "message": "رقم الهاتف المُرسل يبدو وهمياً أو غير صالح. يرجى سؤال الطبيب عن الرقم الحقيقي، أو إذا أكد عدم توفره أرسل phone='غير متوفر'."
+        }
+
+    # At this point phone_str is either a real number or an explicit unavailable marker
+    p_phone = phone_str
 
     try:
         from datetime import datetime
@@ -102,7 +149,7 @@ async def tool_add_new_patient(fn_args: dict, owner_id: str, conn) -> dict:
         )
         return {
             "status": "success",
-            "message": f"تمت إضافة المريض {p_name} بنجاح إلى قاعدة البيانات.",
+            "message": f"تمت إضافة المريض {p_name} بنجاح في سجلات العيادة.",
             "patient_id": str(row['id'])
         }
     except Exception as e:
@@ -133,7 +180,7 @@ async def tool_delete_patient(fn_args: dict, owner_id: str, conn) -> dict:
             pid_uuid, UUID(owner_id)
         )
         if "DELETE 1" in del_result:
-            return {"status": "success", "message": "تم حذف المريض ومواعيده وزياراته بنجاح من قاعدة البيانات."}
+            return {"status": "success", "message": "تم حذف المريض ومواعيده وزياراته بنجاح من سجلات العيادة."}
         else:
             return {"status": "error", "message": "لم يتم العثور على المريض أو ليس لديك صلاحية حذفه."}
     except Exception as e:

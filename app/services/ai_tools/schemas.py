@@ -12,7 +12,7 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "search_my_patients",
-                "description": "ابحث عن مريض أو أكثر في قاعدة بيانات العيادة بالاسم أو رقم الهاتف.",
+                "description": "ابحث عن مريض أو أكثر في سجلات العيادة بالاسم أو رقم الهاتف.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -107,7 +107,7 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "add_new_patient",
-                "description": "إضافة مريض جديد إلى قاعدة بيانات العيادة.",
+                "description": "إضافة مريض جديد إلى سجلات العيادة.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -117,7 +117,7 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
                         },
                         "phone": {
                             "type": "string",
-                            "description": "رقم هاتف المريض"
+                            "description": "رقم هاتف المريض المكون من أرقام فقط (مثال: 01012345678)"
                         },
                         "date_of_birth": {
                             "type": "string",
@@ -136,7 +136,7 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "delete_patient",
-                "description": "حذف مريض من قاعدة بيانات العيادة نهائياً. يجب البحث عن المريض أولاً باستخدام search_my_patients للحصول على الـ patient_id.",
+                "description": "حذف مريض من سجلات العيادة نهائياً. يجب البحث عن المريض أولاً باستخدام search_my_patients للحصول على الـ patient_id.",
                 "parameters": {
                     "type": "object",
                     "properties": {

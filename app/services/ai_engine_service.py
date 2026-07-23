@@ -71,6 +71,7 @@ def build_system_prompt(today_date: str, patient_info: Optional[Dict[str, Any]] 
     if patient_info:
         patient_context_str = (
             f"\nالمريض المحدد لهذه الجلسة: الاسم: {patient_info.get('name')}, "
+            f"معرف المريض (patient_id): {patient_info.get('id')}, "
             f"تاريخ الميلاد: {patient_info.get('date_of_birth')}, "
             f"الجنس: {patient_info.get('gender') or 'غير محدد'}."
         )
@@ -88,7 +89,7 @@ class AIEngineService:
         from app.services.chat_service import ChatService
         from app.schemes.chat_schema import MessageCreate
         from app.services.ai_tools import ToolExecutor
-        from app.services.router import HybridToolRouter
+        from app.services.router import SmartRouter
 
         try:
             api_key = settings.GROQ_API_KEY or os.environ.get("GROQ_API_KEY", "")
@@ -137,7 +138,7 @@ class AIEngineService:
             if thread and thread.get('patient_id'):
                 async with db.pool.acquire() as conn_ctx:
                     patient = await conn_ctx.fetchrow(
-                        "SELECT name, date_of_birth, gender FROM patients WHERE id = $1 AND doctor_id = $2",
+                        "SELECT id, name, date_of_birth, gender FROM patients WHERE id = $1 AND doctor_id = $2",
                         thread['patient_id'], UUID(owner_id)
                     )
                     if patient:
@@ -145,22 +146,70 @@ class AIEngineService:
 
             system_instruction = build_system_prompt(today_str, patient_info)
 
-            # DYNAMIC TOOL ROUTING: Select only relevant tools to minimize token usage
-            user_messages = [msg["content"] for msg in history if msg["sender_type"] == "user" and msg["content"]]
-            # Since history includes the current user message as the last item, the actual previous user message is at index -2
-            previous_user_msg = user_messages[-2] if len(user_messages) >= 2 else ""
-            
-            routing_query = user_msg
-            if previous_user_msg:
-                routing_query = f"{previous_user_msg} {routing_query}"
+            # ── SMART AGENTIC ROUTING ────────────────────────────────────────
+            # Three pieces of context are passed to the SmartRouter:
+            #   1. current user message   → what the doctor just said
+            #   2. last AI message        → what the assistant asked (follow-up)
+            #   3. previous user message  → the ORIGINAL intent (e.g. "احجز")
+            #      This is critical so the router knows WHY the doctor is now
+            #      sending a follow-up like a patient name or phone number.
+            last_ai_msg: Optional[str] = None
+            previous_user_msg: Optional[str] = None
+
+            # Walk history in reverse to find last AI msg and previous user msg
+            for msg in reversed(history[:-1]):  # exclude current message
+                sender = msg.get("sender_type")
+                content = msg.get("content") or ""
+                if not content:
+                    continue
+                # AI messages are stored as JSON {"type":"text","content":"..."}
+                # Extract plain text so the Router can understand the actual meaning
+                if sender == "ai":
+                    try:
+                        parsed = json.loads(content)
+                        content = parsed.get("content", content)
+                    except (json.JSONDecodeError, AttributeError):
+                        pass  # already plain text
                 
-            if len(history) >= 2:
-                last_ai = history[-2]
-                if last_ai.get("sender_type") == "ai" and last_ai.get("content"):
-                    routing_query = f"{last_ai['content']} {routing_query}"
-            
-            _dbg(f"ROUTING CONTEXT: '{routing_query}'")
-            tools = await HybridToolRouter.get_tools_for_query(routing_query)
+                if sender == "ai" and last_ai_msg is None:
+                    last_ai_msg = content
+                elif sender == "user" and previous_user_msg is None:
+                    # Smart intent retrieval: Skip short confirmation keywords or phone numbers
+                    # to keep the true semantic intent as the previous user context.
+                    clean_content = content.strip().lower()
+                    # Check if phone number (digits only or with leading plus/zeros)
+                    is_phone = re.match(r"^\+?[0-9\u0660-\u0669\u06f0-\u06f9]+$", clean_content) is not None
+                    is_short_confirmation = clean_content in [
+                        "اه", "نعم", "لا", "تمام", "صح", "ماشي", "الاول", "الأول", "الاولاني", 
+                        "الأولاني", "الثاني", "التاني", "yes", "no", "ok", "y", "n"
+                    ]
+                    # Also skip messages that are too short (less than 4 characters)
+                    is_too_short = len(clean_content) < 4
+                    
+                    if not (is_phone or is_short_confirmation or is_too_short):
+                        previous_user_msg = content
+                
+                if last_ai_msg and previous_user_msg:
+                    break
+
+            # Fallback: if all user messages in history were short, grab the last one anyway
+            if previous_user_msg is None:
+                for msg in reversed(history[:-1]):
+                    if msg.get("sender_type") == "user" and msg.get("content"):
+                        previous_user_msg = msg["content"]
+                        break
+
+            _dbg(f"USER MSG : '{user_msg}'")
+            if previous_user_msg:
+                _dbg(f"PREV USER: '{previous_user_msg[:80]}{'…' if len(previous_user_msg) > 80 else ''}'")
+            if last_ai_msg:
+                _dbg(f"LAST AI  : '{last_ai_msg[:80]}{'…' if len(last_ai_msg) > 80 else ''}'")
+
+            tools = await SmartRouter.get_tools_for_query(
+                current_user_msg=user_msg,
+                last_ai_msg=last_ai_msg,
+                previous_user_msg=previous_user_msg,
+            )
             if not tools:
                 tools = None
 
@@ -194,6 +243,9 @@ class AIEngineService:
             accumulated_completion = 0
             accumulated_total = 0
 
+            # Track executed calls to prevent infinite loops on the same error
+            executed_calls = set()
+
             # AI execution loop
             for idx in range(MAX_ITERATIONS):
                 logger.info(f"[AI ENGINE] Iteration {idx+1}/{MAX_ITERATIONS} - Sending prompt to LLM...")
@@ -220,60 +272,105 @@ class AIEngineService:
                     logger.warning(f"Groq tool call exception: {groq_err}")
                     _dbg(f"⚠️  Groq error: {groq_err_str[:200]}")
 
-                    # ── Recover from tool_use_failed by regex on the raw error string ──
-                    recovered = False
-                    if "tool_use_failed" in groq_err_str or "failed_generation" in groq_err_str:
-                        parsed_calls = _parse_groq_failed_generation(groq_err_str)
-                        if parsed_calls:
-                            _dbg(f"🔧 Recovered {len(parsed_calls)} tool call(s) from failed_generation")
-                            groq_messages.append({
-                                "role": "assistant",
-                                "content": "",
-                                "tool_calls": [
-                                    {
-                                        "id": f"recovered_{i}",
-                                        "type": "function",
-                                        "function": {
-                                            "name": c["name"],
-                                            "arguments": json.dumps(c["args"], ensure_ascii=False)
-                                        }
-                                    }
-                                    for i, c in enumerate(parsed_calls)
-                                ]
-                            })
-                            has_error = False
-                            async with db.pool.acquire() as conn:
-                                for i, call in enumerate(parsed_calls):
-                                    fn_name = call["name"]
-                                    fn_args = call["args"]
-                                    _dbg(f"   ⚡ Executing (recovered): {fn_name} | Args: {fn_args}")
-                                    result_data = await tool_executor.dispatch(fn_name, fn_args, owner_id, conn)
-                                    _dbg(f"      Result: {str(result_data)[:200]}")
-                                    if isinstance(result_data, dict) and result_data.get("status") == "error":
-                                        has_error = True
-                                    groq_messages.append({
-                                        "role": "tool",
-                                        "name": fn_name,
-                                        "tool_call_id": f"recovered_{i}",
-                                        "content": json.dumps(result_data, ensure_ascii=False)
-                                    })
-                            if has_error:
-                                break
-                            recovered = True
-                            continue  # next iteration → final LLM text response
+                    # Check if it's a transient network/connection error
+                    is_transient = (
+                        "connection" in groq_err_str.lower() or 
+                        "timeout" in groq_err_str.lower() or 
+                        "50" in groq_err_str or 
+                        "rate_limit" in groq_err_str.lower() or
+                        "api_connection" in groq_err_str.lower()
+                    )
+                    if is_transient:
+                        _dbg("🔄 Transient network error detected. Retrying WITH tools in 1.5 seconds...")
+                        import asyncio
+                        await asyncio.sleep(1.5)
+                        try:
+                            response = await client.chat.completions.create(**comp_kwargs)
+                            if hasattr(response, "usage") and response.usage:
+                                accumulated_prompt += response.usage.prompt_tokens
+                                accumulated_completion += response.usage.completion_tokens
+                                accumulated_total += response.usage.total_tokens
+                            # Succeeded! Nullify the error so we don't trigger fallbacks.
+                            groq_err = None
+                        except Exception as retry_err:
+                            _dbg(f"❌ Retry failed: {retry_err}")
+                            raise retry_err
 
-                    if not recovered:
-                        _dbg("↩️  Last resort: retry WITHOUT tools...")
-                        response = await client.chat.completions.create(
-                            model=MODEL_NAME,
-                            messages=groq_messages,
-                            temperature=0.0
-                        )
-                        if hasattr(response, "usage") and response.usage:
-                            accumulated_prompt += response.usage.prompt_tokens
-                            accumulated_completion += response.usage.completion_tokens
-                            accumulated_total += response.usage.total_tokens
-                            logger.info(f"[AI ENGINE - TOKENS] Retry Call #{total_calls} -> Model: {MODEL_NAME} | Prompt: {response.usage.prompt_tokens} | Completion: {response.usage.completion_tokens} | Total: {response.usage.total_tokens}")
+                    if groq_err is not None:
+                        # ── Recover from tool_use_failed by regex on the raw error string ──
+                        recovered = False
+                        if "tool_use_failed" in groq_err_str or "failed_generation" in groq_err_str:
+                            parsed_calls = _parse_groq_failed_generation(groq_err_str)
+                            if parsed_calls:
+                                _dbg(f"🔧 Recovered {len(parsed_calls)} tool call(s) from failed_generation")
+                                groq_messages.append({
+                                    "role": "assistant",
+                                    "content": "",
+                                    "tool_calls": [
+                                        {
+                                            "id": f"recovered_{i}",
+                                            "type": "function",
+                                            "function": {
+                                                "name": c["name"],
+                                                "arguments": json.dumps(c["args"], ensure_ascii=False)
+                                            }
+                                        }
+                                        for i, c in enumerate(parsed_calls)
+                                    ]
+                                })
+                                has_error = False
+                                async with db.pool.acquire() as conn:
+                                    for i, call in enumerate(parsed_calls):
+                                        fn_name = call["name"]
+                                        fn_args = call["args"]
+                                        
+                                        # Check for duplicate call to prevent infinite loop
+                                        call_key = f"{fn_name}:{json.dumps(fn_args, sort_keys=True)}"
+                                        if call_key in executed_calls:
+                                            logger.warning(f"[AI ENGINE] Duplicate recovered tool call detected: {call_key}. Breaking early.")
+                                            has_error = True
+                                            break
+                                        executed_calls.add(call_key)
+
+                                        _dbg(f"   ⚡ Executing (recovered): {fn_name} | Args: {fn_args}")
+                                        result_data = await tool_executor.dispatch(fn_name, fn_args, owner_id, conn)
+                                        _dbg(f"      Result: {str(result_data)[:200]}")
+                                        if isinstance(result_data, dict) and result_data.get("status") == "error":
+                                            has_error = True
+                                        elif isinstance(result_data, dict) and result_data.get("status") == "success":
+                                            if fn_name == "add_new_patient" and result_data.get("patient_id"):
+                                                new_pid = UUID(result_data["patient_id"])
+                                                await conn.execute(
+                                                    "UPDATE chat_threads SET patient_id = $1 WHERE id = $2",
+                                                    new_pid, UUID(thread_id)
+                                                )
+                                                logger.info(f"[AI ENGINE] Associated new patient {new_pid} with thread {thread_id}")
+                                        groq_messages.append({
+                                            "role": "tool",
+                                            "name": fn_name,
+                                            "tool_call_id": f"recovered_{i}",
+                                            "content": json.dumps(result_data, ensure_ascii=False)
+                                        })
+                                recovered = True
+                                continue  # next iteration → final LLM text response
+
+                        if not recovered:
+                            # Only retry without tools if it is a tool validation / 400 Bad Request error
+                            is_tool_validation_error = "tool" in groq_err_str.lower() or "400" in groq_err_str or "validation" in groq_err_str.lower()
+                            if is_tool_validation_error:
+                                _dbg("↩️  Last resort: retry WITHOUT tools...")
+                                response = await client.chat.completions.create(
+                                    model=MODEL_NAME,
+                                    messages=groq_messages,
+                                    temperature=0.0
+                                )
+                                if hasattr(response, "usage") and response.usage:
+                                    accumulated_prompt += response.usage.prompt_tokens
+                                    accumulated_completion += response.usage.completion_tokens
+                                    accumulated_total += response.usage.total_tokens
+                                    logger.info(f"[AI ENGINE - TOKENS] Retry Call #{total_calls} -> Model: {MODEL_NAME} | Prompt: {response.usage.prompt_tokens} | Completion: {response.usage.completion_tokens} | Total: {response.usage.total_tokens}")
+                            else:
+                                raise groq_err
 
 
                 response_message = response.choices[0].message
@@ -309,12 +406,28 @@ class AIEngineService:
                             if not fn_args:
                                 fn_args = {}
                                 
+                            # Check for duplicate call to prevent infinite loop
+                            call_key = f"{fn_name}:{json.dumps(fn_args, sort_keys=True)}"
+                            if call_key in executed_calls:
+                                logger.warning(f"[AI ENGINE] Duplicate tool call detected: {call_key}. Breaking early.")
+                                has_error = True
+                                break
+                            executed_calls.add(call_key)
+
                             result_data = await tool_executor.dispatch(fn_name, fn_args, owner_id, conn)
                             logger.info(f"    Result: {result_data}")
                             _dbg(f"      Result: {str(result_data)[:200]}")
 
                             if isinstance(result_data, dict) and result_data.get("status") == "error":
                                 has_error = True
+                            elif isinstance(result_data, dict) and result_data.get("status") == "success":
+                                if fn_name == "add_new_patient" and result_data.get("patient_id"):
+                                    new_pid = UUID(result_data["patient_id"])
+                                    await conn.execute(
+                                        "UPDATE chat_threads SET patient_id = $1 WHERE id = $2",
+                                        new_pid, UUID(thread_id)
+                                    )
+                                    logger.info(f"[AI ENGINE] Associated new patient {new_pid} with thread {thread_id}")
 
                             groq_messages.append({
                                 "role": "tool",
@@ -322,9 +435,10 @@ class AIEngineService:
                                 "tool_call_id": tool_call.id,
                                 "content": json.dumps(result_data, ensure_ascii=False)
                             })
-                    if has_error:
-                        logger.warning(f"[AI ENGINE] Tool returned status='error'. Breaking loop early to prevent hallucinated retry.")
-                        break
+                    # We no longer break the main iteration loop unconditionally on has_error.
+                    # This allows the LLM to see the validation/business error (like invalid UUID or slot conflict)
+                    # and self-correct or ask the doctor for another slot.
+                    pass
                 else:
                     logger.info(f"[AI ENGINE] Model finished tool calls and returned text response.")
                     break

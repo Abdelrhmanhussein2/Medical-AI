@@ -1,4 +1,9 @@
 # app/services/router/llm_router.py
+# ⚠️  DEPRECATED — Archived for reference only.
+# This file is no longer used in production.
+# Use SmartRouter (app/services/router/smart_router.py) instead.
+# ─────────────────────────────────────────────────────────────────────────────
+
 import os
 import re
 import json

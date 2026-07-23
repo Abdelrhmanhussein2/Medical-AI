@@ -1,4 +1,8 @@
 # app/services/router/hybrid_router.py
+# ⚠️  DEPRECATED — Archived for reference only.
+# This file is no longer used in production.
+# Use SmartRouter (app/services/router/smart_router.py) instead.
+# ─────────────────────────────────────────────────────────────────────────────
 import logging
 from typing import List, Dict, Any
 from app.services.router.rule_router import RuleBasedRouter

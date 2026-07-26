@@ -102,6 +102,9 @@ CREATE TABLE patients (
     national_id  VARCHAR(50),
     date_of_birth DATE,
     gender       VARCHAR(10),
+    file_id      VARCHAR(100),
+    diseases     TEXT,
+    habits       TEXT,
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );

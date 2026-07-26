@@ -2,9 +2,13 @@
 Session Service — CRUD operations للجلسات الطبية
 """
 import json
+import os
 from typing import Optional
+from uuid import UUID, uuid4
 from app.core.database import db
+from app.core.config import settings
 from app.services.ai_service import summarize_session_transcript
+from groq import AsyncGroq
 
 
 class SessionService:
@@ -20,6 +24,88 @@ class SessionService:
         async with db.pool.acquire() as conn:
             row = await conn.fetchrow(query, doctor_id, appointment_id, patient_id)
             return dict(row) if row else None
+            
+    @staticmethod
+    async def process_audio_chunk(session_id: str, file) -> dict:
+        """
+        يستقبل جزء من الصوت، يرسله لـ Groq Whisper لتفريغه،
+        ثم يدمجه في transcript_raw للجلسة المعنية.
+        """
+        api_key = settings.GROQ_API_KEY or os.environ.get("GROQ_API_KEY", "")
+        if not api_key:
+            raise ValueError("Groq API Key is not configured.")
+
+        # 1. التحقق من وجود الجلسة أولاً
+        check_query = "SELECT id, transcript_raw FROM sessions WHERE id = $1"
+        async with db.pool.acquire() as conn:
+            row = await conn.fetchrow(check_query, UUID(session_id))
+            if not row:
+                raise ValueError("Session not found")
+        
+        # 2. حفظ الملف الصوتي مؤقتاً
+        filename = getattr(file, "filename", None) or ""
+        ext = os.path.splitext(filename)[1].lower() if filename else ".webm"
+        if not ext:
+            ext = ".webm"
+            
+        upload_dir = os.path.join(os.getcwd(), "app", "uploads", "session_chunks")
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        unique_name = f"{session_id}_{uuid4()}{ext}"
+        saved_file_path = os.path.join(upload_dir, unique_name)
+        
+        contents = await file.read()
+        try:
+            with open(saved_file_path, "wb") as f:
+                f.write(contents)
+        except Exception as e:
+            raise RuntimeError(f"Failed to save chunk file: {str(e)}")
+            
+        # 3. إرسال لـ Groq Whisper
+        chunk_text = ""
+        try:
+            client = AsyncGroq(api_key=api_key.strip())
+            with open(saved_file_path, "rb") as audio_file:
+                transcription = await client.audio.transcriptions.create(
+                    file=(unique_name, audio_file.read()),
+                    model="whisper-large-v3",
+                    response_format="text"
+                )
+                chunk_text = str(transcription).strip()
+        except Exception as e:
+            if os.path.exists(saved_file_path):
+                os.remove(saved_file_path)
+            raise RuntimeError(f"Groq Whisper transcription failed: {str(e)}")
+            
+        # 4. مسح الملف المؤقت من القرص فوراً
+        if os.path.exists(saved_file_path):
+            os.remove(saved_file_path)
+            
+        # إذا لم يتم كشف أي كلام في هذا الجزء
+        if not chunk_text or chunk_text.startswith("Subtitles by") or chunk_text.startswith("Amara.org"):
+            chunk_text = ""
+            
+        # 5. تحديث قاعدة البيانات وإلحاق النص الجديد
+        if chunk_text:
+            update_query = """
+                UPDATE sessions 
+                SET transcript_raw = CASE 
+                    WHEN transcript_raw IS NULL OR TRIM(transcript_raw) = '' THEN $1
+                    ELSE transcript_raw || '\n' || $1
+                END
+                WHERE id = $2
+                RETURNING transcript_raw
+            """
+            async with db.pool.acquire() as conn:
+                res_row = await conn.fetchrow(update_query, chunk_text, UUID(session_id))
+                updated_transcript = res_row["transcript_raw"] if res_row else ""
+        else:
+            updated_transcript = row["transcript_raw"] or ""
+
+        return {
+            "chunk_text": chunk_text,
+            "transcript_raw": updated_transcript
+        }
     
     @staticmethod
     async def update_transcript(session_id: str, transcript_raw: str, duration_seconds: int = 0) -> dict:
@@ -159,3 +245,35 @@ class SessionService:
         async with db.pool.acquire() as conn:
             rows = await conn.fetch(query, doctor_id, limit)
             return [dict(r) for r in rows]
+
+    @staticmethod
+    async def get_sessions_by_patient(patient_id: str) -> list:
+        """جلب كل الجلسات الطبية لمريض معين"""
+        query = """
+            SELECT id, status, duration_seconds, summary_text, soap_note, patient_summary, prescriptions, tasks, created_at
+            FROM sessions 
+            WHERE patient_id = $1
+            ORDER BY created_at DESC
+        """
+        async with db.pool.acquire() as conn:
+            rows = await conn.fetch(query, UUID(patient_id))
+            results = []
+            for r in rows:
+                item = dict(r)
+                if item.get("soap_note"):
+                    try:
+                        item["soap_note"] = json.loads(item["soap_note"])
+                    except Exception:
+                        pass
+                if item.get("prescriptions"):
+                    try:
+                        item["prescriptions"] = json.loads(item["prescriptions"])
+                    except Exception:
+                        pass
+                if item.get("tasks"):
+                    try:
+                        item["tasks"] = json.loads(item["tasks"])
+                    except Exception:
+                        pass
+                results.append(item)
+            return results

@@ -11,9 +11,23 @@ class PatientBase(BaseModel):
     date_of_birth: Optional[date] = None
     gender: Optional[str] = None
     doctor_id: Optional[UUID] = None
+    file_id: Optional[str] = None
+    diseases: Optional[str] = None
+    habits: Optional[str] = None
 
 class PatientCreate(PatientBase):
     pass
+
+class PatientUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[EmailStr] = None
+    national_id: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    gender: Optional[str] = None
+    file_id: Optional[str] = None
+    diseases: Optional[str] = None
+    habits: Optional[str] = None
 
 class PatientResponse(PatientBase):
     id: UUID

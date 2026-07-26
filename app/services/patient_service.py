@@ -1,5 +1,5 @@
 from app.core.database import db
-from app.schemes.patient_schema import PatientCreate
+from app.schemes.patient_schema import PatientCreate, PatientUpdate
 from typing import Optional
 from uuid import UUID
 
@@ -10,9 +10,9 @@ class PatientService:
         doc_uuid = UUID(effective_doctor_id) if effective_doctor_id else None
 
         query = """
-            INSERT INTO patients (name, phone, email, national_id, date_of_birth, gender, doctor_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING id, doctor_id, name, phone, email, national_id, date_of_birth, gender, created_at, updated_at
+            INSERT INTO patients (name, phone, email, national_id, date_of_birth, gender, doctor_id, file_id, diseases, habits)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            RETURNING id, doctor_id, name, phone, email, national_id, date_of_birth, gender, file_id, diseases, habits, created_at, updated_at
         """
         async with db.pool.acquire() as connection:
             row = await connection.fetchrow(
@@ -23,8 +23,48 @@ class PatientService:
                 patient_data.national_id,
                 patient_data.date_of_birth,
                 patient_data.gender,
-                doc_uuid
+                doc_uuid,
+                patient_data.file_id,
+                patient_data.diseases,
+                patient_data.habits
             )
+            return dict(row) if row else None
+
+    @staticmethod
+    async def update_patient(patient_id: str, patient_data: PatientUpdate, doctor_id: Optional[str] = None):
+        """
+        تعديل بيانات مريض مع دعم التحديث الجزئي (PATCH).
+        """
+        doc_uuid = UUID(doctor_id) if doctor_id else None
+        
+        # Build query dynamically
+        update_data = patient_data.model_dump(exclude_unset=True)
+        if not update_data:
+            return await PatientService.get_patient(patient_id)
+            
+        set_clauses = []
+        values = []
+        for i, (key, val) in enumerate(update_data.items(), start=1):
+            set_clauses.append(f"{key} = ${i}")
+            if key == "doctor_id" and val:
+                values.append(UUID(str(val)))
+            else:
+                values.append(val)
+                
+        pid_idx = len(values) + 1
+        doc_idx = len(values) + 2
+        
+        values.append(UUID(patient_id))
+        values.append(doc_uuid)
+        
+        query = f"""
+            UPDATE patients
+            SET {", ".join(set_clauses)}, updated_at = now()
+            WHERE id = ${pid_idx} AND (${doc_idx}::uuid IS NULL OR doctor_id = ${doc_idx}::uuid)
+            RETURNING id, doctor_id, name, phone, email, national_id, date_of_birth, gender, file_id, diseases, habits, created_at, updated_at
+        """
+        async with db.pool.acquire() as connection:
+            row = await connection.fetchrow(query, *values)
             return dict(row) if row else None
 
     @staticmethod

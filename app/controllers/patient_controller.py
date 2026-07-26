@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Query, Depends
-from app.schemes.patient_schema import PatientCreate, PatientResponse
+from app.schemes.patient_schema import PatientCreate, PatientUpdate, PatientResponse
 from app.services.patient_service import PatientService
 from app.core.dependencies import get_current_user
 from uuid import UUID
@@ -17,6 +17,23 @@ async def create_patient(
     if not new_patient:
         raise HTTPException(status_code=400, detail="Could not create patient")
     return new_patient
+
+@router.patch("/{patient_id}", response_model=PatientResponse)
+async def update_patient(
+    patient_id: UUID,
+    patient_data: PatientUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    doctor_id = str(current_user["id"]) if current_user.get("role") == "doctor" else None
+    existing = await PatientService.get_patient(str(patient_id))
+    if not existing:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    if doctor_id and existing.get("doctor_id") and str(existing["doctor_id"]) != doctor_id:
+        raise HTTPException(status_code=403, detail="ليس لديك صلاحية لتعديل بيانات هذا المريض.")
+    updated = await PatientService.update_patient(str(patient_id), patient_data, doctor_id)
+    if not updated:
+        raise HTTPException(status_code=400, detail="Could not update patient")
+    return updated
 
 @router.get("/{patient_id}", response_model=PatientResponse)
 async def get_patient(

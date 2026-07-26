@@ -14,8 +14,82 @@ async def summarize_session_transcript(transcript: str, patient_name: str = "Ø§Ù
         dict with keys: summary, soap_note (S/O/A/P), patient_summary, prescriptions, tasks
     """
     if not settings.OPENAI_API_KEY or settings.OPENAI_API_KEY.startswith("sk-your"):
-        # Fallback mock response if no API key set
-        return _mock_summary_response(transcript)
+        # Fallback to Groq LLM if GROQ_API_KEY is available
+        if settings.GROQ_API_KEY:
+            try:
+                from groq import AsyncGroq
+                client = AsyncGroq(api_key=settings.GROQ_API_KEY)
+                
+                system_prompt = """You are a highly skilled medical AI assistant helping doctors summarize clinical consultations.
+You will receive a raw transcript of a doctor-patient session and must return a structured JSON response.
+
+IMPORTANT: Always respond in the SAME language as the transcript. If the transcript is in Arabic, respond in Arabic.
+
+Return ONLY valid JSON with this exact structure:
+{
+  "summary": "Brief 2-3 sentence overview of the session",
+  "soap_note": {
+    "S": "Subjective - patient's complaints and history",
+    "O": "Objective - examination findings",
+    "A": "Assessment - diagnosis or differential",
+    "P": "Plan - treatment and follow-up"
+  },
+  "patient_summary": "Simple summary written for patient understanding (avoid medical jargon)",
+  "prescriptions": [
+    {"medication": "name", "dose": "dose", "frequency": "frequency", "duration": "duration"}
+  ],
+  "tasks": [
+    "Follow up task 1",
+    "Follow up task 2"
+  ]
+}"""
+
+                user_prompt = f"""Patient Name: {patient_name}
+
+Session Transcript:
+{transcript}
+
+Please analyze this consultation and return the structured JSON summary."""
+
+                response = await client.chat.completions.create(
+                    model="llama-3.3-70b-specdec",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0.3,
+                    max_tokens=2000
+                )
+                
+                content = response.choices[0].message.content
+                result = json.loads(content)
+                result["tokens_used"] = response.usage.total_tokens
+                result["model"] = "llama-3.3-70b-specdec"
+                return result
+            except Exception as e:
+                print(f"Groq primary summarization failed, trying fallback model: {e}")
+                try:
+                    response = await client.chat.completions.create(
+                        model="llama-3.1-8b-instant",
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        response_format={"type": "json_object"},
+                        temperature=0.3,
+                        max_tokens=2000
+                    )
+                    content = response.choices[0].message.content
+                    result = json.loads(content)
+                    result["tokens_used"] = response.usage.total_tokens
+                    result["model"] = "llama-3.1-8b-instant"
+                    return result
+                except Exception as ex:
+                    print(f"Groq fallback summarization failed: {ex}")
+                    return _mock_summary_response(transcript)
+        else:
+            return _mock_summary_response(transcript)
     
     try:
         from openai import AsyncOpenAI

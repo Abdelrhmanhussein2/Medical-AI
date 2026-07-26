@@ -1,9 +1,11 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
+import { useSession } from '../context/SessionContext';
 import SbrLogo from './SbrLogo';
 
 export default function Layout({ children, activePage, setActivePage }) {
   const { currentUser, logout } = useApp();
+  const { isRecording, duration, appointmentId, patient } = useSession();
 
   if (!currentUser) return <>{children}</>;
 
@@ -86,6 +88,26 @@ export default function Layout({ children, activePage, setActivePage }) {
             </li>
           ))}
         </ul>
+
+        {/* Active Session Indicator Widget */}
+        {isRecording && appointmentId && (
+          <div class="mx-4 my-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl space-y-2 text-left animate-pulse">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-red-500 shrink-0"></span>
+              <span class="text-[9px] font-black text-red-500 uppercase tracking-widest">Active Recording</span>
+            </div>
+            {patient && (
+              <p class="text-xs font-bold text-on-surface truncate max-w-[190px]">{patient.name}</p>
+            )}
+            <button
+              onClick={() => setActivePage(`live-session-${appointmentId}`)}
+              class="w-full py-1.5 bg-red-500 hover:bg-red-600 text-white text-[10px] font-black rounded-lg text-center transition-colors flex items-center justify-center gap-1 shadow-sm"
+            >
+              <span class="material-symbols-outlined text-[12px]">keyboard_return</span>
+              Return to Session
+            </button>
+          </div>
+        )}
 
         {/* Dynamic Role Action Buttons */}
         {currentUser.role === 'admin' && (

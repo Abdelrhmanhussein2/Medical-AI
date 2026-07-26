@@ -1,7 +1,7 @@
 """
 Session Controller — API endpoints للجلسات الطبية
 """
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, File, UploadFile
 from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel
@@ -9,6 +9,17 @@ from pydantic import BaseModel
 from app.services.session_service import SessionService
 
 router = APIRouter(prefix="/sessions", tags=["Sessions"])
+
+@router.post("/{session_id}/chunks")
+async def upload_audio_chunk(session_id: UUID, file: UploadFile = File(...)):
+    """رفع جزء صوتي من الجلسة وتفريغه ودمجه في النص الكامل"""
+    try:
+        result = await SessionService.process_audio_chunk(str(session_id), file)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"فشل معالجة جزء الصوت: {str(e)}")
 
 
 # ---- Pydantic Schemas ----
@@ -109,3 +120,9 @@ async def get_by_appointment(appointment_id: UUID):
 async def get_doctor_sessions(doctor_id: UUID, limit: int = 20):
     """جلب آخر جلسات الدكتور"""
     return await SessionService.get_doctor_sessions(str(doctor_id), limit)
+
+
+@router.get("/by-patient/{patient_id}")
+async def get_patient_sessions(patient_id: UUID):
+    """جلب كل الجلسات لمريض معين"""
+    return await SessionService.get_sessions_by_patient(str(patient_id))

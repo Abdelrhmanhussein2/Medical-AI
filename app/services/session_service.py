@@ -145,15 +145,17 @@ class SessionService:
         # حفظ النتيجة
         update_query = """
             UPDATE sessions SET
-                summary_text    = $1,
-                soap_note       = $2,
-                patient_summary = $3,
-                prescriptions   = $4,
-                tasks           = $5,
-                ai_model_used   = $6,
-                ai_tokens_used  = $7,
-                status          = 'summarized'
-            WHERE id = $8
+                summary_text         = $1,
+                soap_note            = $2,
+                patient_summary      = $3,
+                prescriptions        = $4,
+                tasks                = $5,
+                ai_model_used        = $6,
+                ai_tokens_used       = $7,
+                ai_prompt_tokens     = $8,
+                ai_completion_tokens = $9,
+                status               = 'summarized'
+            WHERE id = $10
             RETURNING *
         """
         soap_note_json = json.dumps(ai_result.get("soap_note", {}), ensure_ascii=False)
@@ -168,10 +170,33 @@ class SessionService:
                 ai_result.get("patient_summary"),
                 prescriptions_json,
                 tasks_json,
-                ai_result.get("model", "gpt-4o-mini"),
+                ai_result.get("model", settings.OPENAI_MODEL),
                 ai_result.get("tokens_used", 0),
+                ai_result.get("prompt_tokens", 0),
+                ai_result.get("completion_tokens", 0),
                 session_id
             )
+            
+            # Log token usage to database
+            tokens_used = ai_result.get("tokens_used", 0)
+            if row and tokens_used > 0:
+                try:
+                    from uuid import UUID
+                    doc_id = row.get("doctor_id") or session.get("doctor_id")
+                    if doc_id:
+                        await conn.execute(
+                            """
+                            INSERT INTO token_usage_logs (
+                                doctor_id, service_type, model_name,
+                                prompt_tokens, completion_tokens, total_tokens
+                            )
+                            VALUES ($1, $2, $3, $4, $5, $6)
+                            """,
+                            UUID(str(doc_id)), "summarization", ai_result.get("model", settings.OPENAI_MODEL),
+                            ai_result.get("prompt_tokens", 0), ai_result.get("completion_tokens", 0), tokens_used
+                        )
+                except Exception as log_err:
+                    print(f"Failed to log summarization tokens: {log_err}")
         
         if not row:
             raise ValueError("Failed to save session summary")
@@ -250,7 +275,7 @@ class SessionService:
     async def get_sessions_by_patient(patient_id: str) -> list:
         """جلب كل الجلسات الطبية لمريض معين"""
         query = """
-            SELECT id, status, duration_seconds, summary_text, soap_note, patient_summary, prescriptions, tasks, created_at
+            SELECT id, status, duration_seconds, summary_text, soap_note, patient_summary, prescriptions, tasks, ai_model_used, ai_tokens_used, ai_prompt_tokens, ai_completion_tokens, created_at
             FROM sessions 
             WHERE patient_id = $1
             ORDER BY created_at DESC

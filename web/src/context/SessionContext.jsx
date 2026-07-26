@@ -96,6 +96,8 @@ export const SessionProvider = ({ children }) => {
   const [patientSummary, setPatientSummary] = useState('');
   const [prescriptions, setPrescriptions] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [aiModelUsed, setAiModelUsed] = useState('');
+  const [aiTokensUsed, setAiTokensUsed] = useState(0);
   const [showSummaryError, setShowSummaryError] = useState(false);
 
   // References for Web Recording
@@ -124,6 +126,8 @@ export const SessionProvider = ({ children }) => {
         setPatientSummary(data.patientSummary || '');
         setPrescriptions(data.prescriptions || []);
         setTasks(data.tasks || []);
+        setAiModelUsed(data.aiModelUsed || '');
+        setAiTokensUsed(data.aiTokensUsed || 0);
         
         // If it was recording, we attempt to re-initialize mediaRecorder
         if (data.isRecording) {
@@ -150,7 +154,9 @@ export const SessionProvider = ({ children }) => {
         soapNote,
         patientSummary,
         prescriptions,
-        tasks
+        tasks,
+        aiModelUsed,
+        aiTokensUsed
       };
       localStorage.setItem("active_bg_recording_session", JSON.stringify(data));
     } else {
@@ -519,6 +525,8 @@ export const SessionProvider = ({ children }) => {
         setPatientSummary(result.patient_summary || '');
         setPrescriptions(result.prescriptions || []);
         setTasks(result.tasks || []);
+        setAiModelUsed(result.ai_model_used || '');
+        setAiTokensUsed(result.ai_tokens_used || 0);
         setSummaryDone(true);
         
         // Success - clear localStorage and IndexedDB
@@ -558,6 +566,8 @@ export const SessionProvider = ({ children }) => {
       setPatientSummary(result.patient_summary || '');
       setPrescriptions(result.prescriptions || []);
       setTasks(result.tasks || []);
+      setAiModelUsed(result.ai_model_used || '');
+      setAiTokensUsed(result.ai_tokens_used || 0);
       setSummaryDone(true);
       clearActiveSession();
     } catch (err) {
@@ -600,6 +610,8 @@ export const SessionProvider = ({ children }) => {
     setPatientSummary('');
     setPrescriptions([]);
     setTasks([]);
+    setAiModelUsed('');
+    setAiTokensUsed(0);
     setShowSummaryError(false);
   };
 
@@ -620,6 +632,8 @@ export const SessionProvider = ({ children }) => {
       patientSummary,
       prescriptions,
       tasks,
+      aiModelUsed,
+      aiTokensUsed,
       showSummaryError,
       startRecording,
       stopRecording,

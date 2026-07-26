@@ -200,9 +200,9 @@ async def tool_update_patient_info(fn_args: dict, owner_id: str, conn) -> dict:
         updates = []
         params = [pid_uuid, UUID(owner_id)]
         param_idx = 3
-        for field in ["name", "phone", "email", "gender"]:
+        for field in ["name", "phone", "email", "gender", "diseases", "habits"]:
             val = fn_args.get(field)
-            if val:
+            if val is not None:
                 updates.append(f"{field} = ${param_idx}")
                 params.append(val)
                 param_idx += 1
@@ -240,7 +240,7 @@ async def tool_get_patient_full_profile(fn_args: dict, owner_id: str, conn) -> d
 
     try:
         patient = await conn.fetchrow(
-            "SELECT id, name, phone, email, date_of_birth, gender, created_at FROM patients WHERE id = $1 AND doctor_id = $2",
+            "SELECT id, name, phone, email, date_of_birth, gender, diseases, habits, created_at FROM patients WHERE id = $1 AND doctor_id = $2",
             pid_uuid, UUID(owner_id)
         )
         if patient:
@@ -259,6 +259,8 @@ async def tool_get_patient_full_profile(fn_args: dict, owner_id: str, conn) -> d
                     "email": patient['email'],
                     "date_of_birth": str(patient['date_of_birth']) if patient['date_of_birth'] else None,
                     "gender": patient['gender'],
+                    "diseases": patient['diseases'],
+                    "habits": patient['habits'],
                     "registered_at": str(patient['created_at'].date())
                 },
                 "recent_visits": [

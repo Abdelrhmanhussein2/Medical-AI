@@ -65,7 +65,10 @@ Please analyze this consultation and return the structured JSON summary."""
                 content = response.choices[0].message.content
                 result = json.loads(content)
                 result["tokens_used"] = response.usage.total_tokens
+                result["prompt_tokens"] = response.usage.prompt_tokens
+                result["completion_tokens"] = response.usage.completion_tokens
                 result["model"] = "llama-3.3-70b-specdec"
+                print(f"\033[92m[AI TOKEN USAGE] Model: llama-3.3-70b-specdec | Tokens Consumed: {response.usage.total_tokens}\033[0m", flush=True)
                 return result
             except Exception as e:
                 print(f"Groq primary summarization failed, trying fallback model: {e}")
@@ -83,7 +86,10 @@ Please analyze this consultation and return the structured JSON summary."""
                     content = response.choices[0].message.content
                     result = json.loads(content)
                     result["tokens_used"] = response.usage.total_tokens
+                    result["prompt_tokens"] = response.usage.prompt_tokens
+                    result["completion_tokens"] = response.usage.completion_tokens
                     result["model"] = "llama-3.1-8b-instant"
+                    print(f"\033[92m[AI TOKEN USAGE] Model: llama-3.1-8b-instant | Tokens Consumed: {response.usage.total_tokens}\033[0m", flush=True)
                     return result
                 except Exception as ex:
                     print(f"Groq fallback summarization failed: {ex}")
@@ -127,7 +133,7 @@ Session Transcript:
 Please analyze this consultation and return the structured JSON summary."""
 
         response = await client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=settings.OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
@@ -140,7 +146,10 @@ Please analyze this consultation and return the structured JSON summary."""
         content = response.choices[0].message.content
         result = json.loads(content)
         result["tokens_used"] = response.usage.total_tokens
-        result["model"] = "gpt-4o-mini"
+        result["prompt_tokens"] = response.usage.prompt_tokens
+        result["completion_tokens"] = response.usage.completion_tokens
+        result["model"] = settings.OPENAI_MODEL
+        print(f"\033[92m[OPENAI TOKEN USAGE] Model: {settings.OPENAI_MODEL} | Tokens Consumed: {response.usage.total_tokens}\033[0m", flush=True)
         return result
         
     except Exception as e:

@@ -77,10 +77,11 @@ export default function Layout({ children, activePage, setActivePage }) {
             <li key={item.id}>
               <button
                 onClick={() => setActivePage(item.id)}
-                class={`w-full flex items-center gap-stack-md px-stack-md py-stack-sm cursor-pointer rounded-lg transition-colors text-left ${activePage === item.id
+                class={`w-full flex items-center gap-stack-md px-stack-md py-stack-sm cursor-pointer rounded-lg transition-colors text-left ${
+                  activePage === item.id || (item.id === 'aichat' && activePage.startsWith('aichat-patient-'))
                     ? 'bg-primary-light text-primary font-bold shadow-sm'
                     : 'text-secondary hover:bg-surface-container'
-                  }`}
+                }`}
               >
                 <span class="material-symbols-outlined text-[20px]">{item.icon}</span>
                 <span class="text-xs font-semibold">{item.name}</span>

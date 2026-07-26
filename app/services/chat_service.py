@@ -40,8 +40,8 @@ class ChatService:
     @staticmethod
     async def create_thread(owner_id: str, owner_type: str, data: ThreadCreate) -> dict:
         query = """
-            INSERT INTO chat_threads (owner_id, owner_type, title, dept)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO chat_threads (owner_id, owner_type, title, dept, patient_id)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING *
         """
         async with db.pool.acquire() as connection:
@@ -50,7 +50,8 @@ class ChatService:
                 UUID(owner_id),
                 owner_type,
                 data.title,
-                data.dept
+                data.dept,
+                data.patient_id
             )
             return dict(row) if row else None
 

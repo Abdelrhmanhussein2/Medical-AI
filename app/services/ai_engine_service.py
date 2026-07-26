@@ -11,13 +11,18 @@ from fastapi import HTTPException, status
 from app.core.database import db
 from app.core.config import settings
 from groq import AsyncGroq
+from openai import AsyncOpenAI
+from app.services.chat_service import ChatService
+from app.schemes.chat_schema import MessageCreate
+from app.services.ai_tools import ToolExecutor
+from app.services.router import SmartRouter
 
 logger = logging.getLogger(__name__)
 
 # Constants for configuration (Scalability & Maintainability)
 MAX_ITERATIONS = 8
 MODEL_NAME = "llama-3.3-70b-versatile"
-HISTORY_LIMIT = 8  # reduced from 20 → saves ~60% tokens per request
+HISTORY_LIMIT = 5  # reduced to 5 → saves even more tokens per request
 
 def _dbg(*args):
     msg = " ".join(str(a) for a in args)
@@ -86,20 +91,23 @@ class AIEngineService:
     @staticmethod
     async def generate_ai_response(thread_id: str, owner_id: str, owner_type: str) -> dict:
         # Import inside method to avoid circular import issues
-        from app.services.chat_service import ChatService
-        from app.schemes.chat_schema import MessageCreate
-        from app.services.ai_tools import ToolExecutor
-        from app.services.router import SmartRouter
+        
 
         try:
-            api_key = settings.GROQ_API_KEY or os.environ.get("GROQ_API_KEY", "")
-            if not api_key:
-                logger.error("Groq API Key is not configured.")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Groq API Key is not configured."
-                )
-            client = AsyncGroq(api_key=api_key.strip())
+            use_openai = settings.OPENAI_API_KEY and not settings.OPENAI_API_KEY.startswith("sk-your")
+            if use_openai:
+                client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.strip())
+                model_to_use = settings.OPENAI_MODEL or "gpt-4o-mini"
+            else:
+                api_key = settings.GROQ_API_KEY or os.environ.get("GROQ_API_KEY", "")
+                if not api_key:
+                    logger.error("Groq API Key is not configured.")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Groq API Key is not configured."
+                    )
+                client = AsyncGroq(api_key=api_key.strip())
+                model_to_use = MODEL_NAME
 
             # Get message history (limit raised to HISTORY_LIMIT)
             history = await ChatService.get_messages(thread_id, owner_id, owner_type, limit=HISTORY_LIMIT)
@@ -108,6 +116,23 @@ class AIEngineService:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="لا يوجد رسائل للرد عليها."
                 )
+
+            # ── Check Daily Token Limit ──
+            async with db.pool.acquire() as conn_limit:
+                used_today = await conn_limit.fetchval(
+                    """
+                    SELECT COALESCE(SUM(total_tokens), 0)
+                    FROM token_usage_logs
+                    WHERE doctor_id = $1 AND created_at >= NOW() - INTERVAL '24 hours'
+                    """,
+                    UUID(owner_id)
+                )
+                if used_today >= settings.DAILY_TOKEN_LIMIT:
+                    logger.warning(f"[AI ENGINE] Doctor {owner_id} exceeded daily token limit. Used today: {used_today}")
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail="لقد تجاوزت الحد اليومي المسموح به لاستهلاك التوكنز في العيادة. يرجى الانتظار أو التواصل مع الإدارة لزيادة الحد."
+                    )
 
             user_msg = history[-1]["content"] if history else ""
             if history and history[-1].get("is_audio"):
@@ -253,7 +278,7 @@ class AIEngineService:
                 try:
                     total_calls += 1
                     comp_kwargs = {
-                        "model": MODEL_NAME,
+                        "model": model_to_use,
                         "messages": groq_messages,
                         "temperature": 0.0
                     }
@@ -266,7 +291,7 @@ class AIEngineService:
                         accumulated_prompt += response.usage.prompt_tokens
                         accumulated_completion += response.usage.completion_tokens
                         accumulated_total += response.usage.total_tokens
-                        logger.info(f"[AI ENGINE - TOKENS] API Call #{total_calls} -> Model: {MODEL_NAME} | Prompt: {response.usage.prompt_tokens} | Completion: {response.usage.completion_tokens} | Total: {response.usage.total_tokens}")
+                        logger.info(f"[AI ENGINE - TOKENS] API Call #{total_calls} -> Model: {model_to_use} | Prompt: {response.usage.prompt_tokens} | Completion: {response.usage.completion_tokens} | Total: {response.usage.total_tokens}")
                 except Exception as groq_err:
                     groq_err_str = str(groq_err)
                     logger.warning(f"Groq tool call exception: {groq_err}")
@@ -360,7 +385,7 @@ class AIEngineService:
                             if is_tool_validation_error:
                                 _dbg("↩️  Last resort: retry WITHOUT tools...")
                                 response = await client.chat.completions.create(
-                                    model=MODEL_NAME,
+                                    model=model_to_use,
                                     messages=groq_messages,
                                     temperature=0.0
                                 )
@@ -368,7 +393,7 @@ class AIEngineService:
                                     accumulated_prompt += response.usage.prompt_tokens
                                     accumulated_completion += response.usage.completion_tokens
                                     accumulated_total += response.usage.total_tokens
-                                    logger.info(f"[AI ENGINE - TOKENS] Retry Call #{total_calls} -> Model: {MODEL_NAME} | Prompt: {response.usage.prompt_tokens} | Completion: {response.usage.completion_tokens} | Total: {response.usage.total_tokens}")
+                                    logger.info(f"[AI ENGINE - TOKENS] Retry Call #{total_calls} -> Model: {model_to_use} | Prompt: {response.usage.prompt_tokens} | Completion: {response.usage.completion_tokens} | Total: {response.usage.total_tokens}")
                             else:
                                 raise groq_err
 
@@ -449,7 +474,7 @@ class AIEngineService:
                 logger.info(f"[AI ENGINE] Requesting final text response from LLM for the error (forcing text)...")
                 try:
                     final_response = await client.chat.completions.create(
-                        model=MODEL_NAME,
+                        model=model_to_use,
                         messages=groq_messages,
                         tools=tools,
                         tool_choice="none",
@@ -460,7 +485,7 @@ class AIEngineService:
                         accumulated_prompt += final_response.usage.prompt_tokens
                         accumulated_completion += final_response.usage.completion_tokens
                         accumulated_total += final_response.usage.total_tokens
-                        logger.info(f"[AI ENGINE - TOKENS] Final Error Call #{total_calls} -> Model: {MODEL_NAME} | Prompt: {final_response.usage.prompt_tokens} | Completion: {final_response.usage.completion_tokens} | Total: {final_response.usage.total_tokens}")
+                        logger.info(f"[AI ENGINE - TOKENS] Final Error Call #{total_calls} -> Model: {model_to_use} | Prompt: {final_response.usage.prompt_tokens} | Completion: {final_response.usage.completion_tokens} | Total: {final_response.usage.total_tokens}")
                 except Exception as final_err:
                     logger.exception(f"[AI ENGINE] Error generating final text response: {final_err}")
 
@@ -476,6 +501,34 @@ class AIEngineService:
             logger.info(f"  - Total Completion (Output) Tokens: {accumulated_completion}")
             logger.info(f"  - Total Accumulated Tokens: {accumulated_total}")
             logger.info(f"==================================================\n")
+
+            # Print token usage details in green color in the terminal console
+            print(
+                f"\033[92m[CHAT AGENT TOKEN USAGE] Model: {model_to_use} | "
+                f"Total Calls: {total_calls} | "
+                f"Prompt Tokens: {accumulated_prompt} | "
+                f"Completion Tokens: {accumulated_completion} | "
+                f"Total Tokens: {accumulated_total}\033[0m",
+                flush=True
+            )
+
+            # ── Save Token Usage Log to Database ──
+            if accumulated_total > 0:
+                try:
+                    async with db.pool.acquire() as conn_log:
+                        await conn_log.execute(
+                            """
+                            INSERT INTO token_usage_logs (
+                                doctor_id, service_type, model_name,
+                                prompt_tokens, completion_tokens, total_tokens
+                            )
+                            VALUES ($1, $2, $3, $4, $5, $6)
+                            """,
+                            UUID(owner_id), "chat_agent", model_to_use,
+                            accumulated_prompt, accumulated_completion, accumulated_total
+                        )
+                except Exception as log_err:
+                    logger.error(f"[AI ENGINE] Failed to save token usage log: {log_err}")
 
             ai_message_data = MessageCreate(
                 sender_type="ai",

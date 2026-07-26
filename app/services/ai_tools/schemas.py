@@ -84,7 +84,7 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
                     "properties": {
                         "patient_id": {
                             "type": "string",
-                            "description": "الرقم التعريفي (UUID) للمريض المراد الحجز له"
+                            "description": "الرقم التعريفي (UUID) للمريض المراد الحجز له. يجب الحصول عليه من نتائج أداة search_my_patients أو add_new_patient أولاً. يمنع منعاً باتاً تخمين هذا المعرف أو تمرير قيم وهمية مثل '1' أو 'uuid'!"
                         },
                         "appointment_date": {
                             "type": "string",
@@ -142,7 +142,7 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
                     "properties": {
                         "patient_id": {
                             "type": "string",
-                            "description": "معرف المريض (UUID) المراد حذفه"
+                            "description": "معرف المريض (UUID) الحقيقي المستخرج من نتائج البحث (يمنع التخمين تماماً!)"
                         }
                     },
                     "required": ["patient_id"]
@@ -223,7 +223,7 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
                     "properties": {
                         "patient_id": {
                             "type": "string",
-                            "description": "معرف المريض (UUID)"
+                            "description": "معرف المريض (UUID) الحقيقي المستخرج من نتائج البحث (يمنع التخمين تماماً!)"
                         },
                         "diagnosis": {
                             "type": "string",
@@ -273,7 +273,7 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
                     "properties": {
                         "patient_id": {
                             "type": "string",
-                            "description": "معرف المريض (UUID)"
+                            "description": "معرف المريض (UUID) الحقيقي المستخرج من نتائج البحث (يمنع التخمين تماماً!)"
                         },
                         "name": {
                             "type": "string",
@@ -294,6 +294,14 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
                         "gender": {
                             "type": "string",
                             "description": "الجنس: ذكر أو أنثى (اختياري)"
+                        },
+                        "diseases": {
+                            "type": "string",
+                            "description": "الأمراض المزمنة للمريض (اختياري)"
+                        },
+                        "habits": {
+                            "type": "string",
+                            "description": "العادات والأسلوب الشخصي للمريض كالتدخين ونمط الحياة (اختياري)"
                         }
                     },
                     "required": ["patient_id"]
@@ -310,7 +318,7 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
                     "properties": {
                         "patient_id": {
                             "type": "string",
-                            "description": "معرف المريض (UUID)"
+                            "description": "معرف المريض (UUID) الحقيقي المستخرج من نتائج البحث (يمنع التخمين تماماً!)"
                         }
                     },
                     "required": ["patient_id"]

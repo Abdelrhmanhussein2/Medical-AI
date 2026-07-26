@@ -90,13 +90,34 @@ async def tool_search_visits_by_diagnosis(fn_args: dict, owner_id: str, conn) ->
     try:
         search_results = await conn.fetch(
             """
-            SELECT v.visit_date, v.diagnosis, v.description, v.notes, p.name as patient_name
+            SELECT 
+                p.name as patient_name,
+                v.visit_date as visit_date,
+                v.diagnosis as diagnosis,
+                v.description as description,
+                v.notes as notes
             FROM visits v
             JOIN patients p ON p.id = v.patient_id
             WHERE v.doctor_id = $1 AND (
                 v.diagnosis ILIKE $2 OR v.description ILIKE $2 OR v.notes ILIKE $2
             )
-            ORDER BY v.visit_date DESC
+            UNION ALL
+            SELECT 
+                p.name as patient_name,
+                s.created_at::date as visit_date,
+                s.soap_note->>'A' as diagnosis,
+                s.summary_text as description,
+                coalesce(s.soap_note->>'S', '') || ' ' || coalesce(s.soap_note->>'O', '') || ' ' || coalesce(s.soap_note->>'P', '') as notes
+            FROM sessions s
+            JOIN patients p ON p.id = s.patient_id
+            WHERE s.doctor_id = $1 AND (
+                s.soap_note->>'A' ILIKE $2 OR 
+                s.summary_text ILIKE $2 OR 
+                s.soap_note->>'S' ILIKE $2 OR 
+                s.soap_note->>'O' ILIKE $2 OR 
+                s.soap_note->>'P' ILIKE $2
+            )
+            ORDER BY visit_date DESC
             LIMIT 10
             """,
             UUID(owner_id), f"%{sq}%"

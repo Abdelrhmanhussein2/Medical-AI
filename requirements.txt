@@ -17,3 +17,4 @@ pytest
 pytest-asyncio
 httpx
 groq
+openai

@@ -204,12 +204,32 @@ class SessionService:
         result = dict(row)
         # تحويل JSONB strings إلى dicts
         if result.get("soap_note"):
-            result["soap_note"] = json.loads(result["soap_note"])
+            try:
+                result["soap_note"] = json.loads(result["soap_note"])
+            except Exception:
+                pass
         if result.get("prescriptions"):
-            result["prescriptions"] = json.loads(result["prescriptions"])
+            try:
+                result["prescriptions"] = json.loads(result["prescriptions"])
+            except Exception:
+                pass
         if result.get("tasks"):
-            result["tasks"] = json.loads(result["tasks"])
-        
+            try:
+                result["tasks"] = json.loads(result["tasks"])
+            except Exception:
+                pass
+
+        # Update general summary of the patient automatically
+        patient_id = result.get("patient_id")
+        if patient_id:
+            try:
+                from app.services.patient_service import PatientService
+                # This compiles all historical sessions (including the one just finalized)
+                # and updates general_summary in the patients table
+                await PatientService.generate_general_summary(str(patient_id))
+            except Exception as ex:
+                print(f"Failed to automatically generate patient general summary: {ex}")
+
         return result
     
     @staticmethod

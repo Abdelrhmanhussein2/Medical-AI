@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 
 export default function Patients({ setActivePage }) {
-  const { patients, addPatient, updatePatient, visits } = useApp();
+  const { patients, addPatient, updatePatient, visits, generateGeneralSummary } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -28,7 +28,27 @@ export default function Patients({ setActivePage }) {
   const [editFileId, setEditFileId] = useState('');
   const [editDiseases, setEditDiseases] = useState('');
   const [editHabits, setEditHabits] = useState('');
+  const [editGeneralSummary, setEditGeneralSummary] = useState('');
   const [editError, setEditError] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  
+  // Accordion state
+  const [expandedVisitId, setExpandedVisitId] = useState(null);
+
+  const handleAiGenerateSummary = async () => {
+    if (!selectedPatient) return;
+    setIsGenerating(true);
+    try {
+      const updated = await generateGeneralSummary(selectedPatient.id);
+      setSelectedPatient(updated);
+      setEditGeneralSummary(updated.general_summary || '');
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'فشل توليد الملخص العام بالذكاء الاصطناعي.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   // Handle Search filter
   const filteredPatients = patients.filter(
@@ -84,7 +104,9 @@ export default function Patients({ setActivePage }) {
     setEditFileId(patient.file_id || '');
     setEditDiseases(patient.diseases || '');
     setEditHabits(patient.habits || '');
+    setEditGeneralSummary(patient.general_summary || '');
     setEditError('');
+    setExpandedVisitId(null);
   };
 
   const handleEditPatientSubmit = async (e) => {
@@ -105,7 +127,8 @@ export default function Patients({ setActivePage }) {
         gender: editGender,
         file_id: editFileId || null,
         diseases: editDiseases || null,
-        habits: editHabits || null
+        habits: editHabits || null,
+        general_summary: editGeneralSummary || null
       });
       setSelectedPatient(updated);
       setIsEditMode(false);
@@ -462,6 +485,27 @@ export default function Patients({ setActivePage }) {
                           {selectedPatient.habits || 'لا يوجد'}
                         </p>
                       </div>
+
+                      <div class="space-y-2 pt-2 border-t border-border-subtle/50" dir="rtl">
+                        <div class="flex justify-between items-center text-xs">
+                          <strong class="font-bold text-on-surface">الملخص العام للمريض:</strong>
+                          <button
+                            type="button"
+                            disabled={isGenerating}
+                            onClick={handleAiGenerateSummary}
+                            class="text-primary hover:text-primary-hover font-bold text-[10px] flex items-center gap-1 bg-primary/5 hover:bg-primary/10 px-2 py-0.5 rounded transition-colors border border-primary/10"
+                          >
+                            {isGenerating ? (
+                              <><span class="material-symbols-outlined text-[12px] animate-spin">progress_activity</span> جاري التوليد...</>
+                            ) : (
+                              <><span class="material-symbols-outlined text-[12px]">auto_stories</span> توليد بالذكاء 🪄</>
+                            )}
+                          </button>
+                        </div>
+                        <p class="p-3 bg-primary-light/30 text-primary rounded-xl border border-primary/20 text-on-surface-variant text-[11px] leading-relaxed text-right whitespace-pre-wrap">
+                          {selectedPatient.general_summary || 'لا يوجد ملخص عام مسجل للمريض حتى الآن.'}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -559,6 +603,16 @@ export default function Patients({ setActivePage }) {
                       />
                     </div>
 
+                    <div>
+                      <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">الملخص العام للمريض</label>
+                      <textarea
+                        value={editGeneralSummary}
+                        onChange={(e) => setEditGeneralSummary(e.target.value)}
+                        rows="3"
+                        class="w-full px-3 py-1.5 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                      />
+                    </div>
+
                     <div class="flex gap-2 pt-2">
                       <button
                         type="button"
@@ -595,6 +649,7 @@ export default function Patients({ setActivePage }) {
                 ) : (
                   <div class="space-y-4 max-h-[45vh] overflow-y-auto pr-1">
                     {patientVisits.map(visit => {
+                      const isExpanded = expandedVisitId === visit.id;
                       const visitDate = new Date(visit.created_at).toLocaleDateString('ar-EG', {
                         year: 'numeric',
                         month: 'long',
@@ -606,65 +661,93 @@ export default function Patients({ setActivePage }) {
                       });
                       
                       return (
-                        <div key={visit.id} class="p-5 bg-surface-container-low border border-border-subtle rounded-xl space-y-4 text-right" dir="rtl">
-                          {/* Header */}
-                          <div class="flex justify-between items-center pb-2 border-b border-border-subtle/60">
-                            <span class="text-xs font-bold text-primary">
-                              زيارة يوم {visitDate} ({visitTime})
-                            </span>
-                            <span class="text-[10px] font-bold text-secondary bg-surface-container-high px-2 py-0.5 rounded font-mono">
+                        <div 
+                          key={visit.id} 
+                          class={`border rounded-xl transition-all duration-200 overflow-hidden ${
+                            isExpanded ? 'border-primary shadow-xs' : 'border-border-subtle hover:border-outline-variant'
+                          }`}
+                        >
+                          {/* Accordion Header */}
+                          <button
+                            type="button"
+                            onClick={() => setExpandedVisitId(isExpanded ? null : visit.id)}
+                            class="w-full px-5 py-4 bg-surface-container-low/40 hover:bg-surface-container-low flex justify-between items-center text-right transition-colors"
+                            dir="rtl"
+                          >
+                            <div class="flex items-center gap-3">
+                              <span class="material-symbols-outlined text-primary text-[20px]">
+                                {isExpanded ? 'expand_less' : 'expand_more'}
+                              </span>
+                              <span class="text-xs font-bold text-on-surface">
+                                زيارة يوم {visitDate} ({visitTime})
+                              </span>
+                            </div>
+                            <span class="text-[9px] font-black text-secondary bg-surface-container-high px-2 py-0.5 rounded font-mono">
                               المدة: {Math.floor((visit.duration_seconds || 0) / 60)}د و {(visit.duration_seconds || 0) % 60}ث
                             </span>
-                          </div>
+                          </button>
 
-                          {/* Summary */}
-                          {visit.summary_text && (
-                            <div class="space-y-1">
-                              <span class="text-[10px] font-bold text-secondary block">التلخيص الطبي:</span>
-                              <p class="text-xs text-on-surface leading-relaxed">{visit.summary_text}</p>
-                            </div>
-                          )}
-
-                          {/* SOAP Note details */}
-                          {visit.soap_note && (
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                              {[['S', 'Subjective (الشكوى)'], ['O', 'Objective (الفحص)'], ['A', 'Assessment (التشخيص)'], ['P', 'Plan (الخطة)']].map(([key, label]) => (
-                                <div key={key} class="bg-white p-2.5 rounded-lg border border-border-subtle/50 space-y-1">
-                                  <span class="text-[9px] font-black text-primary block">{label}</span>
-                                  <p class="text-[11px] text-on-surface-variant leading-relaxed min-h-[18px]">
-                                    {visit.soap_note[key] || 'لا يوجد'}
-                                  </p>
+                          {/* Accordion Content */}
+                          {isExpanded && (
+                            <div class="p-5 bg-white space-y-4 text-right animate-fade-in" dir="rtl">
+                              {/* Summary */}
+                              {visit.summary_text && (
+                                <div class="space-y-1">
+                                  <span class="text-[10px] font-bold text-secondary block">التلخيص الطبي للجلسة (خاص بالطبيب):</span>
+                                  <p class="text-xs text-on-surface leading-relaxed">{visit.summary_text}</p>
                                 </div>
-                              ))}
-                            </div>
-                          )}
+                              )}
 
-                          {/* Prescriptions */}
-                          {visit.prescriptions && visit.prescriptions.length > 0 && (
-                            <div class="space-y-2 pt-2 border-t border-border-subtle/40">
-                              <span class="text-[10px] font-black text-secondary block">الروشتة العلاجية:</span>
-                              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {visit.prescriptions.map((rx, idx) => (
-                                  <div key={idx} class="bg-white px-3 py-2 rounded-lg border border-border-subtle/50 text-[11px]">
-                                    <div class="font-bold text-on-surface">{rx.medication}</div>
-                                    <div class="text-secondary text-[10px] mt-0.5">
-                                      {rx.dose} • {rx.frequency} • {rx.duration}
+                              {/* Patient-friendly sessional summary */}
+                              {visit.patient_summary && (
+                                <div class="space-y-1">
+                                  <span class="text-[10px] font-bold text-primary block">الملخص العام للزيارة (الموجه للمريض):</span>
+                                  <p class="text-xs text-on-surface leading-relaxed bg-primary-light/10 p-3 rounded-lg border border-primary/10">{visit.patient_summary}</p>
+                                </div>
+                              )}
+
+                              {/* SOAP Note details */}
+                              {visit.soap_note && (
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                                  {[['S', 'Subjective (الشكوى)'], ['O', 'Objective (الفحص)'], ['A', 'Assessment (التشخيص)'], ['P', 'Plan (الخطة)']].map(([key, label]) => (
+                                    <div key={key} class="bg-surface-container-low p-2.5 rounded-lg border border-border-subtle/50 space-y-1">
+                                      <span class="text-[9px] font-black text-primary block">{label}</span>
+                                      <p class="text-[11px] text-on-surface-variant leading-relaxed min-h-[18px]">
+                                        {visit.soap_note[key] || 'لا يوجد'}
+                                      </p>
                                     </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                                  ))}
+                                </div>
+                              )}
 
-                          {/* Tasks */}
-                          {visit.tasks && visit.tasks.length > 0 && (
-                            <div class="space-y-1 pt-2 border-t border-border-subtle/40">
-                              <span class="text-[10px] font-black text-secondary block">مهام المتابعة المطلوبة:</span>
-                              <ul class="list-disc list-inside text-[11px] text-on-surface-variant space-y-1 pr-2">
-                                {visit.tasks.map((task, idx) => (
-                                  <li key={idx}>{task}</li>
-                                ))}
-                              </ul>
+                              {/* Prescriptions */}
+                              {visit.prescriptions && visit.prescriptions.length > 0 && (
+                                <div class="space-y-2 pt-2 border-t border-border-subtle/40">
+                                  <span class="text-[10px] font-black text-secondary block">الروشتة العلاجية:</span>
+                                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {visit.prescriptions.map((rx, idx) => (
+                                      <div key={idx} class="bg-surface-container-low px-3 py-2 rounded-lg border border-border-subtle/50 text-[11px]">
+                                        <div class="font-bold text-on-surface">{rx.medication}</div>
+                                        <div class="text-secondary text-[10px] mt-0.5">
+                                          {rx.dose} • {rx.frequency} • {rx.duration}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Tasks */}
+                              {visit.tasks && visit.tasks.length > 0 && (
+                                <div class="space-y-1 pt-2 border-t border-border-subtle/40">
+                                  <span class="text-[10px] font-black text-secondary block">مهام المتابعة المطلوبة:</span>
+                                  <ul class="list-disc list-inside text-[11px] text-on-surface-variant space-y-1 pr-2">
+                                    {visit.tasks.map((task, idx) => (
+                                      <li key={idx}>{task}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>

@@ -10,9 +10,9 @@ class PatientService:
         doc_uuid = UUID(effective_doctor_id) if effective_doctor_id else None
 
         query = """
-            INSERT INTO patients (name, phone, email, national_id, date_of_birth, gender, doctor_id, file_id, diseases, habits)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            RETURNING id, doctor_id, name, phone, email, national_id, date_of_birth, gender, file_id, diseases, habits, created_at, updated_at
+            INSERT INTO patients (name, phone, email, national_id, date_of_birth, gender, doctor_id, file_id, diseases, habits, general_summary)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            RETURNING id, doctor_id, name, phone, email, national_id, date_of_birth, gender, file_id, diseases, habits, general_summary, created_at, updated_at
         """
         async with db.pool.acquire() as connection:
             row = await connection.fetchrow(
@@ -26,7 +26,8 @@ class PatientService:
                 doc_uuid,
                 patient_data.file_id,
                 patient_data.diseases,
-                patient_data.habits
+                patient_data.habits,
+                patient_data.general_summary
             )
             return dict(row) if row else None
 
@@ -61,7 +62,7 @@ class PatientService:
             UPDATE patients
             SET {", ".join(set_clauses)}, updated_at = now()
             WHERE id = ${pid_idx} AND (${doc_idx}::uuid IS NULL OR doctor_id = ${doc_idx}::uuid)
-            RETURNING id, doctor_id, name, phone, email, national_id, date_of_birth, gender, file_id, diseases, habits, created_at, updated_at
+            RETURNING id, doctor_id, name, phone, email, national_id, date_of_birth, gender, file_id, diseases, habits, general_summary, created_at, updated_at
         """
         async with db.pool.acquire() as connection:
             row = await connection.fetchrow(query, *values)
@@ -105,4 +106,40 @@ class PatientService:
             async with db.pool.acquire() as connection:
                 rows = await connection.fetch(query, doc_uuid)
                 return [dict(r) for r in rows]
+
+    @staticmethod
+    async def generate_general_summary(patient_id: str, doctor_id: Optional[str] = None):
+        """
+        توليد الملخص العام للمريض بالذكاء الاصطناعي بناءً على تاريخ زياراته وجلساته السابقة.
+        """
+        # 1. جلب المريض
+        patient = await PatientService.get_patient(patient_id)
+        if not patient:
+            raise ValueError("Patient not found")
+        
+        # 2. جلب جميع الجلسات المكتملة للمريض
+        from app.services.session_service import SessionService
+        sessions = await SessionService.get_sessions_by_patient(patient_id)
+        completed_sessions = [s for s in sessions if s.get("status") in ("summarized", "completed")]
+        
+        if not completed_sessions:
+            return patient
+
+        # 3. صياغة النص المرسل للموديل
+        summaries_text = ""
+        for idx, s in enumerate(completed_sessions, 1):
+            date_str = s.get("created_at").strftime("%Y-%m-%d") if s.get("created_at") else "غير معروف"
+            summary = s.get("summary_text") or "لا يوجد ملخص"
+            soap = s.get("soap_note") or {}
+            soap_str = f"S: {soap.get('S', '')}, O: {soap.get('O', '')}, A: {soap.get('A', '')}, P: {soap.get('P', '')}"
+            summaries_text += f"\nالزيارة {idx} ({date_str}):\nالملخص: {summary}\nSOAP: {soap_str}\n"
+
+        # 4. استدعاء الموديل للتوليد
+        from app.services.ai_service import generate_global_patient_summary
+        new_general_summary = await generate_global_patient_summary(summaries_text, patient.get("name"))
+        
+        # 5. تحديث المريض بداخل قاعدة البيانات
+        from app.schemes.patient_schema import PatientUpdate
+        update_data = PatientUpdate(general_summary=new_general_summary)
+        return await PatientService.update_patient(patient_id, update_data, doctor_id)
 

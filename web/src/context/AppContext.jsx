@@ -198,6 +198,23 @@ export const AppProvider = ({ children }) => {
     return updatedPatient;
   };
 
+  const generateGeneralSummary = async (id) => {
+    const updatedPatient = await apiFetch(`/patients/${id}/generate-general-summary`, {
+      method: 'POST'
+    });
+    setPatients(prev => prev.map(p => p.id === id ? updatedPatient : p));
+    return updatedPatient;
+  };
+
+  const refreshPatients = async () => {
+    try {
+      const pts = await apiFetch(`/patients/`);
+      setPatients(pts || []);
+    } catch (err) {
+      console.error("Failed to refresh patients list", err);
+    }
+  };
+
   const addAppointment = async (apptData) => {
     const newAppt = await apiFetch(`/appointments/`, {
       method: 'POST',
@@ -367,6 +384,8 @@ export const AppProvider = ({ children }) => {
       addOrgDoctor,
       addPatient,
       updatePatient,
+      generateGeneralSummary,
+      refreshPatients,
       addAppointment,
       updateAppointmentStatus,
       addVisit,

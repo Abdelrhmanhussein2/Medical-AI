@@ -66,3 +66,18 @@ async def search_patients(
     results = await PatientService.search_patients(q, doctor_id)
     return results
 
+
+@router.post("/{patient_id}/generate-general-summary", response_model=PatientResponse)
+async def generate_general_summary(
+    patient_id: UUID,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    توليد الملخص الطبي العام والأساسي للمريض بالذكاء الاصطناعي بناءً على تاريخ جلساته السابقة.
+    """
+    doctor_id = str(current_user["id"]) if current_user.get("role") == "doctor" else None
+    updated_patient = await PatientService.generate_general_summary(str(patient_id), doctor_id)
+    if not updated_patient:
+        raise HTTPException(status_code=400, detail="Could not generate general summary")
+    return updated_patient
+

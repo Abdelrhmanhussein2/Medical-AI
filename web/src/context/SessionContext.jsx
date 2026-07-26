@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
+import { useApp } from './AppContext';
 
 const SessionContext = createContext();
 
@@ -79,6 +80,7 @@ const deleteChunkFromDB = async (id) => {
 
 // --- SessionProvider Component ---
 export const SessionProvider = ({ children }) => {
+  const { refreshPatients } = useApp();
   const [isRecording, setIsRecording] = useState(false);
   const [duration, setDuration] = useState(0);
   const [sessionId, setSessionId] = useState(null);
@@ -529,6 +531,9 @@ export const SessionProvider = ({ children }) => {
         setAiTokensUsed(result.ai_tokens_used || 0);
         setSummaryDone(true);
         
+        // Refresh patient profiles to sync new general_summary automatically
+        refreshPatients();
+
         // Success - clear localStorage and IndexedDB
         clearActiveSession();
       } else {
@@ -569,6 +574,10 @@ export const SessionProvider = ({ children }) => {
       setAiModelUsed(result.ai_model_used || '');
       setAiTokensUsed(result.ai_tokens_used || 0);
       setSummaryDone(true);
+      
+      // Refresh patient profiles to sync new general_summary automatically
+      refreshPatients();
+      
       clearActiveSession();
     } catch (err) {
       console.error("Retry summary failed:", err);

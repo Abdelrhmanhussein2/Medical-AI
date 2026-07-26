@@ -14,6 +14,7 @@ class PatientBase(BaseModel):
     file_id: Optional[str] = None
     diseases: Optional[str] = None
     habits: Optional[str] = None
+    general_summary: Optional[str] = None
 
 class PatientCreate(PatientBase):
     pass
@@ -28,6 +29,7 @@ class PatientUpdate(BaseModel):
     file_id: Optional[str] = None
     diseases: Optional[str] = None
     habits: Optional[str] = None
+    general_summary: Optional[str] = None
 
 class PatientResponse(PatientBase):
     id: UUID

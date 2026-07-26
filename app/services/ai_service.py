@@ -178,3 +178,77 @@ def _mock_summary_response(transcript: str) -> dict:
         "tokens_used": 0,
         "model": "mock"
     }
+
+
+async def generate_global_patient_summary(sessions_history: str, patient_name: str) -> str:
+    """
+    توليد ملخص طبي عام وتراكمي للمريض بناءً على سجل زياراته السابقة.
+    """
+    system_prompt = """You are an expert clinical assistant.
+Analyze the patient's consultation history and formulate a concise, structured general medical summary.
+This summary should capture chronic diseases, allergies, history of surgeries, and overall clinical trajectory.
+Keep it professional, highly structured, and write it in the same language as the history (mostly Arabic).
+IMPORTANT: Do NOT use markdown syntax (do NOT use asterisks like '**' or hashes like '###' or symbols for styling). Write in clean plain text with titles and newlines for spacing instead.
+Do not include any conversational filler, return ONLY the medical summary text."""
+
+    user_prompt = f"""اسم المريض: {patient_name}
+سجل الزيارات الطبية السابقة:
+{sessions_history}
+
+يرجى صياغة ملخص طبي عام وأساسي شامل وموجز لهذا المريض."""
+
+    def clean_text(text: str) -> str:
+        return text.replace("**", "").replace("###", "").replace("##", "").replace("#", "").strip()
+
+    from app.core.config import settings
+    
+    if not settings.OPENAI_API_KEY or settings.OPENAI_API_KEY.startswith("sk-your"):
+        if settings.GROQ_API_KEY:
+            try:
+                from groq import AsyncGroq
+                client = AsyncGroq(api_key=settings.GROQ_API_KEY)
+                response = await client.chat.completions.create(
+                    model="llama-3.3-70b-specdec",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    temperature=0.3,
+                    max_tokens=1500
+                )
+                return clean_text(response.choices[0].message.content)
+            except Exception as e:
+                print(f"Groq global summary failed: {e}")
+                try:
+                    response = await client.chat.completions.create(
+                        model="llama-3.1-8b-instant",
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        temperature=0.3,
+                        max_tokens=1500
+                    )
+                    return clean_text(response.choices[0].message.content)
+                except Exception as ex:
+                    print(f"Groq fallback global summary failed: {ex}")
+                    return "تمت مناقشة حالة المريض خلال الزيارات السابقة."
+        else:
+            return "تمت مناقشة حالة المريض خلال الزيارات السابقة."
+            
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        response = await client.chat.completions.create(
+            model=settings.OPENAI_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.3,
+            max_tokens=1500
+        )
+        return clean_text(response.choices[0].message.content)
+    except Exception as e:
+        print(f"OpenAI global summary failed: {e}")
+        return "تمت مناقشة حالة المريض خلال الزيارات السابقة."

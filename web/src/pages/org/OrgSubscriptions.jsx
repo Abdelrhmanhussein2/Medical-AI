@@ -18,7 +18,7 @@ export default function OrgSubscriptions() {
   useEffect(() => {
     const loadOrgSub = async () => {
       try {
-        const token = localStorage.getItem('accessToken');
+        const token = sessionStorage.getItem('accessToken');
         const res = await fetch('/api/v1/subscriptions/my', {
           headers: { Authorization: `Bearer ${token}` }
         });

@@ -352,9 +352,16 @@ class AIEngineService:
                                         # Check for duplicate call to prevent infinite loop
                                         call_key = f"{fn_name}:{json.dumps(fn_args, sort_keys=True)}"
                                         if call_key in executed_calls:
-                                            logger.warning(f"[AI ENGINE] Duplicate recovered tool call detected: {call_key}. Breaking early.")
+                                            logger.warning(f"[AI ENGINE] Duplicate recovered tool call detected: {call_key}. Skipping execution.")
+                                            result_data = {"status": "error", "message": "Duplicate tool call detected."}
+                                            groq_messages.append({
+                                                "role": "tool",
+                                                "name": fn_name,
+                                                "tool_call_id": f"recovered_{i}",
+                                                "content": json.dumps(result_data, ensure_ascii=False)
+                                            })
                                             has_error = True
-                                            break
+                                            continue
                                         executed_calls.add(call_key)
 
                                         _dbg(f"   ⚡ Executing (recovered): {fn_name} | Args: {fn_args}")
@@ -434,9 +441,16 @@ class AIEngineService:
                             # Check for duplicate call to prevent infinite loop
                             call_key = f"{fn_name}:{json.dumps(fn_args, sort_keys=True)}"
                             if call_key in executed_calls:
-                                logger.warning(f"[AI ENGINE] Duplicate tool call detected: {call_key}. Breaking early.")
+                                logger.warning(f"[AI ENGINE] Duplicate tool call detected: {call_key}. Skipping execution.")
+                                result_data = {"status": "error", "message": "Duplicate tool call detected. This operation has already been executed."}
+                                groq_messages.append({
+                                    "role": "tool",
+                                    "name": fn_name,
+                                    "tool_call_id": tool_call.id,
+                                    "content": json.dumps(result_data, ensure_ascii=False)
+                                })
                                 has_error = True
-                                break
+                                continue
                             executed_calls.add(call_key)
 
                             result_data = await tool_executor.dispatch(fn_name, fn_args, owner_id, conn)

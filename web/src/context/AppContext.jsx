@@ -11,21 +11,21 @@ export const AppProvider = ({ children }) => {
   const [appointments, setAppointments] = useState([]);
   const [visits, setVisits] = useState([]);
 
-  // Load user from local storage on mount
+  // Load user from session storage on mount
   useEffect(() => {
-    const userJson = localStorage.getItem("currentUser");
+    const userJson = sessionStorage.getItem("currentUser");
     if (userJson) {
       try {
         setCurrentUser(JSON.parse(userJson));
       } catch (e) {
-        console.error("Failed to parse user from local storage", e);
+        console.error("Failed to parse user from session storage", e);
       }
     }
   }, []);
 
   // Generic API fetch helper
   const apiFetch = async (url, options = {}) => {
-    const token = localStorage.getItem("accessToken");
+    const token = sessionStorage.getItem("accessToken");
     const headers = {
       ...options.headers,
     };
@@ -108,8 +108,8 @@ export const AppProvider = ({ children }) => {
       if (res.user && res.user.role === 'department') {
         res.user.role = 'org';
       }
-      localStorage.setItem("accessToken", res.access_token);
-      localStorage.setItem("currentUser", JSON.stringify(res.user));
+      sessionStorage.setItem("accessToken", res.access_token);
+      sessionStorage.setItem("currentUser", JSON.stringify(res.user));
       setCurrentUser(res.user);
       return true;
     } catch (err) {
@@ -118,8 +118,8 @@ export const AppProvider = ({ children }) => {
   };
 
   const logout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("currentUser");
+    sessionStorage.removeItem("accessToken");
+    sessionStorage.removeItem("currentUser");
     setCurrentUser(null);
     setPatients([]);
     setOrganizations([]);

@@ -11,7 +11,7 @@ export default function DoctorSubscription() {
   useEffect(() => {
     const fetchSubscription = async () => {
       try {
-        const token = localStorage.getItem("accessToken");
+        const token = sessionStorage.getItem("accessToken");
         const response = await fetch(`/api/v1/subscriptions/my`, {
           headers: {
             'Authorization': `Bearer ${token}`

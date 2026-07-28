@@ -52,10 +52,13 @@ async def tool_search_my_patients(fn_args: dict, owner_id: str, conn) -> dict:
         UUID(owner_id), f"%{q}%", f"%{q_no_spaces}%"
     )
     return {
-        # phone is intentionally excluded — show only name.
-        # Use get_patient_full_profile if contact details are needed.
         "patients": [
-            {"id": str(p['id']), "name": p['name']}
+            {
+                "id": str(p['id']),
+                "name": p['name'],
+                "phone": p['phone'] if p['phone'] else 'غير متوفر',
+                "date_of_birth": p['date_of_birth'].strftime("%Y-%m-%d") if p['date_of_birth'] else 'غير متوفر'
+            }
             for p in patients
         ]
     }
@@ -83,7 +86,7 @@ async def tool_get_patient_visits(fn_args: dict, owner_id: str, conn) -> dict:
         visits = await conn.fetch(
             """
             SELECT visit_date, diagnosis, notes, description
-            FROM patient_visits
+            FROM visits
             WHERE patient_id = $1 AND doctor_id = $2
             ORDER BY visit_date DESC LIMIT 5
             """,
@@ -172,7 +175,7 @@ async def tool_delete_patient(fn_args: dict, owner_id: str, conn) -> dict:
             pid_uuid, UUID(owner_id)
         )
         await conn.execute(
-            "DELETE FROM patient_visits WHERE patient_id = $1 AND doctor_id = $2",
+            "DELETE FROM visits WHERE patient_id = $1 AND doctor_id = $2",
             pid_uuid, UUID(owner_id)
         )
         del_result = await conn.execute(

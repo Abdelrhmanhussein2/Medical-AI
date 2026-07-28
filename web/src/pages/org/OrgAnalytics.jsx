@@ -15,7 +15,7 @@ export default function OrgAnalytics() {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('accessToken');
+        const token = sessionStorage.getItem('accessToken');
         const res = await fetch(
           `/api/v1/departments/${currentUser.id}/dashboard/stats`,
           { headers: { Authorization: `Bearer ${token}` } }

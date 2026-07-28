@@ -139,7 +139,7 @@ export default function Patients({ setActivePage }) {
 
   const startAiChatForPatient = async (patient) => {
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = sessionStorage.getItem('accessToken');
       
       // Fetch threads first to check if one exists for this patient
       const threadsRes = await fetch('/api/v1/chat/threads', {
@@ -181,7 +181,7 @@ export default function Patients({ setActivePage }) {
       const getVisits = async () => {
         setLoadingVisits(true);
         try {
-          const token = localStorage.getItem("accessToken");
+          const token = sessionStorage.getItem("accessToken");
           const response = await fetch(`/api/v1/sessions/by-patient/${selectedPatient.id}`, {
             headers: {
               'Authorization': `Bearer ${token}`

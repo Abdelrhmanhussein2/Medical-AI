@@ -47,7 +47,7 @@ export default function AiChat({ initialPatientId }) {
     const fetchThreads = async () => {
       setLoadingThreads(true);
       try {
-        const token = localStorage.getItem("accessToken");
+        const token = sessionStorage.getItem("accessToken");
         const res = await fetch('/api/v1/chat/threads', {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -80,7 +80,7 @@ export default function AiChat({ initialPatientId }) {
     };
     const fetchPatients = async () => {
       try {
-        const token = localStorage.getItem("accessToken");
+        const token = sessionStorage.getItem("accessToken");
         const res = await fetch('/api/v1/patients/', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -117,7 +117,7 @@ export default function AiChat({ initialPatientId }) {
     const fetchMessages = async () => {
       setLoadingMessages(true);
       try {
-        const token = localStorage.getItem("accessToken");
+        const token = sessionStorage.getItem("accessToken");
         const res = await fetch(`/api/v1/chat/threads/${activeThreadId}/messages`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -162,7 +162,7 @@ export default function AiChat({ initialPatientId }) {
     }
 
     try {
-      const token = localStorage.getItem("accessToken");
+      const token = sessionStorage.getItem("accessToken");
       const res = await fetch('/api/v1/chat/threads', {
         method: 'POST',
         headers: {
@@ -199,7 +199,7 @@ export default function AiChat({ initialPatientId }) {
     setInputText('');
 
     try {
-      const token = localStorage.getItem("accessToken");
+      const token = sessionStorage.getItem("accessToken");
       
       // Save user message to backend
       const res = await fetch(`/api/v1/chat/threads/${activeThreadId}/messages`, {
@@ -314,7 +314,7 @@ export default function AiChat({ initialPatientId }) {
     if (!activeThreadId) return;
     setIsUploadingAudio(true);
     try {
-      const token = localStorage.getItem("accessToken");
+      const token = sessionStorage.getItem("accessToken");
       const formData = new FormData();
       const elapsedSecs = startTimeRef.current ? Math.max(1, Math.round((Date.now() - startTimeRef.current) / 1000)) : (recordingTimeRef.current || 1);
       const durationStr = formatDuration(elapsedSecs);
@@ -365,7 +365,7 @@ export default function AiChat({ initialPatientId }) {
   const handleTogglePin = async (e, threadId, currentPinStatus) => {
     e.stopPropagation(); // prevent selecting
     try {
-      const token = localStorage.getItem("accessToken");
+      const token = sessionStorage.getItem("accessToken");
       const res = await fetch(`/api/v1/chat/threads/${threadId}`, {
         method: 'PATCH',
         headers: {
@@ -390,7 +390,7 @@ export default function AiChat({ initialPatientId }) {
   const handleSetPatientContext = async (patientId) => {
     if (!activeThreadId) return;
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = sessionStorage.getItem('accessToken');
       const res = await fetch(`/api/v1/chat/threads/${activeThreadId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -415,7 +415,7 @@ export default function AiChat({ initialPatientId }) {
   const handleConfirmDelete = async () => {
     if (!threadToDelete) return;
     try {
-      const token = localStorage.getItem("accessToken");
+      const token = sessionStorage.getItem("accessToken");
       const res = await fetch(`/api/v1/chat/threads/${threadToDelete}`, {
         method: 'DELETE',
         headers: {

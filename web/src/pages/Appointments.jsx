@@ -1,10 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 
 export default function Appointments({ setActivePage }) {
   const { appointments, patients, currentUser, addAppointment, updateAppointmentStatus, addPatient } = useApp();
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(new Date());
+    }, 10000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const getAppointmentTimeRange = (appt) => {
+    if (!appt.appointment_date || !appt.appointment_time) return null;
+    const [year, month, day] = appt.appointment_date.split('-').map(Number);
+    const [hours, minutes] = appt.appointment_time.split(':').map(Number);
+    const start = new Date(year, month - 1, day, hours, minutes, 0, 0);
+    const duration = appt.duration_minutes || 30;
+    const end = new Date(start.getTime() + duration * 60 * 1000);
+    return { start, end };
+  };
 
   // --- Modal Form States ---
   const [patientQuery, setPatientQuery] = useState('');
@@ -95,36 +113,74 @@ export default function Appointments({ setActivePage }) {
         </div>
       );
     }
+
+    const renderMoreMenu = () => (
+      <div class="relative">
+        <button 
+          onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === id ? null : id); }}
+          class="p-2 text-secondary hover:bg-surface-container rounded-lg transition-colors"
+        >
+          <span class="material-symbols-outlined text-[20px]">more_vert</span>
+        </button>
+        {openMenuId === id && (
+          <div class="absolute right-0 top-10 w-44 bg-white border border-border-subtle rounded-xl shadow-lg z-30 overflow-hidden animate-fade-in">
+            <button
+              onClick={() => handleOpenEdit(appt)}
+              class="w-full flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors text-left"
+            >
+              <span class="material-symbols-outlined text-[18px] text-secondary">edit</span>
+              Edit
+            </button>
+            <div class="border-t border-border-subtle"></div>
+            <button
+              onClick={() => { updateAppointmentStatus(id, 'cancelled'); setOpenMenuId(null); }}
+              class="w-full flex items-center gap-3 px-4 py-3 text-sm text-error hover:bg-error-container/30 transition-colors text-left"
+            >
+              <span class="material-symbols-outlined text-[18px]">cancel</span>
+              Cancel Appointment
+            </button>
+          </div>
+        )}
+      </div>
+    );
+
     if (status === 'scheduled') {
+      const timeRange = getAppointmentTimeRange(appt);
+      if (timeRange) {
+        const { start, end } = timeRange;
+        if (now > end) {
+          return (
+            <div class="flex items-center gap-2 relative">
+              {renderMoreMenu()}
+              <button 
+                 disabled
+                 class="px-5 py-2.5 bg-surface-container-low text-secondary/40 rounded-lg text-sm font-bold border border-border-subtle cursor-not-allowed flex items-center gap-2"
+                 title="Passed"
+              >
+                 Join Call (Passed)
+              </button>
+            </div>
+          );
+        }
+        if (now < start) {
+          return (
+            <div class="flex items-center gap-2 relative">
+              {renderMoreMenu()}
+              <button 
+                 disabled
+                 class="px-5 py-2.5 bg-surface-container-low text-secondary/40 rounded-lg text-sm font-bold border border-border-subtle cursor-not-allowed flex items-center gap-2"
+                 title="Upcoming"
+              >
+                 Join Call (Upcoming)
+              </button>
+            </div>
+          );
+        }
+      }
+
       return (
         <div class="flex items-center gap-2 relative">
-          <div class="relative">
-            <button 
-              onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === id ? null : id); }}
-              class="p-2 text-secondary hover:bg-surface-container rounded-lg transition-colors"
-            >
-              <span class="material-symbols-outlined text-[20px]">more_vert</span>
-            </button>
-            {openMenuId === id && (
-              <div class="absolute right-0 top-10 w-44 bg-white border border-border-subtle rounded-xl shadow-lg z-30 overflow-hidden animate-fade-in">
-                <button
-                  onClick={() => handleOpenEdit(appt)}
-                  class="w-full flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors text-left"
-                >
-                  <span class="material-symbols-outlined text-[18px] text-secondary">edit</span>
-                  Edit
-                </button>
-                <div class="border-t border-border-subtle"></div>
-                <button
-                  onClick={() => { updateAppointmentStatus(id, 'cancelled'); setOpenMenuId(null); }}
-                  class="w-full flex items-center gap-3 px-4 py-3 text-sm text-error hover:bg-error-container/30 transition-colors text-left"
-                >
-                  <span class="material-symbols-outlined text-[18px]">cancel</span>
-                  Cancel Appointment
-                </button>
-              </div>
-            )}
-          </div>
+          {renderMoreMenu()}
           <button 
              onClick={() => setActivePage(`live-session-${id}`)}
              class="px-5 py-2.5 bg-primary text-on-primary rounded-lg text-sm font-bold shadow-sm hover:bg-primary-hover transition-colors flex items-center gap-2 border border-primary/20"
@@ -426,11 +482,6 @@ export default function Appointments({ setActivePage }) {
               <span class="text-outline-variant mx-3">|</span>
               <span class="text-secondary font-medium">{selectedDate.toLocaleString('default', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
             </div>
-            
-            <div class="bg-surface-container-high rounded-lg p-1 flex items-center text-sm font-bold shadow-inner hidden sm:flex">
-               <button class="px-4 py-1.5 bg-white text-on-surface rounded-md shadow-sm">List</button>
-               <button class="px-4 py-1.5 text-secondary hover:text-on-surface transition-colors">Timeline</button>
-            </div>
           </div>
 
           <div class="space-y-4">
@@ -475,7 +526,12 @@ export default function Appointments({ setActivePage }) {
                                {appt.description || 'Routine Checkup'}
                              </span>
                              <span class="text-outline-variant font-bold text-[10px]">•</span>
-                             <span class="text-secondary text-sm font-medium">{appt.duration_minutes} min</span>
+                             <span class="text-secondary text-sm font-medium">
+                               {appt.status === 'completed' && appt.session_duration != null
+                                 ? `${Math.round(appt.session_duration / 60)} min`
+                                 : `${appt.duration_minutes} min`
+                               }
+                             </span>
                              <span class="text-outline-variant font-bold text-[10px] hidden sm:inline">•</span>
                              <span class="text-secondary text-xs font-semibold flex items-center gap-1 hidden sm:flex">
                                <span class="material-symbols-outlined text-[14px]">videocam</span> Telehealth
@@ -487,9 +543,11 @@ export default function Appointments({ setActivePage }) {
                       {/* Action Column */}
                       <div class="w-full xl:w-auto mt-2 xl:mt-0 flex justify-end">
                          {getStatusBadge(appt.status, appt.id, appt)}
-                         <button onClick={() => handleOpenEdit(appt)} class="ml-2 p-2 hover:bg-surface-container rounded-full text-secondary">
-                           <span class="material-symbols-outlined text-[18px]">edit</span>
-                         </button>
+                         {appt.status !== 'completed' && appt.status !== 'cancelled' && (
+                           <button onClick={() => handleOpenEdit(appt)} class="ml-2 p-2 hover:bg-surface-container rounded-full text-secondary">
+                             <span class="material-symbols-outlined text-[18px]">edit</span>
+                           </button>
+                         )}
                       </div>
                     </div>
                   </div>

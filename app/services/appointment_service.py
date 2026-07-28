@@ -43,9 +43,10 @@ class AppointmentService:
     ):
         if filter_date:
             query = """
-                SELECT a.*, p.name as patient_name, p.phone as patient_phone_num
+                SELECT a.*, p.name as patient_name, p.phone as patient_phone_num, s.duration_seconds as session_duration
                 FROM appointments a
                 JOIN patients p ON a.patient_id = p.id
+                LEFT JOIN sessions s ON a.id = s.appointment_id
                 WHERE a.doctor_id = $1 AND a.appointment_date = $2
                 ORDER BY a.appointment_time ASC
             """
@@ -53,9 +54,10 @@ class AppointmentService:
                 rows = await conn.fetch(query, doctor_id, filter_date)
         else:
             query = """
-                SELECT a.*, p.name as patient_name, p.phone as patient_phone_num
+                SELECT a.*, p.name as patient_name, p.phone as patient_phone_num, s.duration_seconds as session_duration
                 FROM appointments a
                 JOIN patients p ON a.patient_id = p.id
+                LEFT JOIN sessions s ON a.id = s.appointment_id
                 WHERE a.doctor_id = $1
                 ORDER BY a.appointment_date DESC, a.appointment_time ASC
             """
@@ -67,9 +69,10 @@ class AppointmentService:
     @staticmethod
     async def get_appointment(appointment_id: str):
         query = """
-            SELECT a.*, p.name as patient_name, p.phone as patient_phone_num
+            SELECT a.*, p.name as patient_name, p.phone as patient_phone_num, s.duration_seconds as session_duration
             FROM appointments a
             JOIN patients p ON a.patient_id = p.id
+            LEFT JOIN sessions s ON a.id = s.appointment_id
             WHERE a.id = $1
         """
         async with db.pool.acquire() as conn:

@@ -12,6 +12,7 @@ import Visits from './pages/Visits';
 import DoctorSubscription from './pages/DoctorSubscription';
 import LiveSession from './pages/LiveSession';
 import AiChat from './pages/AiChat';
+import Checkout from './pages/Checkout';
 
 // Admin pages
 import AdminOverview from './pages/admin/AdminOverview';
@@ -24,106 +25,225 @@ import OrgDoctors from './pages/org/OrgDoctors';
 import OrgAnalytics from './pages/org/OrgAnalytics';
 import OrgSubscriptions from './pages/org/OrgSubscriptions';
 
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
+
+function ProtectedRoute({ children, role }) {
+  const { currentUser } = useApp();
+
+  if (!currentUser) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (role && currentUser.role !== role) {
+    if (currentUser.role === 'admin') return <Navigate to="/admin-overview" replace />;
+    if (currentUser.role === 'org') return <Navigate to="/org-dashboard" replace />;
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+}
+
+function LayoutWrapper({ children, activePage, handleNavigation }) {
+  return (
+    <Layout activePage={activePage} setActivePage={handleNavigation}>
+      {children}
+    </Layout>
+  );
+}
+
+function LiveSessionRouteWrapper() {
+  const { appointmentId } = useParams();
+  const navigate = useNavigate();
+  return <LiveSession appointmentId={appointmentId} setActivePage={(page) => navigate(`/${page}`)} />;
+}
+
+function AiChatRouteWrapper() {
+  const { patientId } = useParams();
+  return <AiChat initialPatientId={patientId} />;
+}
+
 function AppContent() {
   const { currentUser } = useApp();
-  const [activePage, setActivePage] = useState('landing');
+  const navigate = useNavigate();
 
-  // Handle auto-routing when user logs in or out
-  React.useEffect(() => {
-    if (!currentUser) {
-      if (activePage !== 'register' && activePage !== 'login') {
-        setActivePage('landing');
-      }
+  const handleNavigation = (page) => {
+    if (page.startsWith('aichat-patient-')) {
+      const id = page.replace('aichat-patient-', '');
+      navigate(`/aichat-patient/${id}`);
+    } else if (page.startsWith('live-session-')) {
+      const id = page.replace('live-session-', '');
+      navigate(`/live-session/${id}`);
     } else {
-      if (currentUser.role === 'admin') {
-        if (!activePage.startsWith('admin-')) {
-          setActivePage('admin-overview');
-        }
-      } else if (currentUser.role === 'org') {
-        if (!activePage.startsWith('org-')) {
-          setActivePage('org-dashboard');
-        }
-      } else {
-        if (activePage === 'login' || activePage === 'register' || activePage === 'landing' || activePage.startsWith('admin-') || activePage.startsWith('org-')) {
-          setActivePage('dashboard');
-        }
-      }
-    }
-  }, [currentUser, activePage]);
-
-  const renderPage = () => {
-    switch (activePage) {
-      case 'landing':
-        return <Landing setActivePage={setActivePage} />;
-      case 'login':
-        return <Login setActivePage={setActivePage} />;
-      case 'register':
-        return <Register setActivePage={setActivePage} />;
-      case 'dashboard':
-        return <Dashboard setActivePage={setActivePage} />;
-      case 'patients':
-        return <Patients setActivePage={setActivePage} />;
-      case 'appointments':
-        return <Appointments setActivePage={setActivePage} />;
-      case 'visits':
-        return <Visits />;
-      case 'subscription':
-        return <DoctorSubscription />;
-      case 'aichat':
-      case 'admin-aichat':
-        return <AiChat />;
-      
-      // Admin
-      case 'admin-overview':
-        return <AdminOverview setActivePage={setActivePage} />;
-      case 'admin-users':
-        return <AdminUsers />;
-      case 'admin-subscriptions':
-        return <AdminSubscriptions />;
-      
-      // Org
-      case 'org-dashboard':
-        return <OrgDashboard setActivePage={setActivePage} />;
-      case 'org-doctors':
-        return <OrgDoctors />;
-      case 'org-analytics':
-        return <OrgAnalytics />;
-      case 'org-subscriptions':
-        return <OrgSubscriptions />;
-
-      default:
-        if (activePage.startsWith('live-session-')) {
-          const appointmentId = activePage.split('live-session-')[1];
-          return <LiveSession appointmentId={appointmentId} setActivePage={setActivePage} />;
-        }
-        if (activePage.startsWith('aichat-patient-')) {
-          const patientId = activePage.split('aichat-patient-')[1];
-          return <AiChat initialPatientId={patientId} />;
-        }
-        return <Landing setActivePage={setActivePage} />;
+      navigate(page.startsWith('/') ? page : `/${page}`);
     }
   };
 
-  // Render LiveSession outside Layout for full-screen
-  if (activePage && activePage.startsWith('live-session-')) {
-    const appointmentId = activePage.split('live-session-')[1];
-    return <LiveSession appointmentId={appointmentId} setActivePage={setActivePage} />;
-  }
-
   return (
-    <Layout activePage={activePage} setActivePage={setActivePage}>
-      {renderPage()}
-    </Layout>
+    <Routes>
+      {/* Public routes */}
+      <Route path="/" element={
+        currentUser ? (
+          currentUser.role === 'admin' ? <Navigate to="/admin-overview" replace /> :
+          currentUser.role === 'org' ? <Navigate to="/org-dashboard" replace /> :
+          <Navigate to="/dashboard" replace />
+        ) : (
+          <Landing setActivePage={handleNavigation} />
+        )
+      } />
+      
+      <Route path="/login" element={
+        currentUser ? (
+          currentUser.role === 'admin' ? <Navigate to="/admin-overview" replace /> :
+          currentUser.role === 'org' ? <Navigate to="/org-dashboard" replace /> :
+          <Navigate to="/dashboard" replace />
+        ) : (
+          <Login setActivePage={handleNavigation} />
+        )
+      } />
+      
+      <Route path="/register" element={
+        currentUser ? (
+          currentUser.role === 'admin' ? <Navigate to="/admin-overview" replace /> :
+          currentUser.role === 'org' ? <Navigate to="/org-dashboard" replace /> :
+          <Navigate to="/dashboard" replace />
+        ) : (
+          <Register setActivePage={handleNavigation} />
+        )
+      } />
+
+      <Route path="/checkout" element={<Checkout />} />
+
+      {/* Private layout-wrapped routes */}
+      <Route path="/dashboard" element={
+        <ProtectedRoute role="doctor">
+          <LayoutWrapper activePage="dashboard" handleNavigation={handleNavigation}>
+            <Dashboard setActivePage={handleNavigation} />
+          </LayoutWrapper>
+        </ProtectedRoute>
+      } />
+      <Route path="/patients" element={
+        <ProtectedRoute role="doctor">
+          <LayoutWrapper activePage="patients" handleNavigation={handleNavigation}>
+            <Patients setActivePage={handleNavigation} />
+          </LayoutWrapper>
+        </ProtectedRoute>
+      } />
+      <Route path="/appointments" element={
+        <ProtectedRoute role="doctor">
+          <LayoutWrapper activePage="appointments" handleNavigation={handleNavigation}>
+            <Appointments setActivePage={handleNavigation} />
+          </LayoutWrapper>
+        </ProtectedRoute>
+      } />
+      <Route path="/visits" element={
+        <ProtectedRoute role="doctor">
+          <LayoutWrapper activePage="visits" handleNavigation={handleNavigation}>
+            <Visits />
+          </LayoutWrapper>
+        </ProtectedRoute>
+      } />
+      <Route path="/subscription" element={
+        <ProtectedRoute role="doctor">
+          <LayoutWrapper activePage="subscription" handleNavigation={handleNavigation}>
+            <DoctorSubscription />
+          </LayoutWrapper>
+        </ProtectedRoute>
+      } />
+      <Route path="/aichat" element={
+        <ProtectedRoute role="doctor">
+          <LayoutWrapper activePage="aichat" handleNavigation={handleNavigation}>
+            <AiChat />
+          </LayoutWrapper>
+        </ProtectedRoute>
+      } />
+      <Route path="/aichat-patient/:patientId" element={
+        <ProtectedRoute role="doctor">
+          <LayoutWrapper activePage="aichat" handleNavigation={handleNavigation}>
+            <AiChatRouteWrapper />
+          </LayoutWrapper>
+        </ProtectedRoute>
+      } />
+
+      {/* Admin routes */}
+      <Route path="/admin-overview" element={
+        <ProtectedRoute role="admin">
+          <LayoutWrapper activePage="admin-overview" handleNavigation={handleNavigation}>
+            <AdminOverview setActivePage={handleNavigation} />
+          </LayoutWrapper>
+        </ProtectedRoute>
+      } />
+      <Route path="/admin-users" element={
+        <ProtectedRoute role="admin">
+          <LayoutWrapper activePage="admin-users" handleNavigation={handleNavigation}>
+            <AdminUsers />
+          </LayoutWrapper>
+        </ProtectedRoute>
+      } />
+      <Route path="/admin-subscriptions" element={
+        <ProtectedRoute role="admin">
+          <LayoutWrapper activePage="admin-subscriptions" handleNavigation={handleNavigation}>
+            <AdminSubscriptions />
+          </LayoutWrapper>
+        </ProtectedRoute>
+      } />
+      <Route path="/admin-aichat" element={
+        <ProtectedRoute role="admin">
+          <LayoutWrapper activePage="admin-aichat" handleNavigation={handleNavigation}>
+            <AiChat />
+          </LayoutWrapper>
+        </ProtectedRoute>
+      } />
+
+      {/* Org routes */}
+      <Route path="/org-dashboard" element={
+        <ProtectedRoute role="org">
+          <LayoutWrapper activePage="org-dashboard" handleNavigation={handleNavigation}>
+            <OrgDashboard setActivePage={handleNavigation} />
+          </LayoutWrapper>
+        </ProtectedRoute>
+      } />
+      <Route path="/org-doctors" element={
+        <ProtectedRoute role="org">
+          <LayoutWrapper activePage="org-doctors" handleNavigation={handleNavigation}>
+            <OrgDoctors />
+          </LayoutWrapper>
+        </ProtectedRoute>
+      } />
+      <Route path="/org-analytics" element={
+        <ProtectedRoute role="org">
+          <LayoutWrapper activePage="org-analytics" handleNavigation={handleNavigation}>
+            <OrgAnalytics />
+          </LayoutWrapper>
+        </ProtectedRoute>
+      } />
+      <Route path="/org-subscriptions" element={
+        <ProtectedRoute role="org">
+          <LayoutWrapper activePage="org-subscriptions" handleNavigation={handleNavigation}>
+            <OrgSubscriptions />
+          </LayoutWrapper>
+        </ProtectedRoute>
+      } />
+
+      {/* Full screen routes */}
+      <Route path="/live-session/:appointmentId" element={
+        <ProtectedRoute role="doctor"><LiveSessionRouteWrapper /></ProtectedRoute>
+      } />
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 
 export default function App() {
   return (
-    <AppProvider>
-      <SessionProvider>
-        <AppContent />
-      </SessionProvider>
-    </AppProvider>
+    <Router>
+      <AppProvider>
+        <SessionProvider>
+          <AppContent />
+        </SessionProvider>
+      </AppProvider>
+    </Router>
   );
 }
 

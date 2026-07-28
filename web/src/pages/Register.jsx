@@ -3,7 +3,8 @@ import { useApp } from '../context/AppContext';
 import SbrLogo from '../components/SbrLogo';
 
 export default function Register({ setActivePage }) {
-  const { registerDoctor, registerOrg } = useApp();
+  const { registerDoctor, registerOrg, activateSubscription } = useApp();
+  const paidPlan = sessionStorage.getItem('paidPlan');
   const [role, setRole] = useState('doctor'); // doctor or org
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -25,7 +26,15 @@ export default function Register({ setActivePage }) {
       }
 
       try {
-        await registerDoctor(name, email, phone, password, specialty, null, 'pending', file);
+        const newDoc = await registerDoctor(name, email, phone, password, specialty, null, 'pending', file);
+        if (paidPlan) {
+          const planName = paidPlan === 'starter' ? 'Clinical Pro' : 'Pro AI Suite';
+          const expiryDate = new Date();
+          expiryDate.setDate(expiryDate.getDate() + 30);
+          const expiryStr = expiryDate.toISOString().split('T')[0];
+          await activateSubscription(newDoc.id, planName, expiryStr);
+          sessionStorage.removeItem('paidPlan');
+        }
         setSuccess(true);
       } catch (err) {
         setError(err.message || 'حدث خطأ أثناء التسجيل');
@@ -181,6 +190,18 @@ export default function Register({ setActivePage }) {
               <div class="mb-4 bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2">
                 <span class="material-symbols-outlined text-[18px]">error</span>
                 <span>{error}</span>
+              </div>
+            )}
+
+            {role === 'doctor' && paidPlan && (
+              <div class="mb-4 bg-primary-light text-primary text-xs p-3.5 rounded-lg flex items-start gap-2.5 border border-primary/20 shadow-sm animate-fade-in">
+                <span class="material-symbols-outlined text-[18px] fill">check_circle</span>
+                <div class="text-left">
+                  <p class="font-bold uppercase tracking-wider text-[9px]">Secure Pre-Paid Subscription</p>
+                  <p class="mt-0.5 text-secondary font-medium">
+                    Your account will be configured with the <span class="font-bold text-primary">{paidPlan === 'starter' ? 'Starter Plan ($99.00/mo)' : 'Professional Plan ($249.00/mo)'}</span>.
+                  </p>
+                </div>
               </div>
             )}
 

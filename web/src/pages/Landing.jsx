@@ -259,7 +259,7 @@ export default function Landing({ setActivePage }) {
                   <li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-sm">check_circle</span> Email Support</li>
                 </ul>
                 <button 
-                  onClick={() => setActivePage('register')}
+                  onClick={() => setActivePage('checkout?plan=starter')}
                   class="w-full bg-white hover:bg-surface-container text-primary font-button py-3 rounded-lg border border-border-subtle transition-colors font-semibold"
                 >
                   Get Started
@@ -284,7 +284,7 @@ export default function Landing({ setActivePage }) {
                   <li class="flex items-center gap-2"><span class="material-symbols-outlined text-primary text-sm">check_circle</span> Priority 24/7 Support</li>
                 </ul>
                 <button 
-                  onClick={() => setActivePage('register')}
+                  onClick={() => setActivePage('checkout?plan=professional')}
                   class="w-full bg-primary hover:bg-primary-hover text-on-primary font-button py-3 rounded-lg transition-colors shadow-sm font-semibold"
                 >
                   Start Free Trial

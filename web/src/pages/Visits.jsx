@@ -51,7 +51,7 @@ export default function Visits() {
       const getHistory = async () => {
         setLoadingHistory(true);
         try {
-          const token = localStorage.getItem("accessToken");
+          const token = sessionStorage.getItem("accessToken");
           const response = await fetch(`/api/v1/sessions/by-patient/${selectedPatientId}`, {
             headers: {
               'Authorization': `Bearer ${token}`

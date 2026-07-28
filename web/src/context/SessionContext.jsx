@@ -200,7 +200,7 @@ export const SessionProvider = ({ children }) => {
   }, [isRecording]);
 
   const apiFetch = async (url, options = {}) => {
-    const token = localStorage.getItem('accessToken');
+    const token = sessionStorage.getItem('accessToken');
     const headers = { 'Content-Type': 'application/json', ...options.headers };
     if (token) headers['Authorization'] = `Bearer ${token}`;
     const res = await fetch(`/api/v1${url}`, { ...options, headers });
@@ -230,7 +230,7 @@ export const SessionProvider = ({ children }) => {
 
       // 1. Initialize backend session
       if (isOnline) {
-        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
         const session = await apiFetch('/sessions/', {
           method: 'POST',
           body: JSON.stringify({
@@ -382,7 +382,7 @@ export const SessionProvider = ({ children }) => {
       const formData = new FormData();
       formData.append("file", blob, `chunk_${chunkKey}.webm`);
 
-      const token = localStorage.getItem('accessToken');
+      const token = sessionStorage.getItem('accessToken');
       const response = await fetch(`/api/v1/sessions/${sId}/chunks`, {
         method: "POST",
         headers: {
@@ -420,7 +420,7 @@ export const SessionProvider = ({ children }) => {
     let finalSessionId = sId;
     if (!finalSessionId && isOnline) {
       try {
-        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
         const session = await apiFetch('/sessions/', {
           method: 'POST',
           body: JSON.stringify({
@@ -446,7 +446,7 @@ export const SessionProvider = ({ children }) => {
         const formData = new FormData();
         formData.append("file", chunk.blob, `chunk_${chunk.id}.webm`);
 
-        const token = localStorage.getItem('accessToken');
+        const token = sessionStorage.getItem('accessToken');
         const response = await fetch(`/api/v1/sessions/${finalSessionId}/chunks`, {
           method: "POST",
           headers: {
@@ -491,7 +491,7 @@ export const SessionProvider = ({ children }) => {
 
       // 1. If session wasn't created because started offline, do it now
       if (!activeSessionId && isOnline) {
-        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
         const session = await apiFetch('/sessions/', {
           method: 'POST',
           body: JSON.stringify({
@@ -542,7 +542,7 @@ export const SessionProvider = ({ children }) => {
 
       // Mark appointment as completed
       if (appointmentId) {
-        const token = localStorage.getItem('accessToken');
+        const token = sessionStorage.getItem('accessToken');
         await fetch(`/api/v1/appointments/${appointmentId}/status`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },

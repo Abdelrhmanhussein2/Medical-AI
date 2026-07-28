@@ -82,4 +82,31 @@ class DoctorService:
             row = await connection.fetchrow("SELECT * FROM doctors WHERE id = $1", doctor_id)
             return dict(row) if row else None
 
+    async def update_doctor(self, doctor_id: UUID, name: str, email: str, specialization: str) -> Optional[dict]:
+        async with db.pool.acquire() as connection:
+            # Check if email is taken by someone else
+            existing = await connection.fetchrow(
+                "SELECT id FROM doctors WHERE email = $1 AND id != $2", 
+                email, doctor_id
+            )
+            if existing:
+                raise ValueError("Email already in use by another account")
+                
+            query = """
+            UPDATE doctors 
+            SET name = $1, email = $2, specialization = $3, updated_at = now() 
+            WHERE id = $4 
+            RETURNING *
+            """
+            row = await connection.fetchrow(query, name, email, specialization, doctor_id)
+            return dict(row) if row else None
+
+    async def delete_doctor(self, doctor_id: UUID):
+        async with db.pool.acquire() as connection:
+            # Delete doctor's appointments, sessions, and subscriptions to ensure foreign key integrity
+            await connection.execute("DELETE FROM appointments WHERE doctor_id = $1", doctor_id)
+            await connection.execute("DELETE FROM sessions WHERE doctor_id = $1", doctor_id)
+            await connection.execute("DELETE FROM subscriptions WHERE doctor_id = $1", doctor_id)
+            await connection.execute("DELETE FROM doctors WHERE id = $1", doctor_id)
+
 doctor_service = DoctorService()

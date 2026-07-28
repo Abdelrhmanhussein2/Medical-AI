@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Visits() {
   const { patients, currentUser, updatePatient, generateGeneralSummary } = useApp();
+  const { t, isArabic } = useLanguage();
   const [selectedPatientId, setSelectedPatientId] = useState('');
 
   // General summary state (Left side)
@@ -115,97 +117,104 @@ export default function Visits() {
   };
 
   return (
-    <div class="max-w-7xl mx-auto py-2">
+    <div className="max-w-7xl mx-auto py-2 text-start">
       {/* Header */}
-      <header class="flex justify-between items-end mb-stack-lg border-b border-border-subtle pb-stack-md">
+      <header className="flex justify-between items-end mb-stack-lg border-b border-border-subtle pb-stack-md">
         <div>
-          <h1 class="font-display-lg text-headline-lg text-on-surface font-bold">Medical Visits & Summaries</h1>
-          <p class="font-body-lg text-body-lg text-on-surface-variant mt-1">Review patient medical records and update general summaries.</p>
+          <h1 className="font-display-lg text-headline-lg text-on-surface font-bold">
+            {t('medical_visits_title')}
+          </h1>
+          <p className="font-body-lg text-body-lg text-on-surface-variant mt-1">
+            {isArabic ? 'مراجعة السجلات الطبية للمرضى وتحديث الملخصات العامة.' : 'Review patient medical records and update general summaries.'}
+          </p>
         </div>
       </header>
 
       {/* Grid Layout: Left - General Summary / Right - Session Records */}
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
         
-        {/* ===== LEFT: General Summary / الملخص العام أو الأساسي ===== */}
-        <div class="col-span-12 lg:col-span-6">
-          <div class="bg-white rounded-xl border border-border-subtle p-6 shadow-sm flex flex-col min-h-[500px]">
-            <h3 class="font-headline-md text-base text-primary font-bold mb-4 pb-2 border-b border-border-subtle flex items-center gap-2">
-              <span class="material-symbols-outlined text-primary text-[20px]">assignment</span>
-              الملخص العام للمريض
+        {/* ===== LEFT: General Summary ===== */}
+        <div className="col-span-12 lg:col-span-6">
+          <div className="bg-white rounded-xl border border-border-subtle p-6 shadow-sm flex flex-col min-h-[500px]">
+            <h3 className="font-headline-md text-base text-primary font-bold mb-4 pb-2 border-b border-border-subtle flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-[20px]">assignment</span>
+              {t('general_summary')}
             </h3>
 
-            <div class="mb-4">
-              <label class="block text-xs font-semibold text-on-surface-variant mb-1">اختر المريض *</label>
+            <div className="mb-4">
+              <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                {isArabic ? 'اختر المريض *' : 'Select Patient *'}
+              </label>
               <select
                 value={selectedPatientId}
                 onChange={(e) => setSelectedPatientId(e.target.value)}
-                class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
               >
-                <option value="">-- اختر مريضاً من القائمة --</option>
+                <option value="">{isArabic ? '-- اختر مريضاً من القائمة --' : '-- Select Patient from list --'}</option>
                 {patients.map(p => (
-                  <option key={p.id} value={p.id}>{p.name} {p.file_id ? `(ملف: ${p.file_id})` : ''}</option>
+                  <option key={p.id} value={p.id}>{p.name} {p.file_id ? `(File ID: ${p.file_id})` : ''}</option>
                 ))}
               </select>
             </div>
 
             {!selectedPatientId ? (
-              <div class="flex-1 flex flex-col items-center justify-center text-secondary text-sm border-2 border-dashed border-border-subtle/50 rounded-xl p-8 bg-surface-container-low/20">
-                <span class="material-symbols-outlined text-[48px] mb-2 text-outline-variant">
+              <div className="flex-1 flex flex-col items-center justify-center text-secondary text-sm border-2 border-dashed border-border-subtle/50 rounded-xl p-8 bg-surface-container-low/20">
+                <span className="material-symbols-outlined text-[48px] mb-2 text-outline-variant">
                   person_search
                 </span>
-                <p class="text-center">يرجى تحديد مريض من القائمة بالأعلى لعرض ملخصه العام وتعديله.</p>
+                <p className="text-center">{t('select_patient_to_view')}</p>
               </div>
             ) : (
-              <form onSubmit={handleSaveSummary} class="flex-1 flex flex-col justify-between space-y-4">
+              <form onSubmit={handleSaveSummary} className="flex-1 flex flex-col justify-between space-y-4">
                 {successMsg && (
-                  <div class="bg-primary-light text-primary text-xs p-3 rounded-lg flex items-center gap-2 animate-fade-in" dir="rtl">
-                    <span class="material-symbols-outlined text-[18px]">check_circle</span>
+                  <div className="bg-primary-light text-primary text-xs p-3 rounded-lg flex items-center gap-2 animate-fade-in">
+                    <span className="material-symbols-outlined text-[18px]">check_circle</span>
                     <span>{successMsg}</span>
                   </div>
                 )}
                 {errorMsg && (
-                  <div class="bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2 animate-fade-in" dir="rtl">
-                    <span class="material-symbols-outlined text-[18px]">error</span>
+                  <div className="bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2 animate-fade-in">
+                    <span className="material-symbols-outlined text-[18px]">error</span>
                     <span>{errorMsg}</span>
                   </div>
                 )}
 
-                <div class="flex-1 flex flex-col">
-                  <div class="flex justify-between items-center mb-1 text-xs font-semibold text-on-surface-variant" dir="rtl">
-                    <span>الملخص الأساسي والتاريخ المرضي العام:</span>
+                <div className="flex-1 flex flex-col">
+                  <div className="flex justify-between items-center mb-1 text-xs font-semibold text-on-surface-variant">
+                    <span>{t('general_summary')}</span>
                     <button
                       type="button"
                       disabled={isGenerating}
                       onClick={handleAiGenerateSummary}
-                      class="text-primary hover:text-primary-hover font-bold text-[11px] flex items-center gap-1 bg-primary/5 hover:bg-primary/10 px-2 py-1 rounded-md transition-colors border border-primary/10"
+                      className="text-primary hover:text-primary-hover font-bold text-[11px] flex items-center gap-1 bg-primary/5 hover:bg-primary/10 px-2 py-1 rounded-md transition-colors border border-primary/10"
                     >
                       {isGenerating ? (
-                        <><span class="material-symbols-outlined text-[14px] animate-spin">progress_activity</span> جاري التوليد...</>
+                        <><span className="material-symbols-outlined text-[14px] animate-spin">progress_activity</span> {isArabic ? 'جاري التوليد...' : 'Generating...'}</>
                       ) : (
-                        <><span class="material-symbols-outlined text-[14px]">auto_stories</span> توليد بالذكاء الاصطناعي من الزيارات 🪄</>
+                        <><span className="material-symbols-outlined text-[14px]">auto_stories</span> {t('generate_general_summary')}</>
                       )}
                     </button>
                   </div>
                   <textarea
                     value={generalSummary}
                     onChange={(e) => setGeneralSummary(e.target.value)}
-                    placeholder="اكتب هنا الملخص العام والتاريخ المرضي الأساسي للمريض (مثال: مريض يعاني من السكري والضغط منذ 5 سنوات، لديه حساسية من البنسلين...)"
+                    placeholder={isArabic 
+                      ? 'اكتب هنا الملخص العام والتاريخ المرضي الأساسي للمريض (مثال: مريض يعاني من السكري والضغط منذ 5 سنوات، لديه حساسية من البنسلين...)' 
+                      : 'Type here patient\'s chronic diseases, surgical history, family medical history, allergies...'}
                     rows={12}
-                    dir="rtl"
-                    class="w-full flex-1 px-4 py-3 bg-surface-container-low border border-border-subtle rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface resize-none leading-relaxed"
+                    className="w-full flex-1 px-4 py-3 bg-surface-container-low border border-border-subtle rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface resize-none leading-relaxed"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={isSavingSummary}
-                  class="w-full bg-primary hover:bg-primary-hover disabled:opacity-50 text-on-primary font-button py-2.5 rounded-lg text-sm transition-colors shadow-sm flex items-center justify-center gap-2"
+                  className="w-full bg-primary hover:bg-primary-hover disabled:opacity-50 text-on-primary font-button py-2.5 rounded-lg text-sm transition-colors shadow-sm flex items-center justify-center gap-2 font-bold"
                 >
                   {isSavingSummary ? (
-                    <><span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> جاري الحفظ...</>
+                    <><span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> {t('updating')}</>
                   ) : (
-                    <><span class="material-symbols-outlined text-[18px]">save</span> حفظ التعديلات على الملخص العام</>
+                    <><span className="material-symbols-outlined text-[18px]">save</span> {t('save_general_summary')}</>
                   )}
                 </button>
               </form>

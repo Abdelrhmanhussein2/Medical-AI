@@ -117,16 +117,33 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    sessionStorage.removeItem("accessToken");
-    sessionStorage.removeItem("currentUser");
-    setCurrentUser(null);
-    setPatients([]);
-    setOrganizations([]);
-    setDoctors([]);
-    setSubscriptions([]);
-    setAppointments([]);
-    setVisits([]);
+  const logout = async () => {
+    // Notify the backend before clearing the local session
+    try {
+      const token = sessionStorage.getItem("accessToken");
+      if (token) {
+        await fetch('/api/v1/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+    } catch (err) {
+      // Even if the backend call fails, proceed with local logout
+      console.warn("Backend logout notification failed:", err.message);
+    } finally {
+      sessionStorage.removeItem("accessToken");
+      sessionStorage.removeItem("currentUser");
+      setCurrentUser(null);
+      setPatients([]);
+      setOrganizations([]);
+      setDoctors([]);
+      setSubscriptions([]);
+      setAppointments([]);
+      setVisits([]);
+    }
   };
 
   const registerDoctor = async (name, email, phone, password, specialization = 'General', departmentId = null, status = 'approved', certificateFile = null) => {
@@ -324,6 +341,23 @@ export const AppProvider = ({ children }) => {
     setDoctors(prev => prev.map(d => d.id === id ? { ...d, ...updatedFields } : d));
   };
 
+  const updateProfile = async (name, email, specialization) => {
+    const updated = await apiFetch(`/doctors/me`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name, email, specialization })
+    });
+    setCurrentUser(updated);
+    sessionStorage.setItem("currentUser", JSON.stringify(updated));
+    return updated;
+  };
+
+  const deleteAccount = async () => {
+    await apiFetch(`/doctors/me`, {
+      method: 'DELETE'
+    });
+    logout();
+  };
+
   const updateOrg = (id, updatedFields) => {
     setOrganizations(prev => prev.map(o => o.id === id ? { ...o, ...updatedFields } : o));
   };
@@ -390,6 +424,8 @@ export const AppProvider = ({ children }) => {
       updateAppointmentStatus,
       addVisit,
       updateDoctor,
+      updateProfile,
+      deleteAccount,
       updateOrg,
       deleteDoctor,
       deleteOrg,

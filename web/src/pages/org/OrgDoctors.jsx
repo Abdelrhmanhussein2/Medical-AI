@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function OrgDoctors() {
   const { currentUser, doctors, addOrgDoctor, toggleDoctorStatus, updateDoctor, deleteDoctor } = useApp();
+  const { isArabic } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -28,7 +30,6 @@ export default function OrgDoctors() {
   const [docToDelete, setDocToDelete] = useState(null);
 
   // All doctors in state are already scoped to this department
-  // (loaded via /departments/{id}/doctors endpoint)
   const deptDocs = doctors;
 
   // Filter roster by search only
@@ -48,7 +49,7 @@ export default function OrgDoctors() {
     setError('');
 
     if (!name || !email || !phone) {
-      setError('Please fill in all fields');
+      setError(isArabic ? 'يرجى ملء جميع الحقول' : 'Please fill in all fields');
       return;
     }
 
@@ -59,7 +60,7 @@ export default function OrgDoctors() {
       setPhone('');
       setShowAddModal(false);
     } catch (err) {
-      setError(err.message || 'Failed to assign doctor');
+      setError(err.message || (isArabic ? 'فشل تعيين الطبيب' : 'Failed to assign doctor'));
     }
   };
 
@@ -99,130 +100,164 @@ export default function OrgDoctors() {
     }
   };
 
+  const getSpecialtyLabel = (spec) => {
+    if (!isArabic) return spec;
+    const map = {
+      Cardiology: 'أمراض القلب',
+      Neurology: 'الأعصاب',
+      Pediatrics: 'طب الأطفال',
+      Oncology: 'الأورام',
+      'General Practice': 'الطب العام',
+    };
+    return map[spec] || spec;
+  };
+
+  const getPlanLabel = (plan) => {
+    if (!isArabic) return plan;
+    const map = {
+      'Basic Access': 'الوصول الأساسي',
+      'Trial Access': 'الوصول التجريبي',
+      'Clinical Pro': 'السريري المتقدم',
+      'Pro AI Suite': 'باقة ذكاء اصطناعي برو',
+      'Enterprise AI': 'الذكاء الاصطناعي للمؤسسات',
+    };
+    return map[plan] || plan;
+  };
+
   return (
-    <div class="space-y-stack-lg font-body-md animate-fade-in">
+    <div className={`space-y-stack-lg font-body-md animate-fade-in ${isArabic ? 'text-right' : 'text-left'}`}>
       {/* Header */}
-      <header class="flex justify-between items-end border-b border-border-subtle pb-stack-md">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border-subtle pb-stack-md gap-4">
         <div>
-          <div class="flex items-center gap-1.5 text-xs text-secondary font-semibold">
+          <div className={`flex items-center gap-1.5 text-xs text-secondary font-semibold ${isArabic ? 'flex-row-reverse' : ''}`}>
             <span>{currentUser.name}</span>
-            <span class="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span>Doctors</span>
+            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+            <span>{isArabic ? 'الأطباء' : 'Doctors'}</span>
           </div>
-          <h1 class="font-display-lg text-headline-lg text-on-surface font-bold mt-1">Active Doctors Roster</h1>
-          <p class="font-body-lg text-body-lg text-on-surface-variant mt-1">
-            Manage doctor assignments, monitor clinical AI usage, and track subscription health.
+          <h1 className="font-display-lg text-headline-lg text-on-surface font-bold mt-1">
+            {isArabic ? 'قائمة الأطباء النشطين' : 'Active Doctors Roster'}
+          </h1>
+          <p className="font-body-lg text-body-lg text-on-surface-variant mt-1">
+            {isArabic
+              ? 'إدارة تعيينات الأطباء، مراقبة استخدام الذكاء الاصطناعي السريري، وتتبع حالة الاشتراكات.'
+              : 'Manage doctor assignments, monitor clinical AI usage, and track subscription health.'}
           </p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          class="bg-primary hover:bg-primary-hover text-on-primary font-button text-xs py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm font-semibold"
+          className="bg-primary hover:bg-primary-hover text-on-primary font-button text-xs py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm font-semibold"
         >
-          <span class="material-symbols-outlined text-[18px]">person_add</span>
-          Assign Doctor
+          <span className="material-symbols-outlined text-[18px]">person_add</span>
+          {isArabic ? 'تعيين طبيب' : 'Assign Doctor'}
         </button>
       </header>
 
       {/* Mini KPIs & Search */}
-      <div class="flex flex-col md:flex-row justify-between gap-gutter">
+      <div className={`flex flex-col md:flex-row justify-between gap-gutter ${isArabic ? 'md:flex-row-reverse' : ''}`}>
         {/* KPI Cards */}
-        <div class="flex gap-4 w-full md:w-auto">
-          <div class="bg-white border border-border-subtle py-3 px-6 rounded-lg shadow-sm flex items-center gap-4">
-            <span class="material-symbols-outlined text-primary bg-primary-light p-2 rounded-full text-lg">group</span>
+        <div className={`flex gap-4 w-full md:w-auto ${isArabic ? 'flex-row-reverse' : ''}`}>
+          <div className={`bg-white border border-border-subtle py-3 px-6 rounded-lg shadow-sm flex items-center gap-4 ${isArabic ? 'flex-row-reverse text-right' : ''}`}>
+            <span className="material-symbols-outlined text-primary bg-primary-light p-2 rounded-full text-lg">group</span>
             <div>
-              <span class="text-[10px] text-secondary font-semibold uppercase block">Total Assigned</span>
-              <span class="text-sm font-bold text-on-surface">{totalAssigned} doctors</span>
+              <span className="text-[10px] text-secondary font-semibold uppercase block">{isArabic ? 'إجمالي المعينين' : 'Total Assigned'}</span>
+              <span className="text-sm font-bold text-on-surface">
+                {totalAssigned} {isArabic ? 'أطباء' : 'doctors'}
+              </span>
             </div>
           </div>
           
-          <div class="bg-white border border-border-subtle py-3 px-6 rounded-lg shadow-sm flex items-center gap-4">
-            <span class="material-symbols-outlined text-primary bg-primary-light p-2 rounded-full text-lg">monitoring</span>
+          <div className={`bg-white border border-border-subtle py-3 px-6 rounded-lg shadow-sm flex items-center gap-4 ${isArabic ? 'flex-row-reverse text-right' : ''}`}>
+            <span className="material-symbols-outlined text-primary bg-primary-light p-2 rounded-full text-lg">monitoring</span>
             <div>
-              <span class="text-[10px] text-secondary font-semibold uppercase block">Avg AI Consults</span>
-              <span class="text-sm font-bold text-on-surface">{avgConsults}/mo</span>
+              <span className="text-[10px] text-secondary font-semibold uppercase block">{isArabic ? 'متوسط استشارات الـ AI' : 'Avg AI Consults'}</span>
+              <span className="text-sm font-bold text-on-surface">
+                {avgConsults}/{isArabic ? 'شهرياً' : 'mo'}
+              </span>
             </div>
           </div>
         </div>
 
         {/* Search */}
-        <div class="relative w-full md:w-72 self-end">
-          <span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary text-lg">search</span>
+        <div className="relative w-full md:w-72 self-end">
+          <span className={`material-symbols-outlined absolute ${isArabic ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-secondary text-lg`}>search</span>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Find doctor by name..."
-            class="w-full pl-10 pr-4 py-2.5 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
+            placeholder={isArabic ? 'البحث عن طبيب بالاسم...' : 'Find doctor by name...'}
+            className={`w-full ${isArabic ? 'pr-10 pl-4 text-right' : 'pl-10 pr-4 text-left'} py-2.5 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary shadow-sm`}
           />
         </div>
       </div>
 
       {/* Doctors Table */}
-      <div class="bg-white rounded-xl border border-border-subtle shadow-sm overflow-hidden">
-        <table class="min-w-full divide-y divide-border-subtle text-left">
-          <thead class="bg-bg-canvas">
+      <div className="bg-white rounded-xl border border-border-subtle shadow-sm overflow-hidden">
+        <table className={`min-w-full divide-y divide-border-subtle ${isArabic ? 'text-right' : 'text-left'}`}>
+          <thead className="bg-bg-canvas">
             <tr>
-              <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Doctor</th>
-              <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Specialization</th>
-              <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">AI Consults</th>
-              <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Reports</th>
-              <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Subscription</th>
-              <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Last Activity</th>
-              <th scope="col" class="relative px-6 py-3">
-                <span class="sr-only">Actions</span>
+              <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'الطبيب' : 'Doctor'}</th>
+              <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'التخصص' : 'Specialization'}</th>
+              <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'استشارات AI' : 'AI Consults'}</th>
+              <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'التقارير' : 'Reports'}</th>
+              <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'الاشتراك' : 'Subscription'}</th>
+              <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'آخر نشاط' : 'Last Activity'}</th>
+              <th scope="col" className="relative px-6 py-3">
+                <span className="sr-only">{isArabic ? 'إجراءات' : 'Actions'}</span>
               </th>
             </tr>
           </thead>
-          <tbody class="bg-white divide-y divide-border-subtle text-xs">
+          <tbody className="bg-white divide-y divide-border-subtle text-xs">
             {filteredDocs.length === 0 ? (
               <tr>
-                <td colSpan="7" class="px-6 py-8 text-center text-secondary text-sm">
-                  No doctors assigned to this department
+                <td colSpan="7" className="px-6 py-8 text-center text-secondary text-sm">
+                  {isArabic ? 'لا يوجد أطباء معينين لهذا القسم' : 'No doctors assigned to this department'}
                 </td>
               </tr>
             ) : (
               filteredDocs.map((doc) => (
-                <tr key={doc.id} class="hover:bg-surface-container-low transition-colors">
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center gap-3">
-                      <div class="w-8 h-8 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold font-display-md">
+                <tr key={doc.id} className="hover:bg-surface-container-low transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className={`flex items-center gap-3 ${isArabic ? 'flex-row-reverse' : ''}`}>
+                      <div className="w-8 h-8 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold font-display-md">
                         {doc.name.split(' ').map(n => n[0]).join('')}
                       </div>
                       <div>
-                        <div class="font-bold text-on-surface text-xs">{doc.name}</div>
-                        <div class="text-[10px] text-secondary">{doc.email}</div>
-                        <div class="text-[10px] text-secondary">{doc.phone}</div>
+                        <div className="font-bold text-on-surface text-xs">{doc.name}</div>
+                        <div className="text-[10px] text-secondary">{doc.email}</div>
+                        <div className="text-[10px] text-secondary">{doc.phone}</div>
                       </div>
                     </div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-secondary font-semibold">
-                    {doc.specialization || doc.department}
+                  <td className="px-6 py-4 whitespace-nowrap text-secondary font-semibold">
+                    {getSpecialtyLabel(doc.specialization || doc.department)}
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-secondary font-bold text-sm">
+                  <td className="px-6 py-4 whitespace-nowrap text-secondary font-bold text-sm">
                     {doc.ai_consults}
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-secondary font-semibold">
-                    {doc.reports} reports
+                  <td className="px-6 py-4 whitespace-nowrap text-secondary font-semibold">
+                    {doc.reports} {isArabic ? 'تقارير' : 'reports'}
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span class={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                       doc.is_active !== false
                         ? 'bg-primary-light text-primary' 
                         : 'bg-error-container text-error'
                     }`}>
-                      {doc.is_active !== false ? 'Active' : 'Disabled'}
+                      {doc.is_active !== false ? (isArabic ? 'نشط' : 'Active') : (isArabic ? 'معطل' : 'Disabled')}
                     </span>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-secondary">
+                  <td className="px-6 py-4 whitespace-nowrap text-secondary">
                     {doc.last_login}
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-right text-xs font-semibold">
-                    <button
-                      onClick={() => openDoctorDetails(doc)}
-                      class="px-3 py-1.5 bg-primary-light hover:bg-primary/20 text-primary rounded font-bold text-xs shadow-sm transition-colors"
-                    >
-                      View Details & Manage
-                    </button>
+                  <td className="px-6 py-4 whitespace-nowrap text-xs font-semibold">
+                    <div className={`flex ${isArabic ? 'justify-start' : 'justify-end'}`}>
+                      <button
+                        onClick={() => openDoctorDetails(doc)}
+                        className="px-3 py-1.5 bg-primary-light hover:bg-primary/20 text-primary rounded font-bold text-xs shadow-sm transition-colors"
+                      >
+                        {isArabic ? 'عرض التفاصيل والإدارة' : 'View Details & Manage'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -233,85 +268,83 @@ export default function OrgDoctors() {
 
       {/* Assign Doctor Modal */}
       {showAddModal && (
-        <div class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div class="bg-white rounded-xl border border-border-subtle shadow-lg max-w-md w-full overflow-hidden animate-fade-in">
-            <div class="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas">
-              <h3 class="font-headline-md text-base text-primary font-bold">Assign Existing Doctor</h3>
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl border border-border-subtle shadow-lg max-w-md w-full overflow-hidden animate-fade-in">
+            <div className={`px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas ${isArabic ? 'flex-row-reverse' : ''}`}>
+              <h3 className="font-headline-md text-base text-primary font-bold">
+                {isArabic ? 'تعيين طبيب ممارس' : 'Assign Existing Doctor'}
+              </h3>
               <button 
                 onClick={() => setShowAddModal(false)}
-                class="p-1 hover:bg-surface-container rounded-full text-secondary"
+                className="p-1 hover:bg-surface-container rounded-full text-secondary"
               >
-                <span class="material-symbols-outlined text-[20px]">close</span>
+                <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
             
-            <form onSubmit={handleAddDoctorSubmit} class="p-6 space-y-4">
+            <form onSubmit={handleAddDoctorSubmit} className="p-6 space-y-4 text-start">
               {error && (
-                <div class="bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2">
-                  <span class="material-symbols-outlined text-[16px]">error</span>
+                <div className="bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px]">error</span>
                   <span>{error}</span>
                 </div>
               )}
 
               <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Doctor Name *</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                  {isArabic ? 'اسم الطبيب *' : 'Doctor Name *'}
+                </label>
                 <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Dr. Ahmed Hassan"
-                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                  type="text" required value={name} onChange={(e) => setName(e.target.value)}
+                  placeholder={isArabic ? 'د. أحمد حسن' : 'e.g. Dr. Ahmed Hassan'}
+                  className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
                 />
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Clinic Email *</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                  {isArabic ? 'البريد الإلكتروني للعيادة *' : 'Clinic Email *'}
+                </label>
                 <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. doctor@example.com"
-                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                  type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+                  placeholder="doctor@example.com"
+                  className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
                 />
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Contact Phone *</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                  {isArabic ? 'رقم الهاتف للاتصال *' : 'Contact Phone *'}
+                </label>
                 <input
-                  type="text"
-                  required
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  type="text" required value={phone} onChange={(e) => setPhone(e.target.value)}
                   placeholder="e.g. 01012345678"
-                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                  className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
                 />
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Department Specialty</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                  {isArabic ? 'تخصص القسم' : 'Department Specialty'}
+                </label>
                 <input
-                  type="text"
-                  disabled
-                  value={currentUser.specialty}
-                  class="w-full px-3 py-2 bg-surface-container-low border border-border-subtle rounded-lg text-sm text-secondary cursor-not-allowed font-semibold"
+                  type="text" disabled value={getSpecialtyLabel(currentUser.specialty)}
+                  className={`w-full px-3 py-2 bg-surface-container-low border border-border-subtle rounded-lg text-sm text-secondary cursor-not-allowed font-semibold ${isArabic ? 'text-right' : 'text-left'}`}
                 />
               </div>
 
-              <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
+              <div className={`flex gap-3 mt-6 pt-4 border-t border-border-subtle ${isArabic ? 'flex-row-reverse' : ''}`}>
                 <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  class="flex-1 bg-white border border-border-subtle text-secondary font-button py-2 rounded-lg text-xs hover:bg-surface-container-low transition-colors font-semibold"
+                  type="button" onClick={() => setShowAddModal(false)}
+                  className="flex-1 bg-white border border-border-subtle text-secondary font-button py-2 rounded-lg text-xs hover:bg-surface-container-low transition-colors font-semibold"
                 >
-                  Cancel
+                  {isArabic ? 'إلغاء' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
-                  class="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-button py-2 rounded-lg text-xs transition-colors shadow-sm font-semibold"
+                  className="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-button py-2 rounded-lg text-xs transition-colors shadow-sm font-semibold"
                 >
-                  Assign Doctor
+                  {isArabic ? 'تعيين الطبيب' : 'Assign Doctor'}
                 </button>
               </div>
             </form>
@@ -321,188 +354,179 @@ export default function OrgDoctors() {
 
       {/* Details & Edit Doctor Modal */}
       {selectedDoctor && (
-        <div class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div class="bg-white rounded-xl border border-border-subtle shadow-lg max-w-md w-full overflow-hidden animate-fade-in">
-            <div class="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas">
-              <h3 class="font-headline-md text-base text-primary font-bold">
-                {isEditMode ? "Edit Doctor Profile" : "Doctor Profile Details"}
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl border border-border-subtle shadow-lg max-w-md w-full overflow-hidden animate-fade-in">
+            <div className={`px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas ${isArabic ? 'flex-row-reverse' : ''}`}>
+              <h3 className="font-headline-md text-base text-primary font-bold">
+                {isEditMode
+                  ? (isArabic ? 'تعديل ملف الطبيب' : 'Edit Doctor Profile')
+                  : (isArabic ? 'تفاصيل ملف الطبيب' : 'Doctor Profile Details')}
               </h3>
               <button 
                 onClick={() => setSelectedDoctor(null)}
-                class="p-1 hover:bg-surface-container rounded-full text-secondary"
+                className="p-1 hover:bg-surface-container rounded-full text-secondary"
               >
-                <span class="material-symbols-outlined text-[20px]">close</span>
+                <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
             
             {isEditMode ? (
-              <form onSubmit={handleEditDoctorSubmit} class="p-6 space-y-4">
+              <form onSubmit={handleEditDoctorSubmit} className="p-6 space-y-4 text-start">
                 <div>
-                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">Doctor Name *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    {isArabic ? 'اسم الطبيب *' : 'Doctor Name *'}
+                  </label>
                   <input
-                    type="text"
-                    required
-                    value={editDocName}
-                    onChange={(e) => setEditDocName(e.target.value)}
-                    class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                    type="text" required value={editDocName} onChange={(e) => setEditDocName(e.target.value)}
+                    className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
                   />
                 </div>
 
                 <div>
-                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">Clinic Email *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    {isArabic ? 'البريد الإلكتروني للعيادة *' : 'Clinic Email *'}
+                  </label>
                   <input
-                    type="email"
-                    required
-                    value={editDocEmail}
-                    onChange={(e) => setEditDocEmail(e.target.value)}
-                    class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                    type="email" required value={editDocEmail} onChange={(e) => setEditDocEmail(e.target.value)}
+                    className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
                   />
                 </div>
 
                 <div>
-                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">Contact Phone *</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    {isArabic ? 'رقم الهاتف للاتصال *' : 'Contact Phone *'}
+                  </label>
                   <input
-                    type="text"
-                    required
-                    value={editDocPhone}
-                    onChange={(e) => setEditDocPhone(e.target.value)}
-                    class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                    type="text" required value={editDocPhone} onChange={(e) => setEditDocPhone(e.target.value)}
+                    className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
                   />
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Department</label>
+                    <label className="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'القسم' : 'Department'}</label>
                     <input
-                      type="text"
-                      disabled
-                      value={currentUser.specialty}
-                      class="w-full px-3 py-2 bg-surface-container-low border border-border-subtle rounded-lg text-sm text-secondary cursor-not-allowed font-semibold"
+                      type="text" disabled value={getSpecialtyLabel(currentUser.specialty)}
+                      className={`w-full px-3 py-2 bg-surface-container-low border border-border-subtle rounded-lg text-sm text-secondary cursor-not-allowed font-semibold ${isArabic ? 'text-right' : 'text-left'}`}
                     />
                   </div>
                   <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Subscription Plan</label>
+                    <label className="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'خطة الاشتراك' : 'Subscription Plan'}</label>
                     <select
-                      value={editDocPlan}
-                      onChange={(e) => setEditDocPlan(e.target.value)}
-                      class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                      value={editDocPlan} onChange={(e) => setEditDocPlan(e.target.value)}
+                      className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
                     >
-                      <option value="Basic Access">Basic Access</option>
-                      <option value="Trial Access">Trial Access</option>
-                      <option value="Clinical Pro">Clinical Pro</option>
-                      <option value="Pro AI Suite">Pro AI Suite</option>
-                      <option value="Enterprise AI">Enterprise AI</option>
+                      <option value="Basic Access">{isArabic ? 'الوصول الأساسي' : 'Basic Access'}</option>
+                      <option value="Trial Access">{isArabic ? 'الوصول التجريبي' : 'Trial Access'}</option>
+                      <option value="Clinical Pro">{isArabic ? 'السريري المتقدم' : 'Clinical Pro'}</option>
+                      <option value="Pro AI Suite">{isArabic ? 'باقة ذكاء اصطناعي برو' : 'Pro AI Suite'}</option>
+                      <option value="Enterprise AI">{isArabic ? 'الذكاء الاصطناعي للمؤسسات' : 'Enterprise AI'}</option>
                     </select>
                   </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Subscription Expiry</label>
+                    <label className="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'انتهاء الاشتراك' : 'Subscription Expiry'}</label>
                     <input
-                      type="date"
-                      required
-                      value={editDocExpiry}
-                      onChange={(e) => setEditDocExpiry(e.target.value)}
-                      class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                      type="date" required value={editDocExpiry} onChange={(e) => setEditDocExpiry(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
                     />
                   </div>
                   <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Status</label>
+                    <label className="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'الحالة' : 'Status'}</label>
                     <select
-                      value={editDocStatus}
-                      onChange={(e) => setEditDocStatus(e.target.value)}
-                      class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                      value={editDocStatus} onChange={(e) => setEditDocStatus(e.target.value)}
+                      className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
                     >
-                      <option value="approved">Active</option>
-                      <option value="disabled">Disabled</option>
+                      <option value="approved">{isArabic ? 'نشط' : 'Active'}</option>
+                      <option value="disabled">{isArabic ? 'معطل' : 'Disabled'}</option>
                     </select>
                   </div>
                 </div>
 
-                <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
+                <div className={`flex gap-3 mt-6 pt-4 border-t border-border-subtle ${isArabic ? 'flex-row-reverse' : ''}`}>
                   <button
-                    type="button"
-                    onClick={() => setIsEditMode(false)}
-                    class="flex-1 bg-white border border-border-subtle text-secondary font-button py-2 rounded-lg text-xs hover:bg-surface-container-low transition-colors font-semibold"
+                    type="button" onClick={() => setIsEditMode(false)}
+                    className="flex-1 bg-white border border-border-subtle text-secondary font-button py-2 rounded-lg text-xs hover:bg-surface-container-low transition-colors font-semibold"
                   >
-                    Cancel
+                    {isArabic ? 'إلغاء' : 'Cancel'}
                   </button>
                   <button
                     type="submit"
-                    class="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-button py-2 rounded-lg text-xs transition-colors shadow-sm font-semibold"
+                    className="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-button py-2 rounded-lg text-xs transition-colors shadow-sm font-semibold"
                   >
-                    Save Changes
+                    {isArabic ? 'حفظ التغييرات' : 'Save Changes'}
                   </button>
                 </div>
               </form>
             ) : (
-              <div class="p-6 space-y-6 text-xs text-secondary">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-4">
+              <div className="p-6 space-y-6 text-xs text-secondary text-start">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-4">
                   <div>
-                    <span class="block font-semibold text-on-surface-variant mb-0.5">Doctor Name</span>
-                    <span class="text-sm font-bold text-on-surface">{selectedDoctor.name}</span>
-                  </div>
-                  <div>
-                    <span class="block font-semibold text-on-surface-variant mb-0.5">Department</span>
-                    <span class="text-sm font-bold text-primary">{currentUser.specialty || 'General'}</span>
-                  </div>
-                  <div class="sm:col-span-2">
-                    <span class="block font-semibold text-on-surface-variant mb-0.5">Clinic Email</span>
-                    <span class="text-sm font-semibold text-on-surface break-all">{selectedDoctor.email}</span>
+                    <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'اسم الطبيب' : 'Doctor Name'}</span>
+                    <span className="text-sm font-bold text-on-surface">{selectedDoctor.name}</span>
                   </div>
                   <div>
-                    <span class="block font-semibold text-on-surface-variant mb-0.5">Contact Phone</span>
-                    <span class="text-sm font-semibold text-on-surface">{selectedDoctor.phone}</span>
+                    <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'القسم' : 'Department'}</span>
+                    <span className="text-sm font-bold text-primary">{getSpecialtyLabel(currentUser.specialty) || (isArabic ? 'عام' : 'General')}</span>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'البريد الإلكتروني للعيادة' : 'Clinic Email'}</span>
+                    <span className="text-sm font-semibold text-on-surface break-all">{selectedDoctor.email}</span>
                   </div>
                   <div>
-                    <span class="block font-semibold text-on-surface-variant mb-0.5">Subscription Plan</span>
-                    <span class="text-sm font-semibold text-primary">{selectedDoctor.subscription_plan || 'N/A'}</span>
+                    <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'رقم الهاتف للاتصال' : 'Contact Phone'}</span>
+                    <span className="text-sm font-semibold text-on-surface">{selectedDoctor.phone}</span>
                   </div>
                   <div>
-                    <span class="block font-semibold text-on-surface-variant mb-0.5">Expiry Date</span>
-                    <span class="text-sm font-semibold text-on-surface">{selectedDoctor.subscription_expiry || 'N/A'}</span>
+                    <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'خطة الاشتراك' : 'Subscription Plan'}</span>
+                    <span className="text-sm font-semibold text-primary">{getPlanLabel(selectedDoctor.subscription_plan) || 'N/A'}</span>
                   </div>
-                  <div class="sm:col-span-2">
-                    <span class="block font-semibold text-on-surface-variant mb-0.5">Status</span>
-                    <span class={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize mt-1 ${
-                      selectedDoctor.is_active !== false
-                        ? 'bg-primary-light text-primary' 
-                        : 'bg-error-container text-error'
+                  <div>
+                    <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'تاريخ الانتهاء' : 'Expiry Date'}</span>
+                    <span className="text-sm font-semibold text-on-surface">{selectedDoctor.subscription_expiry || 'N/A'}</span>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'الحالة' : 'Status'}</span>
+                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize mt-1 ${
+                      selectedDoctor.is_active !== false ? 'bg-primary-light text-primary' : 'bg-error-container text-error'
                     }`}>
-                      {selectedDoctor.is_active !== false ? 'Active' : 'Disabled'}
+                      {selectedDoctor.is_active !== false ? (isArabic ? 'نشط' : 'Active') : (isArabic ? 'معطل' : 'Disabled')}
                     </span>
                   </div>
                 </div>
 
-                <div class="flex flex-col gap-2 pt-6 border-t border-border-subtle mt-4">
-                  <div class="flex gap-2">
+                <div className="flex flex-col gap-2 pt-6 border-t border-border-subtle mt-4">
+                  <div className="flex gap-2">
                     <button
                       onClick={() => setIsEditMode(true)}
-                      class="flex-1 py-2 bg-primary hover:bg-primary-hover text-on-primary rounded-lg font-bold transition-colors shadow-sm text-center"
+                      className="flex-1 py-2 bg-primary hover:bg-primary-hover text-on-primary rounded-lg font-bold transition-colors shadow-sm text-center"
                     >
-                      Edit Profile
+                      {isArabic ? 'تعديل الملف الشخصي' : 'Edit Profile'}
                     </button>
                     <button
                       onClick={() => {
                         toggleDoctorStatus(selectedDoctor.id);
                         setSelectedDoctor(null);
                       }}
-                      class={`flex-1 py-2 rounded-lg font-bold transition-colors ${
+                      className={`flex-1 py-2 rounded-lg font-bold transition-colors ${
                         selectedDoctor.is_active !== false
                           ? 'bg-status-warning/10 hover:bg-status-warning/20 text-status-warning'
                           : 'bg-primary-light text-primary hover:bg-primary/20'
                       }`}
                     >
-                      {selectedDoctor.is_active !== false ? 'Disable Doctor' : 'Enable Doctor'}
+                      {selectedDoctor.is_active !== false
+                        ? (isArabic ? 'تعطيل الطبيب' : 'Disable Doctor')
+                        : (isArabic ? 'تفعيل الطبيب' : 'Enable Doctor')}
                     </button>
                   </div>
                   
                   <button
                     onClick={() => handleDeleteDoctor(selectedDoctor.id)}
-                    class="w-full py-2 bg-error-container text-error hover:bg-error/10 rounded-lg font-bold transition-colors text-center"
+                    className="w-full py-2 bg-error-container text-error hover:bg-error/10 rounded-lg font-bold transition-colors text-center"
                   >
-                    Remove Doctor from Department
+                    {isArabic ? 'إزالة الطبيب من القسم' : 'Remove Doctor from Department'}
                   </button>
                 </div>
               </div>
@@ -513,27 +537,31 @@ export default function OrgDoctors() {
 
       {/* Delete Confirmation Modal */}
       {docToDelete && (
-        <div class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-fade-in">
-          <div class="bg-white rounded-xl shadow-2xl border border-border-subtle max-w-sm w-full p-6 text-center transform scale-100 animate-fade-in">
-            <div class="w-16 h-16 bg-error-container/50 text-error rounded-full flex items-center justify-center mx-auto mb-4">
-              <span class="material-symbols-outlined text-[32px]">warning</span>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-fade-in">
+          <div className="bg-white rounded-xl shadow-2xl border border-border-subtle max-w-sm w-full p-6 text-center transform scale-100 animate-fade-in">
+            <div className="w-16 h-16 bg-error-container/50 text-error rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-outlined text-[32px]">warning</span>
             </div>
-            <h3 class="text-lg font-bold text-on-surface mb-2">Remove Doctor?</h3>
-            <p class="text-sm text-on-surface-variant mb-6">
-              Are you sure you want to remove this doctor from your department? This action cannot be undone and will revoke their access immediately.
+            <h3 className="text-lg font-bold text-on-surface mb-2">
+              {isArabic ? 'إزالة الطبيب؟' : 'Remove Doctor?'}
+            </h3>
+            <p className="text-sm text-on-surface-variant mb-6">
+              {isArabic
+                ? 'هل أنت متأكد من رغبتك في إزالة هذا الطبيب من القسم؟ لا يمكن التراجع عن هذا الإجراء وسيتم إلغاء صلاحية وصوله على الفور.'
+                : 'Are you sure you want to remove this doctor from your department? This action cannot be undone and will revoke their access immediately.'}
             </p>
-            <div class="flex gap-3">
+            <div className="flex gap-3">
               <button
                 onClick={() => setDocToDelete(null)}
-                class="flex-1 px-4 py-2 bg-surface-container-low text-secondary font-bold text-sm rounded-lg hover:bg-surface-container transition-colors"
+                className="flex-1 px-4 py-2 bg-surface-container-low text-secondary font-bold text-sm rounded-lg hover:bg-surface-container transition-colors"
               >
-                Cancel
+                {isArabic ? 'إلغاء' : 'Cancel'}
               </button>
               <button
                 onClick={confirmDeleteDoctor}
-                class="flex-1 px-4 py-2 bg-error text-white font-bold text-sm rounded-lg hover:bg-error-hover transition-colors shadow-sm"
+                className="flex-1 px-4 py-2 bg-error text-white font-bold text-sm rounded-lg hover:bg-error-hover transition-colors shadow-sm"
               >
-                Yes, Remove
+                {isArabic ? 'نعم، إزالة' : 'Yes, Remove'}
               </button>
             </div>
           </div>

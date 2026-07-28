@@ -1,8 +1,10 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Dashboard({ setActivePage }) {
   const { currentUser, appointments, patients } = useApp();
+  const { t, isArabic } = useLanguage();
 
   // Get only today's appointments for Julian Vance (current user)
   const myAppts = appointments.filter(a => a.doctor_id === currentUser.id);
@@ -18,105 +20,133 @@ export default function Dashboard({ setActivePage }) {
   });
 
   return (
-    <div>
+    <div className="text-start">
       {/* Header */}
-      <header class="flex justify-between items-end mb-stack-lg border-b border-border-subtle pb-stack-md">
+      <header className="flex justify-between items-end mb-stack-lg border-b border-border-subtle pb-stack-md">
         <div>
-          <h1 class="font-display-lg text-headline-lg text-on-surface font-bold">Dashboard</h1>
-          <p class="font-body-lg text-body-lg text-on-surface-variant mt-1">Overview of today's clinical activities and clinical insights.</p>
+          <h1 className="font-display-lg text-headline-lg text-on-surface font-bold">
+            {t('dashboard')}
+          </h1>
+          <p className="font-body-lg text-body-lg text-on-surface-variant mt-1">
+            {isArabic 
+              ? `أهلاً بك د. ${currentUser?.name || ''}، إليك نظرة سريعة على إحصائيات عيادتك اليوم.`
+              : `Welcome Dr. ${currentUser?.name || ''}, here is a quick overview of your clinic statistics today.`}
+          </p>
         </div>
-        <div class="flex items-center gap-stack-md">
+        <div className="flex items-center gap-stack-md">
           <button 
             onClick={() => setActivePage('appointments')}
-            class="bg-primary hover:bg-primary-hover text-on-primary font-button text-sm py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm"
+            className="bg-primary hover:bg-primary-hover text-on-primary font-button text-sm py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm"
           >
-            <span class="material-symbols-outlined text-[18px]">add</span>
-            New Appointment
+            <span className="material-symbols-outlined text-[18px]">add</span>
+            {isArabic ? 'موعد جديد' : 'New Appointment'}
           </button>
         </div>
       </header>
 
       {/* Bento Grid Layout */}
-      <div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-gutter">
         {/* Quick Stats Row */}
-        <div class="col-span-12 grid grid-cols-1 md:grid-cols-4 gap-gutter mb-stack-md">
+        <div className="col-span-12 grid grid-cols-1 md:grid-cols-4 gap-gutter mb-stack-md">
           {/* Stat Card 1 */}
-          <div class="bg-bg-card rounded-xl border border-border-subtle p-6 shadow-sm hover:shadow-ambient transition-shadow">
-            <div class="flex justify-between items-start mb-4">
-              <p class="font-label-caps text-xs text-on-surface-variant uppercase tracking-wider">Today's Appts</p>
-              <span class="material-symbols-outlined text-primary bg-primary-light p-2 rounded-lg">calendar_today</span>
+          <div className="bg-bg-card rounded-xl border border-border-subtle p-6 shadow-sm hover:shadow-ambient transition-shadow">
+            <div className="flex justify-between items-start mb-4">
+              <p className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wider">
+                {t('today_appointments')}
+              </p>
+              <span className="material-symbols-outlined text-primary bg-primary-light p-2 rounded-lg">calendar_today</span>
             </div>
-            <div class="flex items-baseline gap-2">
-              <h3 class="font-headline-lg text-headline-lg text-on-surface font-bold">{myAppts.length}</h3>
-              <span class="font-body-sm text-xs text-tertiary-container flex items-center">
-                <span class="material-symbols-outlined text-[16px] mr-1">trending_up</span> Active
+            <div className="flex items-baseline gap-2">
+              <h3 className="font-headline-lg text-headline-lg text-on-surface font-bold">{myAppts.length}</h3>
+              <span className="font-body-sm text-xs text-tertiary-container flex items-center">
+                <span className={`material-symbols-outlined text-[16px] ${isArabic ? 'ml-1' : 'mr-1'}`}>trending_up</span> 
+                {isArabic ? 'نشط' : 'Active'}
               </span>
             </div>
           </div>
 
           {/* Stat Card 2 */}
-          <div class="bg-bg-card rounded-xl border border-border-subtle p-6 shadow-sm hover:shadow-ambient transition-shadow">
-            <div class="flex justify-between items-start mb-4">
-              <p class="font-label-caps text-xs text-on-surface-variant uppercase tracking-wider">Pending Reports</p>
-              <span class="material-symbols-outlined text-status-warning bg-surface-container-high p-2 rounded-lg">description</span>
+          <div className="bg-bg-card rounded-xl border border-border-subtle p-6 shadow-sm hover:shadow-ambient transition-shadow">
+            <div className="flex justify-between items-start mb-4">
+              <p className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wider">
+                {isArabic ? 'الملخصات المكتملة' : 'Completed Summaries'}
+              </p>
+              <span className="material-symbols-outlined text-status-warning bg-surface-container-high p-2 rounded-lg">description</span>
             </div>
-            <div class="flex items-baseline gap-2">
-              <h3 class="font-headline-lg text-headline-lg text-on-surface font-bold">2</h3>
-              <span class="font-body-sm text-xs text-on-surface-variant">Requires review</span>
+            <div className="flex items-baseline gap-2">
+              <h3 className="font-headline-lg text-headline-lg text-on-surface font-bold">
+                {appointments.filter(a => a.doctor_id === currentUser.id && a.status === 'completed').length}
+              </h3>
+              <span className="font-body-sm text-xs text-on-surface-variant">
+                {isArabic ? 'ملاحظة طبية' : 'clinical notes'}
+              </span>
             </div>
           </div>
 
           {/* Stat Card 3 */}
-          <div class="bg-bg-card rounded-xl border border-border-subtle p-6 shadow-sm hover:shadow-ambient transition-shadow">
-            <div class="flex justify-between items-start mb-4">
-              <p class="font-label-caps text-xs text-on-surface-variant uppercase tracking-wider">Clinical Accuracy</p>
-              <span class="material-symbols-outlined text-tertiary bg-tertiary-fixed p-2 rounded-lg">verified_user</span>
+          <div className="bg-bg-card rounded-xl border border-border-subtle p-6 shadow-sm hover:shadow-ambient transition-shadow">
+            <div className="flex justify-between items-start mb-4">
+              <p className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wider">
+                {t('total_patients')}
+              </p>
+              <span className="material-symbols-outlined text-tertiary bg-tertiary-fixed p-2 rounded-lg">verified_user</span>
             </div>
-            <div class="flex items-baseline gap-2">
-              <h3 class="font-headline-lg text-headline-lg text-on-surface font-bold">98.4%</h3>
-              <span class="font-body-sm text-xs text-tertiary-container flex items-center">
-                <span class="material-symbols-outlined text-[16px] mr-1">trending_up</span> +0.5%
+            <div className="flex items-baseline gap-2">
+              <h3 className="font-headline-lg text-headline-lg text-on-surface font-bold">{patients.length}</h3>
+              <span className="font-body-sm text-xs text-tertiary-container flex items-center">
+                <span className={`material-symbols-outlined text-[16px] ${isArabic ? 'ml-1' : 'mr-1'}`}>group</span>
+                {isArabic ? 'مريض مسجل' : 'registered'}
               </span>
             </div>
           </div>
 
           {/* Stat Card 4 */}
-          <div class="bg-bg-card rounded-xl border border-border-subtle p-6 shadow-sm hover:shadow-ambient transition-shadow">
-            <div class="flex justify-between items-start mb-4">
-              <p class="font-label-caps text-xs text-on-surface-variant uppercase tracking-wider">Est. Revenue</p>
-              <span class="material-symbols-outlined text-primary bg-primary-light p-2 rounded-lg">payments</span>
+          <div className="bg-bg-card rounded-xl border border-border-subtle p-6 shadow-sm hover:shadow-ambient transition-shadow">
+            <div className="flex justify-between items-start mb-4">
+              <p className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wider">
+                {t('ai_credits')}
+              </p>
+              <span className="material-symbols-outlined text-primary bg-primary-light p-2 rounded-lg">payments</span>
             </div>
-            <div class="flex items-baseline gap-2">
-              <h3 class="font-headline-lg text-headline-lg text-on-surface font-bold">$1.8k</h3>
-              <span class="font-body-sm text-xs text-on-surface-variant">Today</span>
+            <div className="flex items-baseline gap-2">
+              <h3 className="font-headline-lg text-headline-lg text-on-surface font-bold">
+                {isArabic ? '٨٥٠ دقيقة' : '850 mins'}
+              </h3>
+              <span className="font-body-sm text-xs text-on-surface-variant">
+                {isArabic ? 'متبقية' : 'remaining'}
+              </span>
             </div>
           </div>
         </div>
 
         {/* Left Column: Upcoming Patients */}
-        <div class="col-span-12 md:col-span-7 space-y-gutter">
-          <div class="bg-bg-card rounded-xl border border-border-subtle p-stack-lg shadow-sm">
-            <div class="flex justify-between items-center mb-stack-md pb-stack-sm border-b border-border-subtle">
-              <h2 class="font-headline-md text-headline-md text-on-surface font-bold">Upcoming Patients</h2>
+        <div className="col-span-12 md:col-span-7 space-y-gutter">
+          <div className="bg-bg-card rounded-xl border border-border-subtle p-stack-lg shadow-sm">
+            <div className="flex justify-between items-center mb-stack-md pb-stack-sm border-b border-border-subtle">
+              <h2 className="font-headline-md text-headline-md text-on-surface font-bold">
+                {isArabic ? 'المرضى القادمون اليوم' : 'Upcoming Patients'}
+              </h2>
               <button 
                 onClick={() => setActivePage('patients')}
-                class="text-primary hover:text-primary-hover font-button text-sm transition-colors"
+                className="text-primary hover:text-primary-hover font-button text-sm transition-colors font-bold"
               >
-                View All
+                {isArabic ? 'عرض الكل' : 'View All'}
               </button>
             </div>
-            <div class="space-y-4">
+            <div className="space-y-4">
               {upcomingPatients.length === 0 ? (
-                <p class="text-secondary text-sm py-4 text-center">لا توجد مواعيد مجدولة لليوم</p>
+                <p className="text-secondary text-sm py-4 text-center">
+                  {t('no_appointments')}
+                </p>
               ) : (
                 upcomingPatients.map((patient, idx) => (
                   <div 
                     key={patient.id} 
                     onClick={() => setActivePage('visits')}
-                    class="flex items-center justify-between p-4 hover:bg-surface-container-low rounded-lg transition-colors border border-transparent hover:border-border-subtle group cursor-pointer"
+                    className="flex items-center justify-between p-4 hover:bg-surface-container-low rounded-lg transition-colors border border-transparent hover:border-border-subtle group cursor-pointer"
                   >
-                    <div class="flex items-center gap-4">
-                      <div class={`w-12 h-12 rounded-full flex items-center justify-center font-button text-sm ${
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center font-button text-sm font-bold ${
                         patient.is_high_priority 
                           ? 'bg-error-container text-error' 
                           : 'bg-primary-light text-primary'
@@ -124,29 +154,30 @@ export default function Dashboard({ setActivePage }) {
                         {patient.initials}
                       </div>
                       <div>
-                        <h4 class="font-button text-sm text-on-surface group-hover:text-primary transition-colors font-semibold">
+                        <h4 className="font-button text-sm text-on-surface group-hover:text-primary transition-colors font-semibold">
                           {patient.patientName}
                         </h4>
-                        <p class="font-body-sm text-xs text-on-surface-variant">
+                        <p className="font-body-sm text-xs text-on-surface-variant">
                           {patient.appointment_time} • {patient.description} • Room {idx + 1}
                         </p>
                       </div>
                     </div>
-                    <div class="flex items-center gap-3">
+                    <div className="flex items-center gap-3">
                       {patient.is_high_priority && (
-                        <span class="px-3 py-1 bg-error-container text-error font-label-caps text-[10px] rounded-full flex items-center gap-1">
-                          <span class="material-symbols-outlined text-[12px]">priority_high</span> High Priority
+                        <span className="px-3 py-1 bg-error-container text-error font-label-caps text-[10px] rounded-full flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[12px]">priority_high</span> 
+                          {isArabic ? 'أولوية عالية' : 'High Priority'}
                         </span>
                       )}
-                      <span class={`px-3 py-1 font-label-caps text-[10px] rounded-full flex items-center gap-1 ${
+                      <span className={`px-3 py-1 font-label-caps text-[10px] rounded-full flex items-center gap-1 ${
                         patient.status === 'confirmed' 
                           ? 'bg-tertiary-fixed text-on-tertiary-fixed-variant'
                           : 'bg-surface-container-high text-secondary'
                       }`}>
                         {patient.status.toUpperCase()}
                       </span>
-                      <button class="p-2 text-secondary group-hover:text-primary transition-colors">
-                        <span class="material-symbols-outlined">chevron_right</span>
+                      <button className="p-2 text-secondary group-hover:text-primary transition-colors">
+                        <span className={`material-symbols-outlined ${isArabic ? 'rotate-180' : ''}`}>chevron_right</span>
                       </button>
                     </div>
                   </div>
@@ -157,29 +188,31 @@ export default function Dashboard({ setActivePage }) {
         </div>
 
         {/* Right Column: AI Assistant (LIGHT MODE ONLY) & Activity */}
-        <div class="col-span-12 md:col-span-5 space-y-gutter">
+        <div className="col-span-12 md:col-span-5 space-y-gutter">
           
           {/* AI Assistant Card - Swapped to a premium light teal/mint styled container */}
-          <div class="bg-primary-light border-2 border-primary/20 rounded-xl p-stack-lg shadow-sm relative overflow-hidden">
-            <div class="absolute -top-12 -right-12 w-32 h-32 bg-primary/10 rounded-full blur-2xl"></div>
-            <div class="flex items-start gap-4 relative z-10">
-              <div class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-md">
-                <span class="material-symbols-outlined fill">psychology</span>
+          <div className="bg-primary-light border-2 border-primary/20 rounded-xl p-stack-lg shadow-sm relative overflow-hidden">
+            <div className="absolute -top-12 -right-12 w-32 h-32 bg-primary/10 rounded-full blur-2xl"></div>
+            <div className="flex items-start gap-4 relative z-10">
+              <div className="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-md">
+                <span className="material-symbols-outlined fill">psychology</span>
               </div>
               <div>
-                <h3 class="font-headline-md text-base text-primary font-bold mb-2">SBR AI Assistant</h3>
-                <p class="font-body-sm text-sm text-secondary mb-4 leading-relaxed">
-                  I've analyzed the lab results for Marcus Johnson (11:15 AM). There are slight anomalies in the hepatic panel that might warrant further discussion.
+                <h3 className="font-headline-md text-base text-primary font-bold mb-2">SBR AI Assistant</h3>
+                <p className="font-body-sm text-sm text-secondary mb-4 leading-relaxed">
+                  {isArabic 
+                    ? 'لقد قمت بتحليل نتائج التحاليل الأخيرة الخاصة بمرضاك، ويوجد بعض التنبيهات التي قد تحتاج لمراجعتها.' 
+                    : 'I have analyzed the recent lab results of your patients. There are some alerts that you might want to review.'}
                 </p>
-                <div class="flex gap-3">
+                <div className="flex gap-3">
                   <button 
                     onClick={() => setActivePage('visits')}
-                    class="bg-primary hover:bg-primary-hover text-on-primary font-button text-xs py-1.5 px-4 rounded-full transition-colors border border-primary shadow-sm"
+                    className="bg-primary hover:bg-primary-hover text-on-primary font-button text-xs py-1.5 px-4 rounded-full transition-colors border border-primary shadow-sm font-bold"
                   >
-                    View Analysis
+                    {isArabic ? 'عرض التحليل' : 'View Analysis'}
                   </button>
-                  <button class="bg-white hover:bg-surface-container-low text-secondary font-button text-xs py-1.5 px-4 rounded-full transition-colors border border-border-subtle shadow-sm">
-                    Dismiss
+                  <button className="bg-white hover:bg-surface-container-low text-secondary font-button text-xs py-1.5 px-4 rounded-full transition-colors border border-border-subtle shadow-sm font-bold">
+                    {isArabic ? 'تجاهل' : 'Dismiss'}
                   </button>
                 </div>
               </div>
@@ -187,29 +220,29 @@ export default function Dashboard({ setActivePage }) {
           </div>
 
           {/* Recent Activity */}
-          <div class="bg-bg-card rounded-xl border border-border-subtle p-stack-lg shadow-sm">
-            <div class="flex justify-between items-center mb-stack-md pb-stack-sm border-b border-border-subtle">
-              <h2 class="font-button text-sm text-on-surface font-bold">Recent Activity</h2>
+          <div className="bg-bg-card rounded-xl border border-border-subtle p-stack-lg shadow-sm">
+            <div className="flex justify-between items-center mb-stack-md pb-stack-sm border-b border-border-subtle">
+              <h2 className="font-button text-sm text-on-surface font-bold">
+                {isArabic ? 'آخر النشاطات' : 'Recent Activity'}
+              </h2>
             </div>
-            <div class="relative border-l border-border-subtle ml-3 space-y-6">
-              <div class="relative pl-6">
-                <div class="absolute w-3 h-3 bg-primary rounded-full -left-[6.5px] top-1 ring-4 ring-bg-card"></div>
-                <p class="font-body-sm text-xs text-on-surface"><span class="font-semibold">{currentUser.name}</span> signed Patient Report #8821</p>
-                <p class="font-label-caps text-[10px] text-on-surface-variant mt-1">10 mins ago</p>
+            <div className={`relative border-l ${isArabic ? 'border-r border-l-0 mr-3 ml-0' : 'border-l ml-3 mr-0'} border-border-subtle space-y-6`}>
+              <div className={`relative ${isArabic ? 'pr-6 pl-0' : 'pl-6 pr-0'}`}>
+                <div className={`absolute w-3 h-3 bg-primary rounded-full ${isArabic ? '-right-[6.5px]' : '-left-[6.5px]'} top-1 ring-4 ring-bg-card`}></div>
+                <p className="font-body-sm text-xs text-on-surface">
+                  <span className="font-semibold">{currentUser.name}</span> {isArabic ? 'وقع تقرير المريض #8821' : 'signed Patient Report #8821'}
+                </p>
+                <p className="font-label-caps text-[10px] text-on-surface-variant mt-1">10 mins ago</p>
               </div>
-              <div class="relative pl-6">
-                <div class="absolute w-3 h-3 bg-surface-container-high border-2 border-border-subtle rounded-full -left-[6.5px] top-1 ring-4 ring-bg-card"></div>
-                <p class="font-body-sm text-xs text-on-surface"><span class="font-semibold">System</span> generated clinical notes for Eleanor Sullivan.</p>
-                <p class="font-label-caps text-[10px] text-on-surface-variant mt-1">45 mins ago</p>
-              </div>
-              <div class="relative pl-6">
-                <div class="absolute w-3 h-3 bg-surface-container-high border-2 border-border-subtle rounded-full -left-[6.5px] top-1 ring-4 ring-bg-card"></div>
-                <p class="font-body-sm text-xs text-on-surface"><span class="font-semibold">Lab</span> uploaded new results for Marcus Johnson.</p>
-                <p class="font-label-caps text-[10px] text-on-surface-variant mt-1">2 hours ago</p>
+              <div className={`relative ${isArabic ? 'pr-6 pl-0' : 'pl-6 pr-0'}`}>
+                <div className={`absolute w-3 h-3 bg-surface-container-high border-2 border-border-subtle rounded-full ${isArabic ? '-right-[6.5px]' : '-left-[6.5px]'} top-1 ring-4 ring-bg-card`}></div>
+                <p className="font-body-sm text-xs text-on-surface">
+                  <span className="font-semibold">System</span> {isArabic ? 'أنتج ملخص الزيارة الطبية لـ إلينور.' : 'generated clinical notes for Eleanor Sullivan.'}
+                </p>
+                <p className="font-label-caps text-[10px] text-on-surface-variant mt-1">45 mins ago</p>
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </div>

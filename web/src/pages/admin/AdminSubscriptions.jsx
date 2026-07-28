@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function AdminSubscriptions() {
   const { subscriptions, renewSubscription } = useApp();
-  const [filterType, setFilterType] = useState('all'); // all, doctor, org
-  const [filterStatus, setFilterStatus] = useState('all'); // all, active, expiring, expired
+  const { isArabic } = useLanguage();
+  const [filterType, setFilterType] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Filtering logic
   const filteredSubs = (subscriptions || []).filter(sub => {
-    const matchesSearch = (sub.entity_name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          (sub.plan_name || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch =
+      (sub.entity_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (sub.plan_name || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = filterType === 'all' || sub.entity_type === filterType;
     const matchesStatus = filterStatus === 'all' || sub.status === filterStatus;
     return matchesSearch && matchesType && matchesStatus;
@@ -21,182 +23,181 @@ export default function AdminSubscriptions() {
   const expiredCount = (subscriptions || []).filter(sub => sub.status === 'expired' || sub.days_remaining <= 0).length;
   const totalMRR = (subscriptions || []).reduce((sum, sub) => sum + (sub.status === 'active' ? sub.monthly_cost : 0), 0);
 
+  const statusLabel = (status) => {
+    if (!isArabic) return status;
+    const map = { active: 'نشط', expiring: 'ينتهي قريباً', expired: 'منتهي' };
+    return map[status] || status;
+  };
+  const paymentLabel = (status) => {
+    if (!isArabic) return status;
+    const map = { paid: 'مدفوع', pending: 'معلّق', overdue: 'متأخر' };
+    return map[status] || status;
+  };
+
   return (
-    <div class="space-y-stack-lg font-body-md animate-fade-in">
+    <div className={`space-y-stack-lg font-body-md animate-fade-in ${isArabic ? 'text-right' : 'text-left'}`}>
       {/* Header */}
-      <header class="flex justify-between items-end border-b border-border-subtle pb-stack-md">
+      <header className="flex justify-between items-end border-b border-border-subtle pb-stack-md">
         <div>
-          <h1 class="font-display-lg text-headline-lg text-on-surface font-bold">Subscription Health</h1>
-          <p class="font-body-lg text-body-lg text-on-surface-variant mt-1">
-            Monitor plan distribution, active subscriptions, renewals, and revenue flows.
+          <h1 className="font-display-lg text-headline-lg text-on-surface font-bold">
+            {isArabic ? 'حالة الاشتراكات' : 'Subscription Health'}
+          </h1>
+          <p className="font-body-lg text-body-lg text-on-surface-variant mt-1">
+            {isArabic
+              ? 'مراقبة توزيع الخطط والاشتراكات النشطة والتجديدات وتدفقات الإيرادات.'
+              : 'Monitor plan distribution, active subscriptions, renewals, and revenue flows.'}
           </p>
         </div>
       </header>
 
       {/* Stats Cards */}
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
-        <div class="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
-          <div class="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
-          <span class="text-xs font-semibold text-secondary uppercase tracking-wider block">Active Licenses</span>
-          <div class="flex items-baseline gap-2">
-            <span class="text-4xl font-bold text-on-surface font-display-lg">{activeLicenses}</span>
-            <span class="text-xs font-semibold text-primary flex items-center gap-0.5">
-              <span class="material-symbols-outlined text-xs">trending_up</span>
-              active now
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
+        {[
+          { labelAr: 'التراخيص النشطة', labelEn: 'Active Licenses', value: activeLicenses, subAr: 'نشطة الآن', subEn: 'active now', subClass: 'text-primary', icon: 'trending_up' },
+          { labelAr: 'تنتهي (7 أيام)', labelEn: 'Expiring (7 days)', value: expiringCount, subAr: 'يتطلب إجراء', subEn: 'Action Required', subClass: 'text-status-warning', icon: null },
+          { labelAr: 'خطط منتهية', labelEn: 'Expired Plans', value: expiredCount, subAr: 'يتطلب مراجعة', subEn: 'requires attention', subClass: 'text-error', icon: null },
+          { labelAr: 'الإيرادات الشهرية', labelEn: 'Monthly MRR', value: `$${totalMRR.toLocaleString()}`, subAr: `السنوي: $${(totalMRR * 12).toLocaleString()}`, subEn: `ARR: $${(totalMRR * 12).toLocaleString()}`, subClass: 'text-secondary', icon: null },
+        ].map(({ labelAr, labelEn, value, subAr, subEn, subClass, icon }, i) => (
+          <div key={i} className="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
+            <div className="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
+            <span className="text-xs font-semibold text-secondary uppercase tracking-wider block">
+              {isArabic ? labelAr : labelEn}
             </span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-4xl font-bold text-on-surface font-display-lg">{value}</span>
+              <span className={`text-xs font-semibold flex items-center gap-0.5 ${subClass}`}>
+                {icon && <span className="material-symbols-outlined text-xs">{icon}</span>}
+                {isArabic ? subAr : subEn}
+              </span>
+            </div>
           </div>
-        </div>
-
-        <div class="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
-          <div class="absolute right-0 top-0 w-24 h-24 bg-tertiary-fixed-dim/5 rounded-full blur-2xl"></div>
-          <span class="text-xs font-semibold text-secondary uppercase tracking-wider block">Expiring (7 days)</span>
-          <div class="flex items-baseline gap-2">
-            <span class="text-4xl font-bold text-on-surface font-display-lg font-bold text-status-warning">{expiringCount}</span>
-            <span class="text-xs font-semibold text-status-warning flex items-center gap-0.5">
-              Action Required
-            </span>
-          </div>
-        </div>
-
-        <div class="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
-          <div class="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
-          <span class="text-xs font-semibold text-secondary uppercase tracking-wider block">Expired Plans</span>
-          <div class="flex items-baseline gap-2">
-            <span class="text-4xl font-bold text-on-surface font-display-lg text-error">{expiredCount}</span>
-            <span class="text-xs font-semibold text-error flex items-center gap-0.5">
-              requires attention
-            </span>
-          </div>
-        </div>
-
-        <div class="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
-          <div class="absolute right-0 top-0 w-24 h-24 bg-tertiary-fixed-dim/5 rounded-full blur-2xl"></div>
-          <span class="text-xs font-semibold text-secondary uppercase tracking-wider block">Monthly MRR</span>
-          <div class="flex items-baseline gap-2">
-            <span class="text-4xl font-bold text-on-surface font-display-lg">${totalMRR.toLocaleString()}</span>
-            <span class="text-xs font-semibold text-secondary">
-              ARR Run Rate: ${(totalMRR * 12).toLocaleString()}
-            </span>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Filter and search panel */}
-      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 border border-border-subtle rounded-xl shadow-sm">
-        <div class="flex gap-2 w-full sm:w-auto">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 border border-border-subtle rounded-xl shadow-sm">
+        <div className="flex gap-2 w-full sm:w-auto">
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            class="bg-white border border-border-subtle rounded-lg text-xs py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary shadow-sm text-secondary font-semibold"
+            className={`bg-white border border-border-subtle rounded-lg text-xs py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary shadow-sm text-secondary font-semibold ${isArabic ? 'text-right' : 'text-left'}`}
           >
-            <option value="all">All Entity Types</option>
-            <option value="doctor">Doctors Only</option>
-            <option value="org">Organizations Only</option>
+            <option value="all">{isArabic ? 'جميع الأنواع' : 'All Entity Types'}</option>
+            <option value="doctor">{isArabic ? 'الأطباء فقط' : 'Doctors Only'}</option>
+            <option value="org">{isArabic ? 'المنظمات فقط' : 'Organizations Only'}</option>
           </select>
 
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            class="bg-white border border-border-subtle rounded-lg text-xs py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary shadow-sm text-secondary font-semibold"
+            className={`bg-white border border-border-subtle rounded-lg text-xs py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary shadow-sm text-secondary font-semibold ${isArabic ? 'text-right' : 'text-left'}`}
           >
-            <option value="all">All Subscriptions</option>
-            <option value="active">Active</option>
-            <option value="expiring">Expiring Soon</option>
-            <option value="expired">Expired</option>
+            <option value="all">{isArabic ? 'جميع الاشتراكات' : 'All Subscriptions'}</option>
+            <option value="active">{isArabic ? 'نشطة' : 'Active'}</option>
+            <option value="expiring">{isArabic ? 'تنتهي قريباً' : 'Expiring Soon'}</option>
+            <option value="expired">{isArabic ? 'منتهية' : 'Expired'}</option>
           </select>
         </div>
 
-        <div class="relative w-full sm:w-64">
-          <span class="material-symbols-outlined absolute left-2.5 top-1/2 transform -translate-y-1/2 text-secondary text-lg">search</span>
+        <div className="relative w-full sm:w-64">
+          <span className={`material-symbols-outlined absolute ${isArabic ? 'right-2.5' : 'left-2.5'} top-1/2 transform -translate-y-1/2 text-secondary text-lg`}>search</span>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search account name or plan..."
-            class="w-full pl-9 pr-3 py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
+            placeholder={isArabic ? 'ابحث عن الحساب أو الخطة...' : 'Search account name or plan...'}
+            className={`w-full ${isArabic ? 'pr-9 pl-3 text-right' : 'pl-9 pr-3 text-left'} py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary shadow-sm`}
           />
         </div>
       </div>
 
       {/* Subscriptions Table */}
-      <div class="bg-white rounded-xl border border-border-subtle shadow-sm overflow-hidden">
-        <table class="min-w-full divide-y divide-border-subtle text-left">
-          <thead class="bg-bg-canvas">
+      <div className="bg-white rounded-xl border border-border-subtle shadow-sm overflow-hidden">
+        <table className={`min-w-full divide-y divide-border-subtle ${isArabic ? 'text-right' : 'text-left'}`}>
+          <thead className="bg-bg-canvas">
             <tr>
-              <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Account / Entity</th>
-              <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Type</th>
-              <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Plan Details</th>
-              <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Days Left</th>
-              <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Payment</th>
-              <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Status</th>
-              <th scope="col" class="relative px-6 py-3">
-                <span class="sr-only">Actions</span>
+              {[
+                { ar: 'الحساب', en: 'Account / Entity' },
+                { ar: 'النوع', en: 'Type' },
+                { ar: 'تفاصيل الخطة', en: 'Plan Details' },
+                { ar: 'الأيام المتبقية', en: 'Days Left' },
+                { ar: 'الدفع', en: 'Payment' },
+                { ar: 'الحالة', en: 'Status' },
+              ].map(({ ar, en }) => (
+                <th key={en} scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">
+                  {isArabic ? ar : en}
+                </th>
+              ))}
+              <th scope="col" className="relative px-6 py-3">
+                <span className="sr-only">{isArabic ? 'إجراءات' : 'Actions'}</span>
               </th>
             </tr>
           </thead>
-          <tbody class="bg-white divide-y divide-border-subtle text-xs">
+          <tbody className="bg-white divide-y divide-border-subtle text-xs">
             {filteredSubs.length === 0 ? (
               <tr>
-                <td colSpan="7" class="px-6 py-8 text-center text-secondary text-sm">
-                  No subscription records found
+                <td colSpan="7" className="px-6 py-8 text-center text-secondary text-sm">
+                  {isArabic ? 'لا توجد سجلات اشتراك' : 'No subscription records found'}
                 </td>
               </tr>
             ) : (
               filteredSubs.map((sub) => (
-                <tr key={sub.id} class="hover:bg-surface-container-low transition-colors">
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="font-bold text-on-surface text-xs">{sub.entity_name}</div>
-                    <div class="text-[10px] text-secondary">Expiry Date: {sub.expiry_date}</div>
+                <tr key={sub.id} className="hover:bg-surface-container-low transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="font-bold text-on-surface text-xs">{sub.entity_name}</div>
+                    <div className="text-[10px] text-secondary">
+                      {isArabic ? 'تاريخ الانتهاء:' : 'Expiry Date:'} {sub.expiry_date}
+                    </div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span class={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                      sub.entity_type === 'org' 
-                        ? 'bg-primary-light text-primary' 
-                        : 'bg-surface-container-high text-secondary'
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                      sub.entity_type === 'org' ? 'bg-primary-light text-primary' : 'bg-surface-container-high text-secondary'
                     }`}>
-                      {sub.entity_type === 'org' ? 'Organization' : 'Doctor'}
+                      {sub.entity_type === 'org' ? (isArabic ? 'منظمة' : 'Organization') : (isArabic ? 'طبيب' : 'Doctor')}
                     </span>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="font-bold text-on-surface">{sub.plan_name}</div>
-                    <div class="text-[10px] text-secondary">${sub.monthly_cost}/month recurring</div>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="font-bold text-on-surface">{sub.plan_name}</div>
+                    <div className="text-[10px] text-secondary">
+                      ${sub.monthly_cost}/{isArabic ? 'شهر متكرر' : 'month recurring'}
+                    </div>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-secondary font-bold">
+                  <td className="px-6 py-4 whitespace-nowrap text-secondary font-bold">
                     {sub.status === 'expired' ? (
-                      <span class="text-error">0 days (Expired)</span>
+                      <span className="text-error">{isArabic ? '0 يوم (منتهي)' : '0 days (Expired)'}</span>
                     ) : (
-                      <span>{sub.days_remaining} days left</span>
+                      <span>{sub.days_remaining} {isArabic ? 'يوم متبقي' : 'days left'}</span>
                     )}
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span class={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                      sub.payment_status === 'paid' 
-                        ? 'bg-primary-light text-primary' 
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                      sub.payment_status === 'paid'
+                        ? 'bg-primary-light text-primary'
                         : sub.payment_status === 'pending'
                           ? 'bg-status-warning/10 text-status-warning'
                           : 'bg-error-container text-error'
                     }`}>
-                      {sub.payment_status}
+                      {paymentLabel(sub.payment_status)}
                     </span>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span class={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${
-                      sub.status === 'active' 
-                        ? 'bg-primary-light text-primary' 
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${
+                      sub.status === 'active'
+                        ? 'bg-primary-light text-primary'
                         : sub.status === 'expiring'
                           ? 'bg-status-warning/10 text-status-warning'
                           : 'bg-error-container text-error'
                     }`}>
-                      {sub.status}
+                      {statusLabel(sub.status)}
                     </span>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-right text-xs font-semibold">
-                    <div class="flex gap-2 justify-end">
+                  <td className="px-6 py-4 whitespace-nowrap text-xs font-semibold">
+                    <div className={`flex gap-2 ${isArabic ? 'justify-start' : 'justify-end'}`}>
                       <button
                         onClick={() => renewSubscription(sub.id)}
-                        class="px-2.5 py-1 rounded bg-primary hover:bg-primary-hover text-on-primary transition-colors text-[10px] font-bold shadow-sm"
+                        className="px-2.5 py-1 rounded bg-primary hover:bg-primary-hover text-on-primary transition-colors text-[10px] font-bold shadow-sm"
                       >
-                        Renew (+30 Days)
+                        {isArabic ? 'تجديد (+30 يوم)' : 'Renew (+30 Days)'}
                       </button>
                     </div>
                   </td>

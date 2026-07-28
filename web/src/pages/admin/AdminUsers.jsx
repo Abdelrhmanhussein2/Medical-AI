@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function AdminUsers() {
   const { 
@@ -14,6 +15,7 @@ export default function AdminUsers() {
     deleteDoctor, 
     deleteOrg 
   } = useApp();
+  const { t, isArabic } = useLanguage();
   
   const [activeTab, setActiveTab] = useState('doctors'); // doctors or orgs
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,7 +70,7 @@ export default function AdminUsers() {
     e.preventDefault();
     setError('');
     if (!orgName || !orgEmail || !orgPhone || !orgPassword) {
-      setError('Please fill in all required fields');
+      setError(isArabic ? 'يرجى ملء جميع الحقول المطلوبة' : 'Please fill in all required fields');
       return;
     }
     try {
@@ -80,7 +82,7 @@ export default function AdminUsers() {
       setOrgSpecialty('Cardiology');
       setShowOrgModal(false);
     } catch (err) {
-      setError(err.message || 'Failed to register new organization');
+      setError(err.message || (isArabic ? 'فشل تسجيل المنظمة الجديدة' : 'Failed to register new organization'));
     }
   };
 
@@ -89,7 +91,7 @@ export default function AdminUsers() {
     e.preventDefault();
     setError('');
     if (!docName || !docEmail || !docPhone || !docPassword) {
-      setError('Please fill in all required fields');
+      setError(isArabic ? 'يرجى ملء جميع الحقول المطلوبة' : 'Please fill in all required fields');
       return;
     }
     try {
@@ -110,7 +112,7 @@ export default function AdminUsers() {
       setDocDept('');
       setShowDocModal(false);
     } catch (err) {
-      setError(err.message || 'Failed to register new doctor');
+      setError(err.message || (isArabic ? 'فشل تسجيل الطبيب الجديد' : 'Failed to register new doctor'));
     }
   };
 
@@ -168,11 +170,13 @@ export default function AdminUsers() {
 
   const handleDeleteDoctor = (id, name) => {
     setConfirmModal({
-      title: 'Delete Doctor Account',
-      description: `Are you sure you want to permanently delete Dr. ${name}'s account from the database? All associated appointments, visits, and subscriptions will be removed. This action cannot be undone.`,
+      title: isArabic ? 'حذف حساب الطبيب' : 'Delete Doctor Account',
+      description: isArabic
+        ? `هل أنت متأكد من رغبتك في حذف حساب د. ${name} نهائياً؟ سيتم إزالة جميع المواعيد والزيارات والاشتراكات المرتبطة به. لا يمكن التراجع عن هذا الإجراء.`
+        : `Are you sure you want to permanently delete Dr. ${name}'s account from the database? All associated appointments, visits, and subscriptions will be removed. This action cannot be undone.`,
       icon: 'delete_forever',
       iconColor: 'text-error',
-      confirmLabel: 'Yes, Delete Permanently',
+      confirmLabel: isArabic ? 'نعم، احذف نهائياً' : 'Yes, Delete Permanently',
       confirmClass: 'bg-error text-white hover:bg-error/90',
       onConfirm: () => {
         deleteDoctor(id);
@@ -184,11 +188,13 @@ export default function AdminUsers() {
 
   const handleDeleteOrg = (id, name) => {
     setConfirmModal({
-      title: 'Delete Department',
-      description: `Are you sure you want to permanently delete "${name}" from the database? All associated records will be removed. This action cannot be undone.`,
+      title: isArabic ? 'حذف القسم/المنظمة' : 'Delete Department',
+      description: isArabic
+        ? `هل أنت متأكد من رغبتك في حذف "${name}" نهائياً من قاعدة البيانات؟ سيتم إزالة جميع السجلات المرتبطة بها. لا يمكن التراجع عن هذا الإجراء.`
+        : `Are you sure you want to permanently delete "${name}" from the database? All associated records will be removed. This action cannot be undone.`,
       icon: 'domain_disabled',
       iconColor: 'text-error',
-      confirmLabel: 'Yes, Delete Permanently',
+      confirmLabel: isArabic ? 'نعم، احذف نهائياً' : 'Yes, Delete Permanently',
       confirmClass: 'bg-error text-white hover:bg-error/90',
       onConfirm: () => {
         deleteOrg(id);
@@ -218,891 +224,903 @@ export default function AdminUsers() {
     return matchesSearch && matchesStatus;
   });
 
+  const getSpecialtyLabel = (spec) => {
+    if (!isArabic) return spec;
+    const map = {
+      Cardiology: 'أمراض القلب',
+      Neurology: 'الأعصاب',
+      Pediatrics: 'طب الأطفال',
+      Oncology: 'الأورام',
+      'General Practice': 'الطب العام',
+    };
+    return map[spec] || spec;
+  };
+
+  const getPlanLabel = (plan) => {
+    if (!isArabic) return plan;
+    const map = {
+      'Basic Access': 'الوصول الأساسي',
+      'Trial Access': 'الوصول التجريبي',
+      'Clinical Pro': 'السريري المتقدم',
+      'Pro AI Suite': 'باقة ذكاء اصطناعي برو',
+      'Enterprise AI': 'الذكاء الاصطناعي للمؤسسات',
+    };
+    return map[plan] || plan;
+  };
+
   return (
     <>
-      <div class="space-y-stack-lg font-body-md animate-fade-in">
-      {/* Header */}
-      <header class="flex justify-between items-end border-b border-border-subtle pb-stack-md">
-        <div>
-          <h1 class="font-display-lg text-headline-lg text-on-surface font-bold">User Management</h1>
-          <p class="font-body-lg text-body-lg text-on-surface-variant mt-1">
-            Manage practitioners, departments, access rights, and status.
-          </p>
-        </div>
-        {activeTab === 'orgs' && (
-          <button
-            onClick={() => setShowOrgModal(true)}
-            class="bg-primary hover:bg-primary-hover text-on-primary font-button text-xs py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm font-semibold"
-          >
-            <span class="material-symbols-outlined text-[18px]">add_business</span>
-            Add New Department
-          </button>
-        )}
-        {activeTab === 'doctors' && (
-          <button
-            onClick={() => setShowDocModal(true)}
-            class="bg-primary hover:bg-primary-hover text-on-primary font-button text-xs py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm font-semibold"
-          >
-            <span class="material-symbols-outlined text-[18px]">person_add</span>
-            Add New Doctor
-          </button>
-        )}
-      </header>
+      <div className={`space-y-stack-lg font-body-md animate-fade-in ${isArabic ? 'text-right' : 'text-left'}`}>
+        {/* Header */}
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border-subtle pb-stack-md gap-4">
+          <div>
+            <h1 className="font-display-lg text-headline-lg text-on-surface font-bold">
+              {isArabic ? 'إدارة المستخدمين' : 'User Management'}
+            </h1>
+            <p className="font-body-lg text-body-lg text-on-surface-variant mt-1">
+              {isArabic
+                ? 'إدارة الأطباء الممارسين، الأقسام، صلاحيات الوصول، والنشاط.'
+                : 'Manage practitioners, departments, access rights, and status.'}
+            </p>
+          </div>
+          {activeTab === 'orgs' && (
+            <button
+              onClick={() => setShowOrgModal(true)}
+              className="bg-primary hover:bg-primary-hover text-on-primary font-button text-xs py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm font-semibold"
+            >
+              <span className="material-symbols-outlined text-[18px]">add_business</span>
+              {isArabic ? 'إضافة قسم جديد' : 'Add New Department'}
+            </button>
+          )}
+          {activeTab === 'doctors' && (
+            <button
+              onClick={() => setShowDocModal(true)}
+              className="bg-primary hover:bg-primary-hover text-on-primary font-button text-xs py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm font-semibold"
+            >
+              <span className="material-symbols-outlined text-[18px]">person_add</span>
+              {isArabic ? 'إضافة طبيب جديد' : 'Add New Doctor'}
+            </button>
+          )}
+        </header>
 
-      {/* Tabs & Search controls */}
-      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 border border-border-subtle rounded-xl shadow-sm">
-        {/* Tabs */}
-        <div class="flex gap-2 p-1 bg-surface-container-low rounded-lg w-full sm:w-auto">
-          <button
-            onClick={() => {
-              setActiveTab('doctors');
-              setSearchQuery('');
-              setStatusFilter('all');
-            }}
-            type="button"
-            class={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-colors ${
-              activeTab === 'doctors' 
-                ? 'bg-white text-primary shadow-sm' 
-                : 'text-secondary hover:text-primary'
-            }`}
-          >
-            Doctors
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('orgs');
-              setSearchQuery('');
-              setStatusFilter('all');
-            }}
-            type="button"
-            class={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-colors ${
-              activeTab === 'orgs' 
-                ? 'bg-white text-primary shadow-sm' 
-                : 'text-secondary hover:text-primary'
-            }`}
-          >
-            Organizations
-          </button>
-        </div>
-
-        {/* Filters */}
-        <div class="flex gap-2 w-full sm:w-auto">
-          <div class="relative flex-1 sm:flex-none sm:w-64">
-            <span class="material-symbols-outlined absolute left-2.5 top-1/2 transform -translate-y-1/2 text-secondary text-lg">search</span>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={activeTab === 'doctors' ? 'Search doctor name...' : 'Search organization...'}
-              class="w-full pl-9 pr-3 py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
-            />
+        {/* Tabs & Search controls */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 border border-border-subtle rounded-xl shadow-sm">
+          {/* Tabs */}
+          <div className="flex gap-2 p-1 bg-surface-container-low rounded-lg w-full sm:w-auto">
+            <button
+              onClick={() => {
+                setActiveTab('doctors');
+                setSearchQuery('');
+                setStatusFilter('all');
+              }}
+              type="button"
+              className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-colors ${
+                activeTab === 'doctors' 
+                  ? 'bg-white text-primary shadow-sm' 
+                  : 'text-secondary hover:text-primary'
+              }`}
+            >
+              {isArabic ? 'الأطباء' : 'Doctors'}
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('orgs');
+                setSearchQuery('');
+                setStatusFilter('all');
+              }}
+              type="button"
+              className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-colors ${
+                activeTab === 'orgs' 
+                  ? 'bg-white text-primary shadow-sm' 
+                  : 'text-secondary hover:text-primary'
+              }`}
+            >
+              {isArabic ? 'المنظمات' : 'Organizations'}
+            </button>
           </div>
 
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            class="bg-white border border-border-subtle rounded-lg text-xs py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary shadow-sm text-secondary font-semibold"
-          >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="disabled">Suspended / Disabled</option>
-          </select>
-        </div>
-      </div>
+          {/* Filters */}
+          <div className="flex gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 sm:flex-none sm:w-64">
+              <span className={`material-symbols-outlined absolute ${isArabic ? 'right-2.5' : 'left-2.5'} top-1/2 transform -translate-y-1/2 text-secondary text-lg`}>search</span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={
+                  activeTab === 'doctors'
+                    ? (isArabic ? 'ابحث عن اسم الطبيب...' : 'Search doctor name...')
+                    : (isArabic ? 'ابحث عن المنظمة...' : 'Search organization...')
+                }
+                className={`w-full ${isArabic ? 'pr-9 pl-3 text-right' : 'pl-9 pr-3 text-left'} py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary shadow-sm`}
+              />
+            </div>
 
-      {/* Main Tables Grid */}
-      <div class="bg-white rounded-xl border border-border-subtle shadow-sm overflow-hidden">
-        {activeTab === 'doctors' ? (
-          <table class="min-w-full divide-y divide-border-subtle text-left">
-            <thead class="bg-bg-canvas">
-              <tr>
-                <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Doctor</th>
-                <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Department</th>
-                <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Subscription Plan</th>
-                <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Status</th>
-                <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Join Date</th>
-                <th scope="col" class="relative px-6 py-3">
-                  <span class="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-border-subtle text-xs">
-              {filteredDoctors.length === 0 ? (
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className={`bg-white border border-border-subtle rounded-lg text-xs py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary shadow-sm text-secondary font-semibold ${isArabic ? 'text-right' : 'text-left'}`}
+            >
+              <option value="all">{isArabic ? 'جميع الحالات' : 'All Status'}</option>
+              <option value="active">{isArabic ? 'نشط' : 'Active'}</option>
+              <option value="disabled">{isArabic ? 'موقوف / معطل' : 'Suspended / Disabled'}</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Main Tables Grid */}
+        <div className="bg-white rounded-xl border border-border-subtle shadow-sm overflow-hidden">
+          {activeTab === 'doctors' ? (
+            <table className={`min-w-full divide-y divide-border-subtle ${isArabic ? 'text-right' : 'text-left'}`}>
+              <thead className="bg-bg-canvas">
                 <tr>
-                  <td colSpan="6" class="px-6 py-8 text-center text-secondary text-sm">
-                    No matching doctors found
-                  </td>
+                  <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'الطبيب' : 'Doctor'}</th>
+                  <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'القسم' : 'Department'}</th>
+                  <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'خطة الاشتراك' : 'Subscription Plan'}</th>
+                  <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'الحالة' : 'Status'}</th>
+                  <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'تاريخ الانضمام' : 'Join Date'}</th>
+                  <th scope="col" className="relative px-6 py-3">
+                    <span className="sr-only">{isArabic ? 'إجراءات' : 'Actions'}</span>
+                  </th>
                 </tr>
-              ) : (
-                filteredDoctors.map((doc) => (
-                  <tr key={doc.id} class="hover:bg-surface-container-low transition-colors">
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold font-display-md">
-                          {doc.name.split(' ').map(n => n[0]).join('')}
-                        </div>
-                        <div>
-                          <div class="font-bold text-on-surface text-xs">{doc.name}</div>
-                          <div class="text-[10px] text-secondary">{doc.email}</div>
-                          <div class="text-[10px] text-secondary">{doc.phone}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-secondary font-semibold">
-                      {doc.department || 'Independent'}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-secondary">
-                      <div class="font-semibold text-primary">{doc.subscription_plan || 'N/A'}</div>
-                      <div class="text-[10px] text-secondary">Expires: {doc.subscription_expiry || 'N/A'}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <span class={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${
-                        doc.is_active 
-                          ? 'bg-primary-light text-primary' 
-                          : 'bg-error-container text-error'
-                      }`}>
-                        {doc.is_active ? 'Active' : 'Disabled'}
-                      </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-secondary">
-                      {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : 'N/A'}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-xs font-semibold">
-                      <div class="flex gap-2 justify-end">
-                        <button
-                          onClick={() => openEditDoctor(doc)}
-                          class="px-3 py-1.5 bg-primary-light hover:bg-primary/20 text-primary rounded font-bold text-xs shadow-sm transition-colors"
-                        >
-                          View Details & Manage
-                        </button>
-                      </div>
+              </thead>
+              <tbody className="bg-white divide-y divide-border-subtle text-xs">
+                {filteredDoctors.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-8 text-center text-secondary text-sm">
+                      {isArabic ? 'لم يتم العثور على أطباء مطابقين' : 'No matching doctors found'}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        ) : (
-          <table class="min-w-full divide-y divide-border-subtle text-left">
-            <thead class="bg-bg-canvas">
-              <tr>
-                <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Organization</th>
-                <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Specialty</th>
-                <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Total Doctors</th>
-                <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Subscription Plan</th>
-                <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Created At</th>
-                <th scope="col" class="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">Status</th>
-                <th scope="col" class="relative px-6 py-3">
-                  <span class="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-border-subtle text-xs">
-              {filteredOrgs.length === 0 ? (
-                <tr>
-                  <td colSpan="7" class="px-6 py-8 text-center text-secondary text-sm">
-                    No matching organizations found
-                  </td>
-                </tr>
-              ) : (
-                filteredOrgs.map((org) => {
-                  const assignedCount = doctors.filter(d => d.org_id === org.id).length;
-                  return (
-                    <tr key={org.id} class="hover:bg-surface-container-low transition-colors">
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="font-bold text-on-surface text-xs">{org.name}</div>
-                        <div class="text-[10px] text-secondary">{org.email}</div>
-                        <div class="text-[10px] text-secondary">{org.phone}</div>
+                ) : (
+                  filteredDoctors.map((doc) => (
+                    <tr key={doc.id} className="hover:bg-surface-container-low transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className={`flex items-center gap-3 ${isArabic ? 'flex-row-reverse' : ''}`}>
+                          <div className="w-8 h-8 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold font-display-md">
+                            {doc.name.split(' ').map(n => n[0]).join('')}
+                          </div>
+                          <div>
+                            <div className="font-bold text-on-surface text-xs">{doc.name}</div>
+                            <div className="text-[10px] text-secondary">{doc.email}</div>
+                            <div className="text-[10px] text-secondary">{doc.phone}</div>
+                          </div>
+                        </div>
                       </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-secondary font-semibold">
-                        {org.specialty}
+                      <td className="px-6 py-4 whitespace-nowrap text-secondary font-semibold">
+                        {doc.department || (isArabic ? 'مستقل' : 'Independent')}
                       </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-secondary font-bold">
-                        {assignedCount} doctors
+                      <td className="px-6 py-4 whitespace-nowrap text-secondary">
+                        <div className="font-semibold text-primary">{getPlanLabel(doc.subscription_plan) || 'N/A'}</div>
+                        <div className="text-[10px] text-secondary">
+                          {isArabic ? 'ينتهي:' : 'Expires:'} {doc.subscription_expiry || 'N/A'}
+                        </div>
                       </td>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="font-semibold text-primary">{org.subscription_plan}</div>
-                        <div class="text-[10px] text-secondary">Expires: {org.subscription_expiry}</div>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-secondary">
-                        {new Date(org.created_at).toLocaleDateString()}
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <span class={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${
-                          org.is_active 
-                            ? 'bg-primary-light text-primary' 
-                            : 'bg-error-container text-error'
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${
+                          doc.is_active ? 'bg-primary-light text-primary' : 'bg-error-container text-error'
                         }`}>
-                          {org.is_active ? 'Active' : 'Suspended'}
+                          {doc.is_active ? (isArabic ? 'نشط' : 'Active') : (isArabic ? 'معطل' : 'Disabled')}
                         </span>
                       </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-right text-xs font-semibold">
-                        <div class="flex gap-2 justify-end">
+                      <td className="px-6 py-4 whitespace-nowrap text-secondary">
+                        {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-xs font-semibold">
+                        <div className={`flex gap-2 ${isArabic ? 'justify-start' : 'justify-end'}`}>
                           <button
-                            onClick={() => openEditOrg(org)}
-                            class="px-3 py-1.5 bg-primary-light hover:bg-primary/20 text-primary rounded font-bold text-xs shadow-sm transition-colors"
+                            onClick={() => openEditDoctor(doc)}
+                            className="px-3 py-1.5 bg-primary-light hover:bg-primary/20 text-primary rounded font-bold text-xs shadow-sm transition-colors"
                           >
-                            View Details & Manage
+                            {isArabic ? 'عرض التفاصيل والإدارة' : 'View Details & Manage'}
                           </button>
                         </div>
                       </td>
                     </tr>
-                  );
-                })
+                  ))
+                )}
+              </tbody>
+            </table>
+          ) : (
+            <table className={`min-w-full divide-y divide-border-subtle ${isArabic ? 'text-right' : 'text-left'}`}>
+              <thead className="bg-bg-canvas">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'المنظمة' : 'Organization'}</th>
+                  <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'التخصص' : 'Specialty'}</th>
+                  <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'إجمالي الأطباء' : 'Total Doctors'}</th>
+                  <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'خطة الاشتراك' : 'Subscription Plan'}</th>
+                  <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'تاريخ الإنشاء' : 'Created At'}</th>
+                  <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'الحالة' : 'Status'}</th>
+                  <th scope="col" className="relative px-6 py-3">
+                    <span className="sr-only">{isArabic ? 'إجراءات' : 'Actions'}</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-border-subtle text-xs">
+                {filteredOrgs.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-8 text-center text-secondary text-sm">
+                      {isArabic ? 'لم يتم العثور على منظمات مطابقة' : 'No matching organizations found'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredOrgs.map((org) => {
+                    const assignedCount = doctors.filter(d => d.org_id === org.id).length;
+                    return (
+                      <tr key={org.id} className="hover:bg-surface-container-low transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="font-bold text-on-surface text-xs">{org.name}</div>
+                          <div className="text-[10px] text-secondary">{org.email}</div>
+                          <div className="text-[10px] text-secondary">{org.phone}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-secondary font-semibold">
+                          {getSpecialtyLabel(org.specialty)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-secondary font-bold">
+                          {assignedCount} {isArabic ? 'أطباء' : 'doctors'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="font-semibold text-primary">{getPlanLabel(org.subscription_plan)}</div>
+                          <div className="text-[10px] text-secondary">
+                            {isArabic ? 'تنتهي:' : 'Expires:'} {org.subscription_expiry}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-secondary">
+                          {new Date(org.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${
+                            org.is_active ? 'bg-primary-light text-primary' : 'bg-error-container text-error'
+                          }`}>
+                            {org.is_active ? (isArabic ? 'نشط' : 'Active') : (isArabic ? 'موقوف' : 'Suspended')}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-xs font-semibold">
+                          <div className={`flex gap-2 ${isArabic ? 'justify-start' : 'justify-end'}`}>
+                            <button
+                              onClick={() => openEditOrg(org)}
+                              className="px-3 py-1.5 bg-primary-light hover:bg-primary/20 text-primary rounded font-bold text-xs shadow-sm transition-colors"
+                            >
+                              {isArabic ? 'عرض التفاصيل والإدارة' : 'View Details & Manage'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Add Organization Modal */}
+        {showOrgModal && (
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl border border-border-subtle shadow-lg max-w-md w-full overflow-hidden animate-fade-in">
+              <div className={`px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas ${isArabic ? 'flex-row-reverse' : ''}`}>
+                <h3 className="font-headline-md text-base text-primary font-bold">
+                  {isArabic ? 'إضافة قسم طبي جديد' : 'Add Clinical Department'}
+                </h3>
+                <button 
+                  onClick={() => setShowOrgModal(false)}
+                  className="p-1 hover:bg-surface-container rounded-full text-secondary"
+                >
+                  <span className="material-symbols-outlined text-[20px]">close</span>
+                </button>
+              </div>
+              
+              <form onSubmit={handleAddOrgSubmit} className="p-6 space-y-4">
+                {error && (
+                  <div className="bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[16px]">error</span>
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    {isArabic ? 'اسم المنظمة/العيادة *' : 'Organization Name *'}
+                  </label>
+                  <input
+                    type="text" required value={orgName} onChange={(e) => setOrgName(e.target.value)}
+                    placeholder={isArabic ? 'مثال: مركز النخبة للقلب' : 'e.g. Elite Cardiology Center'}
+                    className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    {isArabic ? 'البريد الإلكتروني للاتصال *' : 'Contact Email *'}
+                  </label>
+                  <input
+                    type="email" required value={orgEmail} onChange={(e) => setOrgEmail(e.target.value)}
+                    placeholder="e.g. contact@cairomed.com"
+                    className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    {isArabic ? 'رقم الهاتف للاتصال *' : 'Contact Phone *'}
+                  </label>
+                  <input
+                    type="text" required value={orgPhone} onChange={(e) => setOrgPhone(e.target.value)}
+                    placeholder="e.g. 01012345678"
+                    className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    {isArabic ? 'كلمة المرور *' : 'Password *'}
+                  </label>
+                  <input
+                    type="password" required value={orgPassword} onChange={(e) => setOrgPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    {isArabic ? 'التخصص الطبي' : 'Medical Specialty'}
+                  </label>
+                  <select
+                    value={orgSpecialty} onChange={(e) => setOrgSpecialty(e.target.value)}
+                    className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                  >
+                    <option value="Cardiology">{isArabic ? 'أمراض القلب' : 'Cardiology'}</option>
+                    <option value="Neurology">{isArabic ? 'الأعصاب' : 'Neurology'}</option>
+                    <option value="Pediatrics">{isArabic ? 'طب الأطفال' : 'Pediatrics'}</option>
+                    <option value="Oncology">{isArabic ? 'الأورام' : 'Oncology'}</option>
+                    <option value="General Practice">{isArabic ? 'الطب العام' : 'General Practice'}</option>
+                  </select>
+                </div>
+
+                <div className={`flex gap-3 mt-6 pt-4 border-t border-border-subtle ${isArabic ? 'flex-row-reverse' : ''}`}>
+                  <button
+                    type="button" onClick={() => setShowOrgModal(false)}
+                    className="flex-1 bg-white border border-border-subtle text-secondary font-button py-2 rounded-lg text-xs hover:bg-surface-container-low transition-colors font-semibold"
+                  >
+                    {isArabic ? 'إلغاء' : 'Cancel'}
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-button py-2 rounded-lg text-xs transition-colors shadow-sm font-semibold"
+                  >
+                    {isArabic ? 'حفظ القسم' : 'Save Department'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Add Doctor Modal */}
+        {showDocModal && (
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl border border-border-subtle shadow-lg max-w-md w-full overflow-hidden animate-fade-in">
+              <div className={`px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas ${isArabic ? 'flex-row-reverse' : ''}`}>
+                <h3 className="font-headline-md text-base text-primary font-bold">
+                  {isArabic ? 'إضافة طبيب سريري جديد' : 'Add Clinical Doctor'}
+                </h3>
+                <button 
+                  onClick={() => setShowDocModal(false)}
+                  className="p-1 hover:bg-surface-container rounded-full text-secondary"
+                >
+                  <span className="material-symbols-outlined text-[20px]">close</span>
+                </button>
+              </div>
+              
+              <form onSubmit={handleAddDocSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+                {error && (
+                  <div className="bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[16px]">error</span>
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    {isArabic ? 'اسم الطبيب *' : 'Doctor Name *'}
+                  </label>
+                  <input
+                    type="text" required value={docName} onChange={(e) => setDocName(e.target.value)}
+                    placeholder={isArabic ? 'د. أحمد حسن' : 'Dr. Ahmed Hassan'}
+                    className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    {isArabic ? 'البريد الإلكتروني للاتصال *' : 'Contact Email *'}
+                  </label>
+                  <input
+                    type="email" required value={docEmail} onChange={(e) => setDocEmail(e.target.value)}
+                    placeholder="doctor@example.com"
+                    className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    {isArabic ? 'رقم الهاتف للاتصال *' : 'Contact Phone *'}
+                  </label>
+                  <input
+                    type="text" required value={docPhone} onChange={(e) => setDocPhone(e.target.value)}
+                    placeholder="e.g. 01012345678"
+                    className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    {isArabic ? 'كلمة المرور *' : 'Password *'}
+                  </label>
+                  <input
+                    type="password" required value={docPassword} onChange={(e) => setDocPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    {isArabic ? 'التخصص الطبي' : 'Medical Specialty'}
+                  </label>
+                  <select
+                    value={docSpecialty} onChange={(e) => setDocSpecialty(e.target.value)}
+                    className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                  >
+                    <option value="Cardiology">{isArabic ? 'أمراض القلب' : 'Cardiology'}</option>
+                    <option value="Neurology">{isArabic ? 'الأعصاب' : 'Neurology'}</option>
+                    <option value="Pediatrics">{isArabic ? 'طب الأطفال' : 'Pediatrics'}</option>
+                    <option value="Oncology">{isArabic ? 'الأورام' : 'Oncology'}</option>
+                    <option value="General Practice">{isArabic ? 'الطب العام' : 'General Practice'}</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    {isArabic ? 'تعيين قسم طبي' : 'Assign Clinical Department'}
+                  </label>
+                  <select
+                    value={docDept} onChange={(e) => setDocDept(e.target.value)}
+                    className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                  >
+                    <option value="">{isArabic ? 'بلا قسم (طبيب مستقل)' : 'None (Independent Doctor)'}</option>
+                    {organizations.map(org => (
+                      <option key={org.id} value={org.id}>{org.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className={`flex gap-3 mt-6 pt-4 border-t border-border-subtle ${isArabic ? 'flex-row-reverse' : ''}`}>
+                  <button
+                    type="button" onClick={() => setShowDocModal(false)}
+                    className="flex-1 bg-white border border-border-subtle text-secondary font-button py-2 rounded-lg text-xs hover:bg-surface-container-low transition-colors font-semibold"
+                  >
+                    {isArabic ? 'إلغاء' : 'Cancel'}
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-button py-2 rounded-lg text-xs transition-colors shadow-sm font-semibold"
+                  >
+                    {isArabic ? 'حفظ الطبيب' : 'Save Doctor'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Details & Edit Organization Modal */}
+        {editingOrg && (
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl border border-border-subtle shadow-lg max-w-md w-full overflow-hidden animate-fade-in">
+              <div className={`px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas ${isArabic ? 'flex-row-reverse' : ''}`}>
+                <h3 className="font-headline-md text-base text-primary font-bold">
+                  {isEditMode
+                    ? (isArabic ? 'تعديل المنظمة' : 'Edit Organization')
+                    : (isArabic ? 'تفاصيل المنظمة' : 'Organization Details')}
+                </h3>
+                <button 
+                  onClick={() => setEditingOrg(null)}
+                  className="p-1 hover:bg-surface-container rounded-full text-secondary"
+                >
+                  <span className="material-symbols-outlined text-[20px]">close</span>
+                </button>
+              </div>
+              
+              {isEditMode ? (
+                <form onSubmit={handleEditOrgSubmit} className="p-6 space-y-4 text-start">
+                  <div>
+                    <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                      {isArabic ? 'اسم المنظمة/العيادة *' : 'Organization Name *'}
+                    </label>
+                    <input
+                      type="text" required value={editOrgName} onChange={(e) => setEditOrgName(e.target.value)}
+                      className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                      {isArabic ? 'البريد الإلكتروني للاتصال *' : 'Contact Email *'}
+                    </label>
+                    <input
+                      type="email" required value={editOrgEmail} onChange={(e) => setEditOrgEmail(e.target.value)}
+                      className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                      {isArabic ? 'رقم الهاتف للاتصال *' : 'Contact Phone *'}
+                    </label>
+                    <input
+                      type="text" required value={editOrgPhone} onChange={(e) => setEditOrgPhone(e.target.value)}
+                      className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'التخصص' : 'Specialty'}</label>
+                      <select
+                        value={editOrgSpecialty} onChange={(e) => setEditOrgSpecialty(e.target.value)}
+                        className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                      >
+                        <option value="Cardiology">{isArabic ? 'أمراض القلب' : 'Cardiology'}</option>
+                        <option value="Neurology">{isArabic ? 'الأعصاب' : 'Neurology'}</option>
+                        <option value="Pediatrics">{isArabic ? 'طب الأطفال' : 'Pediatrics'}</option>
+                        <option value="Oncology">{isArabic ? 'الأورام' : 'Oncology'}</option>
+                        <option value="General Practice">{isArabic ? 'الطب العام' : 'General Practice'}</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'خطة الاشتراك' : 'Subscription Plan'}</label>
+                      <select
+                        value={editOrgPlan} onChange={(e) => setEditOrgPlan(e.target.value)}
+                        className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                      >
+                        <option value="Basic Access">{isArabic ? 'الوصول الأساسي' : 'Basic Access'}</option>
+                        <option value="Trial Access">{isArabic ? 'الوصول التجريبي' : 'Trial Access'}</option>
+                        <option value="Clinical Pro">{isArabic ? 'السريري المتقدم' : 'Clinical Pro'}</option>
+                        <option value="Pro AI Suite">{isArabic ? 'باقة ذكاء اصطناعي برو' : 'Pro AI Suite'}</option>
+                        <option value="Enterprise AI">{isArabic ? 'الذكاء الاصطناعي للمؤسسات' : 'Enterprise AI'}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'انتهاء الاشتراك' : 'Subscription Expiry'}</label>
+                      <input
+                        type="date" required value={editOrgExpiry} onChange={(e) => setEditOrgExpiry(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'الحالة' : 'Status'}</label>
+                      <select
+                        value={editOrgStatus} onChange={(e) => setEditOrgStatus(e.target.value)}
+                        className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                      >
+                        <option value="active">{isArabic ? 'نشط' : 'Active'}</option>
+                        <option value="suspended">{isArabic ? 'موقوف' : 'Suspended'}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className={`flex gap-3 mt-6 pt-4 border-t border-border-subtle ${isArabic ? 'flex-row-reverse' : ''}`}>
+                    <button
+                      type="button" onClick={() => setIsEditMode(false)}
+                      className="flex-1 bg-white border border-border-subtle text-secondary font-button py-2 rounded-lg text-xs hover:bg-surface-container-low transition-colors font-semibold"
+                    >
+                      {isArabic ? 'إلغاء' : 'Cancel'}
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-button py-2 rounded-lg text-xs transition-colors shadow-sm font-semibold"
+                    >
+                      {isArabic ? 'حفظ التغييرات' : 'Save Changes'}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="p-6 space-y-6 text-xs text-secondary">
+                  <div className="grid grid-cols-2 gap-y-4 gap-x-2">
+                    <div>
+                      <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'اسم المنظمة' : 'Organization Name'}</span>
+                      <span className="text-sm font-bold text-on-surface">{editingOrg.name}</span>
+                    </div>
+                    <div>
+                      <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'التخصص' : 'Specialty'}</span>
+                      <span className="text-sm font-bold text-primary">{getSpecialtyLabel(editingOrg.specialty)}</span>
+                    </div>
+                    <div>
+                      <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'البريد الإلكتروني للاتصال' : 'Contact Email'}</span>
+                      <span className="text-sm font-semibold text-on-surface">{editingOrg.email}</span>
+                    </div>
+                    <div>
+                      <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'رقم الهاتف للاتصال' : 'Contact Phone'}</span>
+                      <span className="text-sm font-semibold text-on-surface">{editingOrg.phone}</span>
+                    </div>
+                    <div>
+                      <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'خطة الاشتراك' : 'Subscription Plan'}</span>
+                      <span className="text-sm font-semibold text-primary">{getPlanLabel(editingOrg.subscription_plan)}</span>
+                    </div>
+                    <div>
+                      <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'تاريخ الانتهاء' : 'Expiry Date'}</span>
+                      <span className="text-sm font-semibold text-on-surface">{editingOrg.subscription_expiry}</span>
+                    </div>
+                    <div>
+                      <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'الحالة' : 'Status'}</span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize ${
+                        editingOrg.is_active ? 'bg-primary-light text-primary' : 'bg-error-container text-error'
+                      }`}>
+                        {editingOrg.is_active ? (isArabic ? 'نشط' : 'Active') : (isArabic ? 'موقوف' : 'Suspended')}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2 pt-6 border-t border-border-subtle mt-4">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setIsEditMode(true)}
+                        className="flex-1 py-2 bg-primary hover:bg-primary-hover text-on-primary rounded-lg font-bold transition-colors shadow-sm text-center"
+                      >
+                        {isArabic ? 'تعديل الملف الشخصي' : 'Edit Profile'}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const res = await toggleOrgStatus(editingOrg.id);
+                          if (res) {
+                            setEditingOrg(prev => ({ ...prev, is_active: res.is_active }));
+                          }
+                        }}
+                        className={`flex-1 py-2 rounded-lg font-bold transition-colors ${
+                          editingOrg.is_active
+                            ? 'bg-status-warning/10 hover:bg-status-warning/20 text-status-warning'
+                            : 'bg-primary-light text-primary hover:bg-primary/20'
+                        }`}
+                      >
+                        {editingOrg.is_active
+                          ? (isArabic ? 'إيقاف المنظمة' : 'Suspend Org')
+                          : (isArabic ? 'تفعيل المنظمة' : 'Activate Org')}
+                      </button>
+                    </div>
+                    
+                    <button
+                      onClick={() => handleDeleteOrg(editingOrg.id, editingOrg.name)}
+                      className="w-full py-2 bg-error-container text-error hover:bg-error/10 rounded-lg font-bold transition-colors text-center"
+                    >
+                      {isArabic ? 'حذف المنظمة' : 'Delete Organization'}
+                    </button>
+                  </div>
+                </div>
               )}
-            </tbody>
-          </table>
+            </div>
+          </div>
+        )}
+
+        {/* Details & Edit Doctor Modal */}
+        {editingDoctor && (
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl border border-border-subtle shadow-lg max-w-md w-full overflow-hidden animate-fade-in">
+              <div className={`px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas ${isArabic ? 'flex-row-reverse' : ''}`}>
+                <h3 className="font-headline-md text-base text-primary font-bold">
+                  {isEditMode
+                    ? (isArabic ? 'تعديل ملف الطبيب' : 'Edit Doctor Profile')
+                    : (isArabic ? 'تفاصيل ملف الطبيب' : 'Doctor Profile Details')}
+                </h3>
+                <button 
+                  onClick={() => setEditingDoctor(null)}
+                  className="p-1 hover:bg-surface-container rounded-full text-secondary"
+                >
+                  <span className="material-symbols-outlined text-[20px]">close</span>
+                </button>
+              </div>
+              
+              {isEditMode ? (
+                <form onSubmit={handleEditDoctorSubmit} className="p-6 space-y-4 text-start">
+                  <div>
+                    <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                      {isArabic ? 'اسم الطبيب *' : 'Doctor Name *'}
+                    </label>
+                    <input
+                      type="text" required value={editDocName} onChange={(e) => setEditDocName(e.target.value)}
+                      className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                      {isArabic ? 'البريد الإلكتروني للعيادة *' : 'Clinic Email *'}
+                    </label>
+                    <input
+                      type="email" required value={editDocEmail} onChange={(e) => setEditDocEmail(e.target.value)}
+                      className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                      {isArabic ? 'رقم الهاتف للاتصال *' : 'Contact Phone *'}
+                    </label>
+                    <input
+                      type="text" required value={editDocPhone} onChange={(e) => setEditDocPhone(e.target.value)}
+                      className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'القسم' : 'Department'}</label>
+                      <input
+                        type="text" value={editDocDept} onChange={(e) => setEditDocDept(e.target.value)}
+                        className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'خطة الاشتراك' : 'Subscription Plan'}</label>
+                      <select
+                        value={editDocPlan} onChange={(e) => setEditDocPlan(e.target.value)}
+                        className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                      >
+                        <option value="Basic Access">{isArabic ? 'الوصول الأساسي' : 'Basic Access'}</option>
+                        <option value="Trial Access">{isArabic ? 'الوصول التجريبي' : 'Trial Access'}</option>
+                        <option value="Clinical Pro">{isArabic ? 'السريري المتقدم' : 'Clinical Pro'}</option>
+                        <option value="Pro AI Suite">{isArabic ? 'باقة ذكاء اصطناعي برو' : 'Pro AI Suite'}</option>
+                        <option value="Enterprise AI">{isArabic ? 'الذكاء الاصطناعي للمؤسسات' : 'Enterprise AI'}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'انتهاء الاشتراك' : 'Subscription Expiry'}</label>
+                      <input
+                        type="date" required value={editDocExpiry} onChange={(e) => setEditDocExpiry(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'الحالة' : 'Status'}</label>
+                      <select
+                        value={editDocStatus} onChange={(e) => setEditDocStatus(e.target.value)}
+                        className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                      >
+                        <option value="approved">{isArabic ? 'نشط' : 'Active'}</option>
+                        <option value="disabled">{isArabic ? 'موقوف' : 'Disabled'}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className={`flex gap-3 mt-6 pt-4 border-t border-border-subtle ${isArabic ? 'flex-row-reverse' : ''}`}>
+                    <button
+                      type="button" onClick={() => setIsEditMode(false)}
+                      className="flex-1 bg-white border border-border-subtle text-secondary font-button py-2 rounded-lg text-xs hover:bg-surface-container-low transition-colors font-semibold"
+                    >
+                      {isArabic ? 'إلغاء' : 'Cancel'}
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-button py-2 rounded-lg text-xs transition-colors shadow-sm font-semibold"
+                    >
+                      {isArabic ? 'حفظ التغييرات' : 'Save Changes'}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="p-6 space-y-6 text-xs text-secondary">
+                  <div className="grid grid-cols-2 gap-y-4 gap-x-2">
+                    <div>
+                      <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'اسم الطبيب' : 'Doctor Name'}</span>
+                      <span className="text-sm font-bold text-on-surface">{editingDoctor.name}</span>
+                    </div>
+                    <div>
+                      <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'القسم' : 'Department'}</span>
+                      <span className="text-sm font-bold text-primary">{editingDoctor.department || (isArabic ? 'مستقل' : 'Independent')}</span>
+                    </div>
+                    <div>
+                      <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'البريد الإلكتروني للعيادة' : 'Clinic Email'}</span>
+                      <span className="text-sm font-semibold text-on-surface">{editingDoctor.email}</span>
+                    </div>
+                    <div>
+                      <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'رقم الهاتف للاتصال' : 'Contact Phone'}</span>
+                      <span className="text-sm font-semibold text-on-surface">{editingDoctor.phone}</span>
+                    </div>
+                    <div>
+                      <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'خطة الاشتراك' : 'Subscription Plan'}</span>
+                      <span className="text-sm font-semibold text-primary">{getPlanLabel(editingDoctor.subscription_plan) || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'تاريخ الانتهاء' : 'Expiry Date'}</span>
+                      <span className="text-sm font-semibold text-on-surface">{editingDoctor.subscription_expiry || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'الحالة' : 'Status'}</span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize ${
+                        editingDoctor.is_active ? 'bg-primary-light text-primary' : 'bg-error-container text-error'
+                      }`}>
+                        {editingDoctor.is_active ? (isArabic ? 'نشط' : 'Active') : (isArabic ? 'معطل' : 'Disabled')}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2 pt-6 border-t border-border-subtle mt-4">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setIsEditMode(true)}
+                        className="flex-1 py-2 bg-primary hover:bg-primary-hover text-on-primary rounded-lg font-bold transition-colors shadow-sm text-center"
+                      >
+                        {isArabic ? 'تعديل الملف الشخصي' : 'Edit Profile'}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const res = await toggleDoctorStatus(editingDoctor.id);
+                          if (res) {
+                            setEditingDoctor(prev => ({ ...prev, is_active: res.is_active }));
+                          }
+                        }}
+                        className={`flex-1 py-2 rounded-lg font-bold transition-colors ${
+                          editingDoctor.is_active
+                            ? 'bg-status-warning/10 hover:bg-status-warning/20 text-status-warning'
+                            : 'bg-primary-light text-primary hover:bg-primary/20'
+                        }`}
+                      >
+                        {editingDoctor.is_active
+                          ? (isArabic ? 'تعطيل حساب الطبيب' : 'Disable Doctor')
+                          : (isArabic ? 'تفعيل حساب الطبيب' : 'Enable Doctor')}
+                      </button>
+                    </div>
+                    
+                    <button
+                      onClick={() => handleDeleteDoctor(editingDoctor.id, editingDoctor.name)}
+                      className="w-full py-2 bg-error-container text-error hover:bg-error/10 rounded-lg font-bold transition-colors text-center"
+                    >
+                      {isArabic ? 'حذف حساب الطبيب نهائياً' : 'Delete Doctor Account'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </div>
 
-      {/* Add Organization Modal */}
-      {showOrgModal && (
-        <div class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div class="bg-white rounded-xl border border-border-subtle shadow-lg max-w-md w-full overflow-hidden animate-fade-in">
-            <div class="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas">
-              <h3 class="font-headline-md text-base text-primary font-bold">Add Clinical Department</h3>
-              <button 
-                onClick={() => setShowOrgModal(false)}
-                class="p-1 hover:bg-surface-container rounded-full text-secondary"
-              >
-                <span class="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-            
-            <form onSubmit={handleAddOrgSubmit} class="p-6 space-y-4">
-              {error && (
-                <div class="bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2">
-                  <span class="material-symbols-outlined text-[16px]">error</span>
-                  <span>{error}</span>
-                </div>
-              )}
-
-              <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Organization Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={orgName}
-                  onChange={(e) => setOrgName(e.target.value)}
-                  placeholder="e.g. Cairo Cardiology Center"
-                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Contact Email *</label>
-                <input
-                  type="email"
-                  required
-                  value={orgEmail}
-                  onChange={(e) => setOrgEmail(e.target.value)}
-                  placeholder="e.g. contact@cairomed.com"
-                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                />
-              </div>
-
-               <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Contact Phone *</label>
-                <input
-                  type="text"
-                  required
-                  value={orgPhone}
-                  onChange={(e) => setOrgPhone(e.target.value)}
-                  placeholder="e.g. 01012345678"
-                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Password *</label>
-                <input
-                  type="password"
-                  required
-                  value={orgPassword}
-                  onChange={(e) => setOrgPassword(e.target.value)}
-                  placeholder="••••••••"
-                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Medical Specialty</label>
-                <select
-                  value={orgSpecialty}
-                  onChange={(e) => setOrgSpecialty(e.target.value)}
-                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                >
-                  <option value="Cardiology">Cardiology</option>
-                  <option value="Neurology">Neurology</option>
-                  <option value="Pediatrics">Pediatrics</option>
-                  <option value="Oncology">Oncology</option>
-                  <option value="General Practice">General Practice</option>
-                </select>
-              </div>
-
-              <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
-                <button
-                  type="button"
-                  onClick={() => setShowOrgModal(false)}
-                  class="flex-1 bg-white border border-border-subtle text-secondary font-button py-2 rounded-lg text-xs hover:bg-surface-container-low transition-colors font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  class="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-button py-2 rounded-lg text-xs transition-colors shadow-sm font-semibold"
-                >
-                  Save Department
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Add Doctor Modal */}
-      {showDocModal && (
-        <div class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div class="bg-white rounded-xl border border-border-subtle shadow-lg max-w-md w-full overflow-hidden animate-fade-in">
-            <div class="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas">
-              <h3 class="font-headline-md text-base text-primary font-bold">Add Clinical Doctor</h3>
-              <button 
-                onClick={() => setShowDocModal(false)}
-                class="p-1 hover:bg-surface-container rounded-full text-secondary"
-              >
-                <span class="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-            
-            <form onSubmit={handleAddDocSubmit} class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-              {error && (
-                <div class="bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2">
-                  <span class="material-symbols-outlined text-[16px]">error</span>
-                  <span>{error}</span>
-                </div>
-              )}
-
-              <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Doctor Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={docName}
-                  onChange={(e) => setDocName(e.target.value)}
-                  placeholder="e.g. Dr. Ahmed Hassan"
-                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Contact Email *</label>
-                <input
-                  type="email"
-                  required
-                  value={docEmail}
-                  onChange={(e) => setDocEmail(e.target.value)}
-                  placeholder="e.g. doctor@example.com"
-                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Contact Phone *</label>
-                <input
-                  type="text"
-                  required
-                  value={docPhone}
-                  onChange={(e) => setDocPhone(e.target.value)}
-                  placeholder="e.g. 01012345678"
-                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Password *</label>
-                <input
-                  type="password"
-                  required
-                  value={docPassword}
-                  onChange={(e) => setDocPassword(e.target.value)}
-                  placeholder="••••••••"
-                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Medical Specialty</label>
-                <select
-                  value={docSpecialty}
-                  onChange={(e) => setDocSpecialty(e.target.value)}
-                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                >
-                  <option value="Cardiology">Cardiology</option>
-                  <option value="Neurology">Neurology</option>
-                  <option value="Pediatrics">Pediatrics</option>
-                  <option value="Oncology">Oncology</option>
-                  <option value="General Practice">General Practice</option>
-                </select>
-              </div>
-
-              <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Assign Clinical Department</label>
-                <select
-                  value={docDept}
-                  onChange={(e) => setDocDept(e.target.value)}
-                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                >
-                  <option value="">None (Independent Doctor)</option>
-                  {organizations.map(org => (
-                    <option key={org.id} value={org.id}>{org.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
-                <button
-                  type="button"
-                  onClick={() => setShowDocModal(false)}
-                  class="flex-1 bg-white border border-border-subtle text-secondary font-button py-2 rounded-lg text-xs hover:bg-surface-container-low transition-colors font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  class="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-button py-2 rounded-lg text-xs transition-colors shadow-sm font-semibold"
-                >
-                  Save Doctor
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Details & Edit Organization Modal */}
-      {editingOrg && (
-        <div class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div class="bg-white rounded-xl border border-border-subtle shadow-lg max-w-md w-full overflow-hidden animate-fade-in">
-            <div class="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas">
-              <h3 class="font-headline-md text-base text-primary font-bold">
-                {isEditMode ? "Edit Organization" : "Organization Details"}
-              </h3>
-              <button 
-                onClick={() => setEditingOrg(null)}
-                class="p-1 hover:bg-surface-container rounded-full text-secondary"
-              >
-                <span class="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-            
-            {isEditMode ? (
-              <form onSubmit={handleEditOrgSubmit} class="p-6 space-y-4">
-                <div>
-                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">Organization Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editOrgName}
-                    onChange={(e) => setEditOrgName(e.target.value)}
-                    class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                  />
-                </div>
-
-                <div>
-                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">Contact Email *</label>
-                  <input
-                    type="email"
-                    required
-                    value={editOrgEmail}
-                    onChange={(e) => setEditOrgEmail(e.target.value)}
-                    class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                  />
-                </div>
-
-                <div>
-                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">Contact Phone *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editOrgPhone}
-                    onChange={(e) => setEditOrgPhone(e.target.value)}
-                    class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                  />
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Specialty</label>
-                    <select
-                      value={editOrgSpecialty}
-                      onChange={(e) => setEditOrgSpecialty(e.target.value)}
-                      class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                    >
-                      <option value="Cardiology">Cardiology</option>
-                      <option value="Neurology">Neurology</option>
-                      <option value="Pediatrics">Pediatrics</option>
-                      <option value="Oncology">Oncology</option>
-                      <option value="General Practice">General Practice</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Subscription Plan</label>
-                    <select
-                      value={editOrgPlan}
-                      onChange={(e) => setEditOrgPlan(e.target.value)}
-                      class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                    >
-                      <option value="Basic Access">Basic Access</option>
-                      <option value="Trial Access">Trial Access</option>
-                      <option value="Clinical Pro">Clinical Pro</option>
-                      <option value="Pro AI Suite">Pro AI Suite</option>
-                      <option value="Enterprise AI">Enterprise AI</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Subscription Expiry</label>
-                    <input
-                      type="date"
-                      required
-                      value={editOrgExpiry}
-                      onChange={(e) => setEditOrgExpiry(e.target.value)}
-                      class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Status</label>
-                    <select
-                      value={editOrgStatus}
-                      onChange={(e) => setEditOrgStatus(e.target.value)}
-                      class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                    >
-                      <option value="active">Active</option>
-                      <option value="suspended">Suspended</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
-                  <button
-                    type="button"
-                    onClick={() => setIsEditMode(false)}
-                    class="flex-1 bg-white border border-border-subtle text-secondary font-button py-2 rounded-lg text-xs hover:bg-surface-container-low transition-colors font-semibold"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    class="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-button py-2 rounded-lg text-xs transition-colors shadow-sm font-semibold"
-                  >
-                    Save Changes
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div class="p-6 space-y-6 text-xs text-secondary">
-                <div class="grid grid-cols-2 gap-y-4 gap-x-2">
-                  <div>
-                    <span class="block font-semibold text-on-surface-variant mb-0.5">Organization Name</span>
-                    <span class="text-sm font-bold text-on-surface">{editingOrg.name}</span>
-                  </div>
-                  <div>
-                    <span class="block font-semibold text-on-surface-variant mb-0.5">Specialty</span>
-                    <span class="text-sm font-bold text-primary">{editingOrg.specialty}</span>
-                  </div>
-                  <div>
-                    <span class="block font-semibold text-on-surface-variant mb-0.5">Contact Email</span>
-                    <span class="text-sm font-semibold text-on-surface">{editingOrg.email}</span>
-                  </div>
-                  <div>
-                    <span class="block font-semibold text-on-surface-variant mb-0.5">Contact Phone</span>
-                    <span class="text-sm font-semibold text-on-surface">{editingOrg.phone}</span>
-                  </div>
-                  <div>
-                    <span class="block font-semibold text-on-surface-variant mb-0.5">Subscription Plan</span>
-                    <span class="text-sm font-semibold text-primary">{editingOrg.subscription_plan}</span>
-                  </div>
-                  <div>
-                    <span class="block font-semibold text-on-surface-variant mb-0.5">Expiry Date</span>
-                    <span class="text-sm font-semibold text-on-surface">{editingOrg.subscription_expiry}</span>
-                  </div>
-                  <div>
-                    <span class="block font-semibold text-on-surface-variant mb-0.5">Status</span>
-                    <span class={`px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize ${
-                      editingOrg.is_active 
-                        ? 'bg-primary-light text-primary' 
-                        : 'bg-error-container text-error'
-                    }`}>
-                      {editingOrg.is_active ? 'Active' : 'Suspended'}
-                    </span>
-                  </div>
-                </div>
-
-                <div class="flex flex-col gap-2 pt-6 border-t border-border-subtle mt-4">
-                  <div class="flex gap-2">
-                    <button
-                      onClick={() => setIsEditMode(true)}
-                      class="flex-1 py-2 bg-primary hover:bg-primary-hover text-on-primary rounded-lg font-bold transition-colors shadow-sm text-center"
-                    >
-                      Edit Profile
-                    </button>
-                    <button
-                      onClick={async () => {
-                        const res = await toggleOrgStatus(editingOrg.id);
-                        if (res) {
-                          setEditingOrg(prev => ({ ...prev, is_active: res.is_active }));
-                        }
-                      }}
-                      class={`flex-1 py-2 rounded-lg font-bold transition-colors ${
-                        editingOrg.is_active
-                          ? 'bg-status-warning/10 hover:bg-status-warning/20 text-status-warning'
-                          : 'bg-primary-light text-primary hover:bg-primary/20'
-                      }`}
-                    >
-                      {editingOrg.is_active ? 'Suspend Org' : 'Activate Org'}
-                    </button>
-                  </div>
-                  
-                  <button
-                    onClick={() => handleDeleteOrg(editingOrg.id, editingOrg.name)}
-                    class="w-full py-2 bg-error-container text-error hover:bg-error/10 rounded-lg font-bold transition-colors text-center"
-                  >
-                    Delete Organization
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Details & Edit Doctor Modal */}
-      {editingDoctor && (
-        <div class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div class="bg-white rounded-xl border border-border-subtle shadow-lg max-w-md w-full overflow-hidden animate-fade-in">
-            <div class="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas">
-              <h3 class="font-headline-md text-base text-primary font-bold">
-                {isEditMode ? "Edit Doctor Profile" : "Doctor Profile Details"}
-              </h3>
-              <button 
-                onClick={() => setEditingDoctor(null)}
-                class="p-1 hover:bg-surface-container rounded-full text-secondary"
-              >
-                <span class="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-            
-            {isEditMode ? (
-              <form onSubmit={handleEditDoctorSubmit} class="p-6 space-y-4">
-                <div>
-                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">Doctor Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editDocName}
-                    onChange={(e) => setEditDocName(e.target.value)}
-                    class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                  />
-                </div>
-
-                <div>
-                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">Clinic Email *</label>
-                  <input
-                    type="email"
-                    required
-                    value={editDocEmail}
-                    onChange={(e) => setEditDocEmail(e.target.value)}
-                    class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                  />
-                </div>
-
-                <div>
-                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">Contact Phone *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editDocPhone}
-                    onChange={(e) => setEditDocPhone(e.target.value)}
-                    class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                  />
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Department</label>
-                    <input
-                      type="text"
-                      value={editDocDept}
-                      onChange={(e) => setEditDocDept(e.target.value)}
-                      class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Subscription Plan</label>
-                    <select
-                      value={editDocPlan}
-                      onChange={(e) => setEditDocPlan(e.target.value)}
-                      class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                    >
-                      <option value="Basic Access">Basic Access</option>
-                      <option value="Trial Access">Trial Access</option>
-                      <option value="Clinical Pro">Clinical Pro</option>
-                      <option value="Pro AI Suite">Pro AI Suite</option>
-                      <option value="Enterprise AI">Enterprise AI</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Subscription Expiry</label>
-                    <input
-                      type="date"
-                      required
-                      value={editDocExpiry}
-                      onChange={(e) => setEditDocExpiry(e.target.value)}
-                      class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-xs font-semibold text-on-surface-variant mb-1">Status</label>
-                    <select
-                      value={editDocStatus}
-                      onChange={(e) => setEditDocStatus(e.target.value)}
-                      class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
-                    >
-                      <option value="approved">Active</option>
-                      <option value="disabled">Disabled</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div class="flex gap-3 mt-6 pt-4 border-t border-border-subtle">
-                  <button
-                    type="button"
-                    onClick={() => setIsEditMode(false)}
-                    class="flex-1 bg-white border border-border-subtle text-secondary font-button py-2 rounded-lg text-xs hover:bg-surface-container-low transition-colors font-semibold"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    class="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-button py-2 rounded-lg text-xs transition-colors shadow-sm font-semibold"
-                  >
-                    Save Changes
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div class="p-6 space-y-6 text-xs text-secondary">
-                <div class="grid grid-cols-2 gap-y-4 gap-x-2">
-                  <div>
-                    <span class="block font-semibold text-on-surface-variant mb-0.5">Doctor Name</span>
-                    <span class="text-sm font-bold text-on-surface">{editingDoctor.name}</span>
-                  </div>
-                  <div>
-                    <span class="block font-semibold text-on-surface-variant mb-0.5">Department</span>
-                    <span class="text-sm font-bold text-primary">{editingDoctor.department || 'Independent'}</span>
-                  </div>
-                  <div>
-                    <span class="block font-semibold text-on-surface-variant mb-0.5">Clinic Email</span>
-                    <span class="text-sm font-semibold text-on-surface">{editingDoctor.email}</span>
-                  </div>
-                  <div>
-                    <span class="block font-semibold text-on-surface-variant mb-0.5">Contact Phone</span>
-                    <span class="text-sm font-semibold text-on-surface">{editingDoctor.phone}</span>
-                  </div>
-                  <div>
-                    <span class="block font-semibold text-on-surface-variant mb-0.5">Subscription Plan</span>
-                    <span class="text-sm font-semibold text-primary">{editingDoctor.subscription_plan || 'N/A'}</span>
-                  </div>
-                  <div>
-                    <span class="block font-semibold text-on-surface-variant mb-0.5">Expiry Date</span>
-                    <span class="text-sm font-semibold text-on-surface">{editingDoctor.subscription_expiry || 'N/A'}</span>
-                  </div>
-                  <div>
-                    <span class="block font-semibold text-on-surface-variant mb-0.5">Status</span>
-                    <span class={`px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize ${
-                      editingDoctor.is_active 
-                        ? 'bg-primary-light text-primary' 
-                        : 'bg-error-container text-error'
-                    }`}>
-                      {editingDoctor.is_active ? 'Active' : 'Disabled'}
-                    </span>
-                  </div>
-                </div>
-
-                <div class="flex flex-col gap-2 pt-6 border-t border-border-subtle mt-4">
-                  <div class="flex gap-2">
-                    <button
-                      onClick={() => setIsEditMode(true)}
-                      class="flex-1 py-2 bg-primary hover:bg-primary-hover text-on-primary rounded-lg font-bold transition-colors shadow-sm text-center"
-                    >
-                      Edit Profile
-                    </button>
-                    <button
-                      onClick={async () => {
-                        const res = await toggleDoctorStatus(editingDoctor.id);
-                        if (res) {
-                          setEditingDoctor(prev => ({ ...prev, is_active: res.is_active }));
-                        }
-                      }}
-                      class={`flex-1 py-2 rounded-lg font-bold transition-colors ${
-                        editingDoctor.is_active
-                          ? 'bg-status-warning/10 hover:bg-status-warning/20 text-status-warning'
-                          : 'bg-primary-light text-primary hover:bg-primary/20'
-                      }`}
-                    >
-                      {editingDoctor.is_active ? 'Disable Doctor' : 'Enable Doctor'}
-                    </button>
-                  </div>
-                  
-                  <button
-                    onClick={() => handleDeleteDoctor(editingDoctor.id, editingDoctor.name)}
-                    class="w-full py-2 bg-error-container text-error hover:bg-error/10 rounded-lg font-bold transition-colors text-center"
-                  >
-                    Delete Doctor Account
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-
       {/* Custom Confirmation Modal */}
       {confirmModal && (
-        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4" onClick={() => setConfirmModal(null)}>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4" onClick={() => setConfirmModal(null)}>
           <div
-            class="bg-white rounded-2xl border border-border-subtle shadow-2xl max-w-sm w-full overflow-hidden animate-fade-in"
+            className="bg-white rounded-2xl border border-border-subtle shadow-2xl max-w-sm w-full overflow-hidden animate-fade-in text-center"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
-            <div class="px-6 pt-6 pb-4 text-center">
-              <div class="w-14 h-14 rounded-full bg-error-container flex items-center justify-center mx-auto mb-4">
-                <span class={`material-symbols-outlined text-3xl ${confirmModal.iconColor}`}>{confirmModal.icon}</span>
+            <div className="px-6 pt-6 pb-4">
+              <div className="w-14 h-14 rounded-full bg-error-container flex items-center justify-center mx-auto mb-4">
+                <span className={`material-symbols-outlined text-3xl ${confirmModal.iconColor}`}>{confirmModal.icon}</span>
               </div>
-              <h3 class="font-bold text-base text-on-surface mb-2">{confirmModal.title}</h3>
-              <p class="text-xs text-secondary leading-relaxed">{confirmModal.description}</p>
+              <h3 className="font-bold text-base text-on-surface mb-2">{confirmModal.title}</h3>
+              <p className="text-xs text-secondary leading-relaxed">{confirmModal.description}</p>
             </div>
 
             {/* Divider */}
-            <div class="h-px bg-border-subtle mx-6" />
+            <div className="h-px bg-border-subtle mx-6" />
 
             {/* Actions */}
-            <div class="px-6 py-4 flex gap-3">
+            <div className="px-6 py-4 flex gap-3">
               <button
                 onClick={() => setConfirmModal(null)}
-                class="flex-1 py-2.5 rounded-xl border border-border-subtle text-secondary font-semibold text-sm hover:bg-surface-container transition-colors"
+                className="flex-1 py-2.5 rounded-xl border border-border-subtle text-secondary font-semibold text-sm hover:bg-surface-container transition-colors"
               >
-                Cancel
+                {isArabic ? 'إلغاء' : 'Cancel'}
               </button>
               <button
                 onClick={confirmModal.onConfirm}
-                class={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-colors shadow-sm ${confirmModal.confirmClass}`}
+                className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-colors shadow-sm ${confirmModal.confirmClass}`}
               >
                 {confirmModal.confirmLabel}
               </button>

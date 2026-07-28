@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Patients({ setActivePage }) {
   const { patients, addPatient, updatePatient, visits, generateGeneralSummary } = useApp();
+  const { t, isArabic } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -206,74 +208,78 @@ export default function Patients({ setActivePage }) {
   }, [selectedPatient]);
 
   return (
-    <div>
+    <div className="text-start">
       {/* Header */}
-      <header class="flex justify-between items-end mb-stack-lg border-b border-border-subtle pb-stack-md">
+      <header className="flex justify-between items-end mb-stack-lg border-b border-border-subtle pb-stack-md">
         <div>
-          <h1 class="font-display-lg text-headline-lg text-on-surface font-bold">Patient Directory</h1>
-          <p class="font-body-lg text-body-lg text-on-surface-variant mt-1">Manage and search your registered patients.</p>
+          <h1 className="font-display-lg text-headline-lg text-on-surface font-bold">
+            {t('patient_directory')}
+          </h1>
+          <p className="font-body-lg text-body-lg text-on-surface-variant mt-1">
+            {isArabic ? 'إدارة والبحث في سجلات المرضى المسجلين لديك.' : 'Manage and search your registered patients.'}
+          </p>
         </div>
         <div>
           <button
             onClick={() => setShowAddModal(true)}
-            class="bg-primary hover:bg-primary-hover text-on-primary font-button text-sm py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm"
+            className="bg-primary hover:bg-primary-hover text-on-primary font-button text-sm py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm font-bold"
           >
-            <span class="material-symbols-outlined text-[18px]">person_add</span>
-            Add New Patient
+            <span className="material-symbols-outlined text-[18px]">person_add</span>
+            {t('add_patient')}
           </button>
         </div>
       </header>
 
       {/* Search Input */}
-      <div class="mb-6 max-w-md relative">
-        <span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-on-surface-variant">
+      <div className="mb-6 max-w-md relative">
+        <span className={`material-symbols-outlined absolute ${isArabic ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-on-surface-variant`}>
           search
         </span>
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by name, phone or File ID..."
-          class="w-full pl-10 pr-4 py-2.5 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
+          placeholder={t('search_placeholder')}
+          className={`w-full ${isArabic ? 'pr-10 pl-4 text-right' : 'pl-10 pr-4 text-left'} py-2.5 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-sm`}
         />
       </div>
 
       {/* Patients Grid */}
-      <div class="bg-white rounded-xl border border-border-subtle shadow-sm overflow-hidden">
-        <table class="min-w-full divide-y divide-border-subtle">
-          <thead class="bg-bg-canvas">
+      <div className="bg-white rounded-xl border border-border-subtle shadow-sm overflow-hidden">
+        <table className="min-w-full divide-y divide-border-subtle">
+          <thead className="bg-bg-canvas">
             <tr>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">Name</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">Phone</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">Date of Birth</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">Gender</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">File ID</th>
-              <th scope="col" class="relative px-6 py-3">
-                <span class="sr-only">Actions</span>
+              <th scope="col" className={`px-6 py-3 text-xs font-semibold text-secondary uppercase tracking-wider ${isArabic ? 'text-right' : 'text-left'}`}>{t('patient_name')}</th>
+              <th scope="col" className={`px-6 py-3 text-xs font-semibold text-secondary uppercase tracking-wider ${isArabic ? 'text-right' : 'text-left'}`}>{t('phone')}</th>
+              <th scope="col" className={`px-6 py-3 text-xs font-semibold text-secondary uppercase tracking-wider ${isArabic ? 'text-right' : 'text-left'}`}>{t('dob')}</th>
+              <th scope="col" className={`px-6 py-3 text-xs font-semibold text-secondary uppercase tracking-wider ${isArabic ? 'text-right' : 'text-left'}`}>{t('gender')}</th>
+              <th scope="col" className={`px-6 py-3 text-xs font-semibold text-secondary uppercase tracking-wider ${isArabic ? 'text-right' : 'text-left'}`}>{t('file_id')}</th>
+              <th scope="col" className="relative px-6 py-3">
+                <span className="sr-only">Actions</span>
               </th>
             </tr>
           </thead>
-          <tbody class="bg-white divide-y divide-border-subtle">
+          <tbody className="bg-white divide-y divide-border-subtle">
             {filteredPatients.length === 0 ? (
               <tr>
-                <td colSpan="6" class="px-6 py-8 text-center text-secondary text-sm">
-                  لا توجد نتائج مطابقة للبحث
+                <td colSpan="6" className="px-6 py-8 text-center text-secondary text-sm">
+                  {isArabic ? 'لا توجد نتائج مطابقة للبحث' : 'No matching results found'}
                 </td>
               </tr>
             ) : (
               filteredPatients.map((patient) => (
-                <tr key={patient.id} class="hover:bg-surface-container-low transition-colors">
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-on-surface">
+                <tr key={patient.id} className="hover:bg-surface-container-low transition-colors">
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}>
                     {patient.name}
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-secondary">
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-secondary ${isArabic ? 'text-right' : 'text-left'}`}>
                     {patient.phone}
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-secondary">
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-secondary ${isArabic ? 'text-right' : 'text-left'}`}>
                     {patient.date_of_birth || 'N/A'}
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span class={`px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
+                  <td className={`px-6 py-4 whitespace-nowrap ${isArabic ? 'text-right' : 'text-left'}`}>
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
                       patient.gender === 'male' 
                         ? 'bg-primary-light text-primary' 
                         : 'bg-surface-container-high text-secondary'
@@ -454,56 +460,60 @@ export default function Patients({ setActivePage }) {
                 {!isEditMode ? (
                   /* VIEW MODE */
                   <div class="space-y-4">
-                    <div class="text-center md:text-left space-y-2">
-                      <div class="w-16 h-16 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-xl mx-auto md:mx-0 shadow-sm font-mono">
+                    <div className="text-center md:text-left space-y-2">
+                      <div className="w-16 h-16 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-xl mx-auto md:mx-0 shadow-sm font-mono">
                         {selectedPatient.name.split(' ').map(n => n[0]).join('')}
                       </div>
-                      <h4 class="font-button text-base text-on-surface font-bold">{selectedPatient.name}</h4>
-                      <span class={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${
+                      <h4 className="font-button text-base text-on-surface font-bold">{selectedPatient.name}</h4>
+                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${
                         selectedPatient.gender === 'male' ? 'bg-primary-light text-primary' : 'bg-surface-container-high text-secondary'
                       }`}>
-                        {selectedPatient.gender}
+                        {selectedPatient.gender === 'male' ? t('male') : t('female')}
                       </span>
                     </div>
                     
-                    <div class="space-y-3 pt-4 text-xs text-secondary leading-relaxed border-t border-border-subtle">
-                      <p><strong class="text-on-surface">File ID:</strong> <span class="font-mono text-primary font-bold">{selectedPatient.file_id || '—'}</span></p>
-                      <p><strong class="text-on-surface">Phone:</strong> {selectedPatient.phone}</p>
-                      <p><strong class="text-on-surface">Email:</strong> {selectedPatient.email || 'No Email'}</p>
-                      <p><strong class="text-on-surface">Date of Birth:</strong> {selectedPatient.date_of_birth || 'N/A'}</p>
+                    <div className="space-y-3 pt-4 text-xs text-secondary leading-relaxed border-t border-border-subtle">
+                      <p><strong className="text-on-surface">{t('file_id')}:</strong> <span className="font-mono text-primary font-bold">{selectedPatient.file_id || '—'}</span></p>
+                      <p><strong className="text-on-surface">{t('phone')}:</strong> {selectedPatient.phone}</p>
+                      <p><strong className="text-on-surface">{t('email_address')}:</strong> {selectedPatient.email || '—'}</p>
+                      <p><strong className="text-on-surface">{t('dob')}:</strong> {selectedPatient.date_of_birth || '—'}</p>
                       
-                      <div class="mt-4 pt-4 border-t border-border-subtle space-y-2">
-                        <strong class="text-xs text-on-surface block">Chronic Diseases (الأمراض المزمنة):</strong>
-                        <p class="p-2 bg-surface-container-low rounded border border-border-subtle text-on-surface-variant text-[11px] whitespace-pre-wrap">
-                          {selectedPatient.diseases || 'لا يوجد'}
+                      <div className="mt-4 pt-4 border-t border-border-subtle space-y-2">
+                        <strong className="text-xs text-on-surface block">
+                          {isArabic ? 'الأمراض المزمنة:' : 'Chronic Diseases:'}
+                        </strong>
+                        <p className="p-2 bg-surface-container-low rounded border border-border-subtle text-on-surface-variant text-[11px] whitespace-pre-wrap">
+                          {selectedPatient.diseases || (isArabic ? 'لا يوجد' : 'None')}
                         </p>
                       </div>
 
-                      <div class="space-y-2">
-                        <strong class="text-xs text-on-surface block">Lifestyle Habits (العادات):</strong>
-                        <p class="p-2 bg-surface-container-low rounded border border-border-subtle text-on-surface-variant text-[11px]">
-                          {selectedPatient.habits || 'لا يوجد'}
+                      <div className="space-y-2">
+                        <strong className="text-xs text-on-surface block">
+                          {isArabic ? 'العادات اليومية:' : 'Lifestyle Habits:'}
+                        </strong>
+                        <p className="p-2 bg-surface-container-low rounded border border-border-subtle text-on-surface-variant text-[11px]">
+                          {selectedPatient.habits || (isArabic ? 'لا يوجد' : 'None')}
                         </p>
                       </div>
 
-                      <div class="space-y-2 pt-2 border-t border-border-subtle/50" dir="rtl">
-                        <div class="flex justify-between items-center text-xs">
-                          <strong class="font-bold text-on-surface">الملخص العام للمريض:</strong>
+                      <div className="space-y-2 pt-2 border-t border-border-subtle/50">
+                        <div className="flex justify-between items-center text-xs">
+                          <strong className="font-bold text-on-surface">{t('general_summary')}</strong>
                           <button
                             type="button"
                             disabled={isGenerating}
                             onClick={handleAiGenerateSummary}
-                            class="text-primary hover:text-primary-hover font-bold text-[10px] flex items-center gap-1 bg-primary/5 hover:bg-primary/10 px-2 py-0.5 rounded transition-colors border border-primary/10"
+                            className="text-primary hover:text-primary-hover font-bold text-[10px] flex items-center gap-1 bg-primary/5 hover:bg-primary/10 px-2 py-0.5 rounded transition-colors border border-primary/10"
                           >
                             {isGenerating ? (
-                              <><span class="material-symbols-outlined text-[12px] animate-spin">progress_activity</span> جاري التوليد...</>
+                              <><span className="material-symbols-outlined text-[12px] animate-spin">progress_activity</span> {isArabic ? 'جاري التوليد...' : 'Generating...'}</>
                             ) : (
-                              <><span class="material-symbols-outlined text-[12px]">auto_stories</span> توليد بالذكاء 🪄</>
+                              <><span className="material-symbols-outlined text-[12px]">auto_stories</span> {isArabic ? 'توليد بالذكاء 🪄' : 'Generate with AI 🪄'}</>
                             )}
                           </button>
                         </div>
-                        <p class="p-3 bg-primary-light/30 text-primary rounded-xl border border-primary/20 text-on-surface-variant text-[11px] leading-relaxed text-right whitespace-pre-wrap">
-                          {selectedPatient.general_summary || 'لا يوجد ملخص عام مسجل للمريض حتى الآن.'}
+                        <p className={`p-3 bg-primary-light/30 text-primary rounded-xl border border-primary/20 text-on-surface-variant text-[11px] leading-relaxed ${isArabic ? 'text-right' : 'text-left'} whitespace-pre-wrap`}>
+                          {selectedPatient.general_summary || t('no_general_summary')}
                         </p>
                       </div>
                     </div>

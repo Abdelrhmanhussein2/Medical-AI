@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import StatsCard from '../components/StatsCard';
 
 export default function AiChat({ initialPatientId }) {
   const { currentUser } = useApp();
+  const { t, isArabic } = useLanguage();
   const messagesEndRef = useRef(null);
 
   const [threads, setThreads] = useState([]);
@@ -449,7 +451,7 @@ export default function AiChat({ initialPatientId }) {
   );
 
   return (
-    <div className="flex h-screen bg-bg-card overflow-hidden relative animate-fade-in">
+    <div className="flex h-screen bg-bg-card overflow-hidden relative animate-fade-in text-start">
       {/* Left Sidebar: Conversations List */}
       <div className={`flex flex-col border-r border-border-subtle bg-white flex-shrink-0 transition-all duration-300 ${isSidebarOpen ? 'w-80' : 'w-0 overflow-hidden border-r-0'}`}>
         {/* Search & Filter Header */}
@@ -459,15 +461,15 @@ export default function AiChat({ initialPatientId }) {
             className="w-full bg-primary hover:bg-primary-hover text-on-primary font-bold text-xs py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 mb-4 transition-colors duration-300 active:scale-95 shadow-sm"
           >
             <span className="material-symbols-outlined text-[16px]">add</span>
-            New AI Session
+            {isArabic ? 'جلسة ذكاء اصطناعي جديدة' : 'New AI Session'}
           </button>
           <div className="relative">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-secondary text-[18px]">search</span>
+            <span className={`material-symbols-outlined absolute ${isArabic ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 text-secondary text-[18px]`}>search</span>
             <input 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white text-on-surface font-body-sm text-xs rounded-lg pl-9 pr-4 py-2.5 border border-border-subtle focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none" 
-              placeholder="Search chats..." 
+              className={`w-full bg-white text-on-surface font-body-sm text-xs rounded-lg ${isArabic ? 'pr-9 pl-4 text-right' : 'pl-9 pr-4 text-left'} py-2.5 border border-border-subtle focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none`} 
+              placeholder={isArabic ? 'ابحث عن محادثة...' : 'Search chats...'} 
               type="text" 
             />
           </div>
@@ -478,11 +480,11 @@ export default function AiChat({ initialPatientId }) {
           {loadingThreads ? (
             <div className="text-center py-8 text-secondary text-xs">
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary mx-auto mb-2"></div>
-              Loading chat sessions...
+              {isArabic ? 'جاري تحميل جلسات المحادثة...' : 'Loading chat sessions...'}
             </div>
           ) : filteredThreads.length === 0 ? (
             <div className="text-center py-8 text-secondary text-xs">
-              No conversations found.
+              {isArabic ? 'لا توجد محادثات.' : 'No conversations found.'}
             </div>
           ) : (
             filteredThreads.map(t => {
@@ -497,22 +499,24 @@ export default function AiChat({ initialPatientId }) {
                       : 'hover:bg-bg-canvas border-transparent'
                   }`}
                 >
-                  <div className="flex justify-between items-start mb-1 gap-2 pr-12">
+                  <div className={`flex justify-between items-start mb-1 gap-2 ${isArabic ? 'pl-12' : 'pr-12'}`}>
                     <div className={`text-xs font-bold truncate ${isActive ? 'text-primary' : 'text-on-surface'}`}>
                       {t.title}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-2">
                     <span className="px-2 py-0.5 rounded-full bg-white text-primary text-[9px] font-label-caps border border-border-subtle">
-                      {t.dept || 'General'}
+                      {t.dept || (isArabic ? 'عام' : 'General')}
                     </span>
                     {t.is_pinned && (
-                      <span className="px-2 py-0.5 rounded-full bg-primary-light text-primary text-[9px] font-label-caps font-bold">Pinned</span>
+                      <span className="px-2 py-0.5 rounded-full bg-primary-light text-primary text-[9px] font-label-caps font-bold">
+                        {isArabic ? 'مثبت' : 'Pinned'}
+                      </span>
                     )}
                   </div>
 
                   {/* Actions (hover triggers) */}
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 p-1 rounded-lg">
+                  <div className={`absolute ${isArabic ? 'left-2' : 'right-2'} top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 p-1 rounded-lg`}>
                     <button 
                       onClick={(e) => handleTogglePin(e, t.id, t.is_pinned)}
                       className="p-1 hover:text-primary text-secondary rounded"

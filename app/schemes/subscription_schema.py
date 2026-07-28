@@ -7,6 +7,7 @@ from decimal import Decimal
 class BundleResponse(BaseModel):
     id: UUID
     name: str
+    name_ar: Optional[str] = None
     target_type: str
     max_doctors: Optional[int] = None
     duration_days: int
@@ -38,6 +39,7 @@ class SubscriptionResponse(BaseModel):
     
     # Custom fields for frontend visibility
     bundle_name: Optional[str] = None
+    bundle_name_ar: Optional[str] = None
     seats_used: Optional[int] = None
     managed_by_org: Optional[bool] = False
 

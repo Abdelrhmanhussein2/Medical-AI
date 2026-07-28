@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useSession } from '../context/SessionContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function LiveSession({ appointmentId, setActivePage }) {
   const { appointments, patients } = useApp();
+  const { t, isArabic } = useLanguage();
   const {
     isRecording,
     duration,
@@ -244,49 +246,51 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                 </div>
               </button>
 
-              <h3 class={`text-xs font-bold tracking-widest uppercase transition-colors ${
-                isRecording ? 'text-[#52D2C8]' : isSummarizing ? 'text-yellow-400' : summaryDone ? 'text-green-400' : 'text-white/40'
-              }`}>
+              <h3 className={isRecording ? 'text-[#52D2C8]' : isSummarizing ? 'text-yellow-400' : summaryDone ? 'text-green-400' : 'text-white/40'}>
                 {isSummarizing 
-                  ? 'AI is analyzing the session...' 
+                  ? (isArabic ? 'جاري تحليل الجلسة بواسطة الذكاء الاصطناعي...' : 'AI is analyzing the session...') 
                   : isRecording 
-                    ? 'Voice Recording & Whisper Transcription Active...' 
+                    ? (isArabic ? 'تسجيل الصوت وكتابة النص الفورية نشطة...' : 'Voice Recording & Whisper Transcription Active...') 
                     : summaryDone 
-                      ? 'Session Summarized ✓' 
-                      : 'Click Mic to Start Consultation Session'
+                      ? (isArabic ? 'اكتمل الملخص الطبي ✓' : 'Session Summarized ✓') 
+                      : (isArabic ? 'اضغط على المايك لبدء جلسة الكشف الطبي' : 'Click Mic to Start Consultation Session')
                 }
               </h3>
             </div>
 
             {/* Transcription Feed */}
-            <div class="bg-white rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col h-[380px]">
-              <div class="p-5 border-b border-border-subtle flex justify-between items-center">
-                <h3 class="text-xs font-black tracking-widest text-secondary uppercase">Session Transcript (Whisper)</h3>
-                <span class="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded">AUTOMATIC LANG</span>
+            <div className="bg-white rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col h-[380px]">
+              <div className="p-5 border-b border-border-subtle flex justify-between items-center">
+                <h3 className="text-xs font-black tracking-widest text-secondary uppercase">
+                  {isArabic ? 'النص الطبي الفوري (Whisper)' : 'Session Transcript (Whisper)'}
+                </h3>
+                <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded">AUTOMATIC LANG</span>
               </div>
 
-              <div class="flex-1 p-6 overflow-y-auto space-y-4 bg-surface-container-low">
+              <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-surface-container-low">
                 {transcriptLines.length === 0 ? (
-                  <div class="flex flex-col items-center justify-center h-full text-center text-secondary">
-                    <span class="material-symbols-outlined text-3xl mb-2 text-outline-variant">transcribe</span>
-                    <p class="text-sm">Real-time Whisper transcription will appear here in chunks...</p>
+                  <div className="flex flex-col items-center justify-center h-full text-center text-secondary">
+                    <span className="material-symbols-outlined text-3xl mb-2 text-outline-variant">transcribe</span>
+                    <p className="text-sm">
+                      {isArabic ? 'سيظهر النص المترجم المحول من المحادثة هنا مباشرة...' : 'Real-time Whisper transcription will appear here in chunks...'}
+                    </p>
                   </div>
                 ) : (
                   transcriptLines.map(line => (
-                    <div key={line.id} class="flex gap-4 animate-fade-in bg-white p-4 rounded-xl border border-border-subtle shadow-xs">
-                      <div class="w-8 h-8 rounded-lg bg-primary-light text-primary flex items-center justify-center font-bold text-xs shrink-0">
-                        <span class="material-symbols-outlined text-[16px]">chat_bubble</span>
+                    <div key={line.id} className="flex gap-4 animate-fade-in bg-white p-4 rounded-xl border border-border-subtle shadow-xs">
+                      <div className="w-8 h-8 rounded-lg bg-primary-light text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                        <span className="material-symbols-outlined text-[16px]">chat_bubble</span>
                       </div>
-                      <div class="flex-1 pt-0.5 text-sm text-on-surface leading-relaxed">
+                      <div className="flex-1 pt-0.5 text-sm text-on-surface leading-relaxed">
                         {line.text}
                       </div>
                     </div>
                   ))
                 )}
                 {isRecording && transcriptLines.length > 0 && (
-                  <div class="flex items-center gap-2 text-xs text-secondary italic animate-pulse pl-12">
-                    <span class="w-1.5 h-1.5 bg-secondary rounded-full"></span>
-                    <span>Listening & transcribing next chunk...</span>
+                  <div className={`flex items-center gap-2 text-xs text-secondary italic animate-pulse ${isArabic ? 'pr-12 pl-0' : 'pl-12 pr-0'}`}>
+                    <span className="w-1.5 h-1.5 bg-secondary rounded-full"></span>
+                    <span>{isArabic ? 'جاري الاستماع وتدوين الجملة القادمة...' : 'Listening & transcribing next chunk...'}</span>
                   </div>
                 )}
                 <div ref={transcriptEndRef} />

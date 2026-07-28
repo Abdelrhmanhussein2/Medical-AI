@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Appointments({ setActivePage }) {
   const { appointments, patients, currentUser, addAppointment, updateAppointmentStatus, addPatient } = useApp();
+  const { t, isArabic } = useLanguage();
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [now, setNow] = useState(new Date());
@@ -107,37 +109,37 @@ export default function Appointments({ setActivePage }) {
   const getStatusBadge = (status, id, appt) => {
     if (status === 'completed') {
       return (
-        <div class="flex items-center gap-1.5 px-4 py-2 bg-surface-container-high rounded-full text-secondary text-sm font-semibold">
-          <span class="material-symbols-outlined text-[16px]">check_circle</span>
-          Completed
+        <div className="flex items-center gap-1.5 px-4 py-2 bg-surface-container-high rounded-full text-secondary text-sm font-semibold">
+          <span className="material-symbols-outlined text-[16px]">check_circle</span>
+          {isArabic ? 'مكتملة' : 'Completed'}
         </div>
       );
     }
 
     const renderMoreMenu = () => (
-      <div class="relative">
+      <div className="relative">
         <button 
           onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === id ? null : id); }}
-          class="p-2 text-secondary hover:bg-surface-container rounded-lg transition-colors"
+          className="p-2 text-secondary hover:bg-surface-container rounded-lg transition-colors"
         >
-          <span class="material-symbols-outlined text-[20px]">more_vert</span>
+          <span className="material-symbols-outlined text-[20px]">more_vert</span>
         </button>
         {openMenuId === id && (
-          <div class="absolute right-0 top-10 w-44 bg-white border border-border-subtle rounded-xl shadow-lg z-30 overflow-hidden animate-fade-in">
+          <div className={`absolute ${isArabic ? 'left-0' : 'right-0'} top-10 w-44 bg-white border border-border-subtle rounded-xl shadow-lg z-30 overflow-hidden animate-fade-in`}>
             <button
               onClick={() => handleOpenEdit(appt)}
-              class="w-full flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors text-left"
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-on-surface hover:bg-surface-container-low transition-colors text-start"
             >
-              <span class="material-symbols-outlined text-[18px] text-secondary">edit</span>
-              Edit
+              <span className="material-symbols-outlined text-[18px] text-secondary">edit</span>
+              {isArabic ? 'تعديل' : 'Edit'}
             </button>
-            <div class="border-t border-border-subtle"></div>
+            <div className="border-t border-border-subtle"></div>
             <button
               onClick={() => { updateAppointmentStatus(id, 'cancelled'); setOpenMenuId(null); }}
-              class="w-full flex items-center gap-3 px-4 py-3 text-sm text-error hover:bg-error-container/30 transition-colors text-left"
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-error hover:bg-error-container/30 transition-colors text-start"
             >
-              <span class="material-symbols-outlined text-[18px]">cancel</span>
-              Cancel Appointment
+              <span className="material-symbols-outlined text-[18px]">cancel</span>
+              {isArabic ? 'إلغاء الموعد' : 'Cancel Appointment'}
             </button>
           </div>
         )}
@@ -150,28 +152,28 @@ export default function Appointments({ setActivePage }) {
         const { start, end } = timeRange;
         if (now > end) {
           return (
-            <div class="flex items-center gap-2 relative">
+            <div className="flex items-center gap-2 relative">
               {renderMoreMenu()}
               <button 
                  disabled
-                 class="px-5 py-2.5 bg-surface-container-low text-secondary/40 rounded-lg text-sm font-bold border border-border-subtle cursor-not-allowed flex items-center gap-2"
+                 className="px-5 py-2.5 bg-surface-container-low text-secondary/40 rounded-lg text-sm font-bold border border-border-subtle cursor-not-allowed flex items-center gap-2"
                  title="Passed"
               >
-                 Join Call (Passed)
+                 {isArabic ? 'بدء الكول (انتهى)' : 'Join Call (Passed)'}
               </button>
             </div>
           );
         }
         if (now < start) {
           return (
-            <div class="flex items-center gap-2 relative">
+            <div className="flex items-center gap-2 relative">
               {renderMoreMenu()}
               <button 
                  disabled
-                 class="px-5 py-2.5 bg-surface-container-low text-secondary/40 rounded-lg text-sm font-bold border border-border-subtle cursor-not-allowed flex items-center gap-2"
+                 className="px-5 py-2.5 bg-surface-container-low text-secondary/40 rounded-lg text-sm font-bold border border-border-subtle cursor-not-allowed flex items-center gap-2"
                  title="Upcoming"
               >
-                 Join Call (Upcoming)
+                 {isArabic ? 'بدء الكول (قريباً)' : 'Join Call (Upcoming)'}
               </button>
             </div>
           );
@@ -179,35 +181,35 @@ export default function Appointments({ setActivePage }) {
       }
 
       return (
-        <div class="flex items-center gap-2 relative">
+        <div className="flex items-center gap-2 relative">
           {renderMoreMenu()}
           <button 
              onClick={() => setActivePage(`live-session-${id}`)}
-             class="px-5 py-2.5 bg-primary text-on-primary rounded-lg text-sm font-bold shadow-sm hover:bg-primary-hover transition-colors flex items-center gap-2 border border-primary/20"
+             className="px-5 py-2.5 bg-primary text-on-primary rounded-lg text-sm font-bold shadow-sm hover:bg-primary-hover transition-colors flex items-center gap-2 border border-primary/20"
           >
-             Join Call
+             {isArabic ? 'بدء الكول 🎙️' : 'Join Call'}
           </button>
         </div>
       );
     }
     if (status === 'cancelled') {
        return (
-        <div class="flex items-center gap-1.5 px-4 py-2 bg-error-container/50 rounded-full text-error text-sm font-semibold">
-          <span class="material-symbols-outlined text-[16px]">cancel</span>
-          Cancelled
+        <div className="flex items-center gap-1.5 px-4 py-2 bg-error-container/50 rounded-full text-error text-sm font-semibold">
+          <span className="material-symbols-outlined text-[16px]">cancel</span>
+          {isArabic ? 'ملغية' : 'Cancelled'}
         </div>
        );
     }
     if (status === 'no_show') {
        return (
-        <div class="flex items-center gap-1.5 px-4 py-2 bg-surface-container rounded-full text-secondary text-sm font-semibold">
-          <span class="material-symbols-outlined text-[16px]">person_off</span>
-          No Show
+        <div className="flex items-center gap-1.5 px-4 py-2 bg-surface-container rounded-full text-secondary text-sm font-semibold">
+          <span className="material-symbols-outlined text-[16px]">person_off</span>
+          {isArabic ? 'لم يحضر' : 'No Show'}
         </div>
        );
     }
     return (
-       <div class="flex items-center gap-1.5 px-4 py-2 bg-surface-container rounded-full text-secondary text-sm font-semibold capitalize">
+       <div className="flex items-center gap-1.5 px-4 py-2 bg-surface-container rounded-full text-secondary text-sm font-semibold capitalize">
           {status}
        </div>
     );
@@ -380,30 +382,38 @@ export default function Appointments({ setActivePage }) {
   };
 
   return (
-    <div class="max-w-7xl mx-auto py-2">
+    <div className="max-w-7xl mx-auto py-2 text-start">
       {/* Header */}
-      <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 pb-6 border-b border-border-subtle">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 pb-6 border-b border-border-subtle">
         <div>
-          <h1 class="font-display-lg text-headline-lg text-on-surface font-bold">Appointments</h1>
-          <p class="font-body-lg text-body-lg text-on-surface-variant mt-1">Manage your schedule and upcoming clinical consultations.</p>
+          <h1 className="font-display-lg text-headline-lg text-on-surface font-bold">
+            {t('appointments_title')}
+          </h1>
+          <p className="font-body-lg text-body-lg text-on-surface-variant mt-1">
+            {isArabic ? 'إدارة المواعيد والزيارات السريرية القادمة الخاصة بك.' : 'Manage your schedule and upcoming clinical consultations.'}
+          </p>
         </div>
-        <div class="flex items-center gap-4 w-full md:w-auto">
-          <div class="relative w-full md:w-64">
-            <span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-outline-variant text-[20px]">search</span>
+        
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className="relative w-full md:w-64">
+            <span className={`material-symbols-outlined absolute ${isArabic ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-outline-variant text-[20px]`}>
+              search
+            </span>
             <input 
               type="text" 
-              placeholder="Search patient..."
+              placeholder={isArabic ? 'ابحث عن مريض...' : 'Search patient...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              class="w-full pl-10 pr-4 py-2 border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
+              className={`w-full ${isArabic ? 'pr-10 pl-4 text-right' : 'pl-10 pr-4 text-left'} py-2 border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-sm`}
             />
           </div>
+          
           <button
             onClick={() => setShowAddModal(true)}
-            class="shrink-0 bg-primary hover:bg-primary-hover text-on-primary font-bold text-sm py-2 px-5 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm"
+            className="shrink-0 bg-primary hover:bg-primary-hover text-on-primary font-bold text-sm py-2 px-5 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm"
           >
-            <span class="material-symbols-outlined text-[18px]">add</span>
-            New Appointment
+            <span className="material-symbols-outlined text-[18px]">add</span>
+            {isArabic ? 'موعد جديد' : 'New Appointment'}
           </button>
         </div>
       </header>

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { useLanguage } from '../context/LanguageContext';
 import SbrLogo from '../components/SbrLogo';
 
 export default function Login({ setActivePage }) {
   const { login } = useApp();
-  const [role, setRole] = useState('doctor'); // doctor, org, or admin
+  const { lang, setLang, isArabic } = useLanguage();
+  const [role, setRole] = useState('doctor');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -27,118 +29,110 @@ export default function Login({ setActivePage }) {
   };
 
   return (
-    <div class="min-h-screen flex bg-bg-canvas font-body-md animate-fade-in">
-      {/* Left side: Premium Branding & Illustration Panel */}
-      <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-tr from-primary-light via-white to-primary/10 items-center justify-center p-16 relative overflow-hidden border-r border-border-subtle">
-        <div class="absolute -top-20 -left-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
-        <div class="absolute -bottom-20 -right-20 w-96 h-96 bg-tertiary-fixed-dim/5 rounded-full blur-3xl"></div>
-        
-        <div class="max-w-md space-y-8 relative z-10 text-left">
-          <div class="flex items-center gap-3">
-            <SbrLogo size={56} color="#24564C" showText={true} textClass="text-primary" />
-          </div>
-          <div class="inline-flex items-center gap-2 px-3.5 py-1 bg-white border border-border-subtle rounded-full text-xs font-semibold text-primary shadow-sm">
-            <span class="material-symbols-outlined text-[16px] fill">shield_locked</span>
-            HIPAA Compliant & SOC2 Certified
-          </div>
-          <div class="space-y-4">
-            <h2 class="text-4xl font-bold text-primary font-headline-lg leading-tight">
-              Elevating Clinical Precision with Generative AI
-            </h2>
-            <p class="text-sm text-secondary leading-relaxed">
-              Capture patient consultations naturally, auto-generate high-quality SOAP notes, and manage your schedules seamlessly with SBR AI.
-            </p>
-          </div>
+    <div className={`min-h-screen bg-bg-canvas font-body-md relative ${isArabic ? 'rtl' : 'ltr'}`}>
+      <div className={`min-h-screen flex animate-fade-in ${isArabic ? 'flex-row-reverse' : 'flex-row'}`}>
+        {/* Branding Panel */}
+        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-tr from-primary-light via-white to-primary/10 items-center justify-center p-16 relative overflow-hidden border-r border-border-subtle">
+          <div className="absolute -top-20 -left-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-tertiary-fixed-dim/5 rounded-full blur-3xl"></div>
           
-          {/* Visual Floating Preview Card */}
-          <div class="p-6 bg-white/90 backdrop-blur-md rounded-xl border border-border-subtle shadow-ambient animate-float-up">
-            <div class="flex items-center gap-3 mb-3">
-              <span class="material-symbols-outlined text-primary bg-primary-light p-2 rounded-lg text-lg">auto_awesome</span>
-              <span class="text-xs font-bold text-on-surface uppercase tracking-wider font-label-caps">Clinical Engine</span>
+          <div className={`max-w-md space-y-8 relative z-10 ${isArabic ? 'text-right' : 'text-left'}`}>
+            <div className="flex items-center gap-3">
+              <SbrLogo size={56} color="#24564C" showText={true} textClass="text-primary" />
             </div>
-            <p class="text-xs text-secondary leading-relaxed">
-              Our ambient AI listens in the background and structures the consultation data without manual intervention, allowing you to focus entirely on your patients.
-            </p>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-white border border-border-subtle rounded-full text-xs font-semibold text-primary shadow-sm">
+              <span className="material-symbols-outlined text-[16px]">shield_locked</span>
+              HIPAA Compliant &amp; SOC2 Certified
+            </div>
+            <div className="space-y-4">
+              <h2 className="text-4xl font-bold text-primary font-headline-lg leading-tight">
+                {isArabic
+                  ? 'رفع دقة التوثيق السريري بالذكاء الاصطناعي'
+                  : 'Elevating Clinical Precision with Generative AI'}
+              </h2>
+              <p className="text-sm text-secondary leading-relaxed">
+                {isArabic
+                  ? 'التقط استشارات المرضى بشكل طبيعي، وولّد تلقائياً ملاحظات SOAP عالية الجودة، وأدر جداولك بسلاسة مع SBR AI.'
+                  : 'Capture patient consultations naturally, auto-generate high-quality SOAP notes, and manage your schedules seamlessly with SBR AI.'}
+              </p>
+            </div>
+            
+            <div className="p-6 bg-white/90 backdrop-blur-md rounded-xl border border-border-subtle shadow-ambient animate-float-up">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="material-symbols-outlined text-primary bg-primary-light p-2 rounded-lg text-lg">auto_awesome</span>
+                <span className="text-xs font-bold text-on-surface uppercase tracking-wider font-label-caps">
+                  {isArabic ? 'محرك الذكاء السريري' : 'Clinical Engine'}
+                </span>
+              </div>
+              <p className="text-sm text-secondary leading-relaxed">
+                {isArabic
+                  ? 'يستمع الذكاء الاصطناعي في الخلفية ويهيكل بيانات الاستشارة دون تدخل يدوي، مما يتيح لك التركيز على مرضاك.'
+                  : 'Our ambient AI listens in the background and structures the consultation data without manual intervention, allowing you to focus entirely on your patients.'}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Right side: Login Form Container */}
-      <div class="w-full lg:w-1/2 flex flex-col justify-center py-12 px-6 sm:px-12 lg:px-24 bg-white">
-        <div class="mx-auto w-full max-w-sm">
-          <div class="text-center lg:text-left mb-8 flex flex-col items-center lg:items-start">
-            <div class="mb-4 lg:hidden">
-              <SbrLogo size={44} color="#24564C" showText={true} textClass="text-primary" />
-            </div>
-            <h2 class="font-display-lg text-headline-lg text-primary font-bold">
-              Welcome back
-            </h2>
-            <p class="mt-2 text-sm text-secondary text-center lg:text-left">
-              Please enter your credentials to access your workspace.
-            </p>
+        {/* Form Panel */}
+        <div className="w-full lg:w-1/2 flex flex-col justify-center py-12 px-6 sm:px-12 lg:px-24 bg-white relative">
+          {/* Floating Language Switcher */}
+          <div className={`absolute top-6 ${isArabic ? 'left-6' : 'right-6'} z-10`}>
+            <button
+              onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-border-subtle bg-white text-secondary hover:text-primary rounded-lg text-xs font-bold shadow-sm transition-all duration-300 active:scale-95 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">language</span>
+              <span>{lang === 'ar' ? 'English' : 'العربية'}</span>
+            </button>
           </div>
 
-          <div class="bg-white border border-border-subtle rounded-xl p-6 shadow-sm">
+          <div className="mx-auto w-full max-w-sm">
+            <div className="text-center mb-8 flex flex-col items-center">
+              <div className="mb-4 lg:hidden">
+                <SbrLogo size={44} color="#24564C" showText={true} textClass="text-primary" />
+              </div>
+              <h2 className="font-display-lg text-headline-lg text-primary font-bold">
+                {isArabic ? 'مرحباً بعودتك' : 'Welcome back'}
+              </h2>
+              <p className="mt-2 text-sm text-secondary text-center">
+                {isArabic
+                  ? 'أدخل بياناتك للوصول إلى مساحة عملك.'
+                  : 'Please enter your credentials to access your workspace.'}
+              </p>
+            </div>
+
+          <div className="bg-white border border-border-subtle rounded-xl p-6 shadow-sm">
             {/* Role Switcher */}
-            <div class="flex gap-1 mb-6 p-1 bg-surface-container-low rounded-lg">
-              <button
-                onClick={() => {
-                  setRole('doctor');
-                  setEmail('');
-                  setPassword('');
-                }}
-                type="button"
-                class={`flex-1 py-1.5 text-[11px] font-bold rounded-md transition-colors ${
-                  role === 'doctor' 
-                    ? 'bg-white text-primary shadow-sm' 
-                    : 'text-secondary hover:text-primary'
-                }`}
-              >
-                Doctor
-              </button>
-              <button
-                onClick={() => {
-                  setRole('org');
-                  setEmail('');
-                  setPassword('');
-                }}
-                type="button"
-                class={`flex-1 py-1.5 text-[11px] font-bold rounded-md transition-colors ${
-                  role === 'org' 
-                    ? 'bg-white text-primary shadow-sm' 
-                    : 'text-secondary hover:text-primary'
-                }`}
-              >
-                Organization
-              </button>
-              <button
-                onClick={() => {
-                  setRole('admin');
-                  setEmail('');
-                  setPassword('');
-                }}
-                type="button"
-                class={`flex-1 py-1.5 text-[11px] font-bold rounded-md transition-colors ${
-                  role === 'admin' 
-                    ? 'bg-white text-primary shadow-sm' 
-                    : 'text-secondary hover:text-primary'
-                }`}
-              >
-                Admin
-              </button>
+            <div className="flex gap-1 mb-6 p-1 bg-surface-container-low rounded-lg">
+              {[
+                { key: 'doctor', ar: 'طبيب', en: 'Doctor' },
+                { key: 'org', ar: 'منظمة', en: 'Organization' },
+                { key: 'admin', ar: 'مشرف', en: 'Admin' },
+              ].map(({ key, ar, en }) => (
+                <button
+                  key={key}
+                  onClick={() => { setRole(key); setEmail(''); setPassword(''); }}
+                  type="button"
+                  className={`flex-1 py-1.5 text-[11px] font-bold rounded-md transition-colors ${
+                    role === key ? 'bg-white text-primary shadow-sm' : 'text-secondary hover:text-primary'
+                  }`}
+                >
+                  {isArabic ? ar : en}
+                </button>
+              ))}
             </div>
 
             {error && (
-              <div class="mb-4 bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2">
-                <span class="material-symbols-outlined text-[18px]">error</span>
+              <div className="mb-4 bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px]">error</span>
                 <span>{error}</span>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} class="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">
-                  Email Address
+                <label className={`block text-xs font-semibold text-on-surface-variant mb-1 ${isArabic ? 'text-right' : 'text-left'}`}>
+                  {isArabic ? 'البريد الإلكتروني' : 'Email Address'}
                 </label>
                 <input
                   type="email"
@@ -146,19 +140,19 @@ export default function Login({ setActivePage }) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={
-                    role === 'admin' 
-                      ? 'admin@medical-ai.com' 
-                      : role === 'org' 
-                        ? 'org@cardiology.com' 
-                        : 'doctor@example.com'
+                    role === 'admin'
+                      ? 'admin@medical-ai.com'
+                      : role === 'org'
+                      ? 'org@cardiology.com'
+                      : 'doctor@example.com'
                   }
-                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                  className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
                 />
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">
-                  Password
+                <label className={`block text-xs font-semibold text-on-surface-variant mb-1 ${isArabic ? 'text-right' : 'text-left'}`}>
+                  {isArabic ? 'كلمة المرور' : 'Password'}
                 </label>
                 <input
                   type="password"
@@ -166,43 +160,43 @@ export default function Login({ setActivePage }) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                  className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
                 />
               </div>
 
               <button
                 type="submit"
-                class="w-full bg-primary hover:bg-primary-hover text-on-primary font-button py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm font-semibold mt-6 text-sm"
+                className="w-full bg-primary hover:bg-primary-hover text-on-primary font-button py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm font-semibold mt-6 text-sm"
               >
-                Sign In
+                {isArabic ? 'تسجيل الدخول' : 'Sign In'}
               </button>
             </form>
 
             {role === 'doctor' && (
-              <div class="mt-6 text-center">
-                <p class="text-xs text-secondary">
-                  New doctor?{' '}
+              <div className="mt-6 text-center">
+                <p className="text-xs text-secondary">
+                  {isArabic ? 'طبيب جديد؟ ' : 'New doctor? '}
                   <button
                     onClick={() => setActivePage('register')}
                     type="button"
-                    class="text-primary hover:underline font-semibold"
+                    className="text-primary hover:underline font-semibold"
                   >
-                    Register here
+                    {isArabic ? 'سجّل هنا' : 'Register here'}
                   </button>
                 </p>
               </div>
             )}
 
             {role === 'org' && (
-              <div class="mt-6 text-center">
-                <p class="text-xs text-secondary">
-                  New organization?{' '}
+              <div className="mt-6 text-center">
+                <p className="text-xs text-secondary">
+                  {isArabic ? 'منظمة جديدة؟ ' : 'New organization? '}
                   <button
                     onClick={() => setActivePage('register')}
                     type="button"
-                    class="text-primary hover:underline font-semibold"
+                    className="text-primary hover:underline font-semibold"
                   >
-                    Register organization
+                    {isArabic ? 'سجّل منظمتك' : 'Register organization'}
                   </button>
                 </p>
               </div>
@@ -211,6 +205,6 @@ export default function Login({ setActivePage }) {
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }
-

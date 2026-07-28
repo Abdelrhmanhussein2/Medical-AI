@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, status
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, status, Depends
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from uuid import UUID
 from app.schemes.doctor_schema import DoctorCreate, DoctorResponse
 from app.services.doctor_service import doctor_service
 from app.core.database import db
+from app.core.dependencies import get_current_user
 
 router = APIRouter(prefix="/doctors", tags=["Doctors"])
 
@@ -151,6 +152,39 @@ async def activate_doctor_subscription(doctor_id: UUID, body: SubscriptionActiva
             return item
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class DoctorUpdate(BaseModel):
+    name: str
+    email: EmailStr
+    specialization: str
+
+@router.patch("/me", response_model=DoctorResponse)
+async def update_my_profile(body: DoctorUpdate, current_user: dict = Depends(get_current_user)):
+    """
+    Update logged-in doctor's name, email, and specialization.
+    """
+    try:
+        doctor_id = UUID(current_user["id"]) if isinstance(current_user["id"], str) else current_user["id"]
+        updated = await doctor_service.update_doctor(doctor_id, body.name, body.email, body.specialization)
+        if not updated:
+            raise HTTPException(status_code=404, detail="Doctor not found")
+        return updated
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_my_account(current_user: dict = Depends(get_current_user)):
+    """
+    Delete logged-in doctor's profile and clear data.
+    """
+    try:
+        doctor_id = UUID(current_user["id"]) if isinstance(current_user["id"], str) else current_user["id"]
+        await doctor_service.delete_doctor(doctor_id)
+        return None
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

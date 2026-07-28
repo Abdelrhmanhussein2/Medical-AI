@@ -1,11 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useSession } from '../context/SessionContext';
+import { useLanguage } from '../context/LanguageContext';
 import SbrLogo from './SbrLogo';
+import ConfirmModal from './modals/ConfirmModal';
 
 export default function Layout({ children, activePage, setActivePage }) {
   const { currentUser, logout } = useApp();
   const { isRecording, duration, appointmentId, patient } = useSession();
+  const { t, dir, isArabic } = useLanguage();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   if (!currentUser) return <>{children}</>;
 
@@ -16,75 +20,79 @@ export default function Layout({ children, activePage, setActivePage }) {
   let menuItems = [];
 
   if (currentUser.role === 'admin') {
-    suiteSub = "ADMIN SUITE";
+    suiteSub = t('admin_suite');
     menuItems = [
-      { id: 'admin-overview', name: 'Organization Overview', icon: 'grid_view' },
-      { id: 'admin-users', name: 'Department Management', icon: 'corporate_fare' },
-      { id: 'admin-subscriptions', name: 'Subscription Health', icon: 'credit_card' },
-      { id: 'admin-aichat', name: 'SBR AI Chat', icon: 'smart_toy' }
+      { id: 'admin-overview', name: t('dashboard'), icon: 'grid_view' },
+      { id: 'admin-users', name: t('department'), icon: 'corporate_fare' },
+      { id: 'admin-subscriptions', name: t('subscription'), icon: 'credit_card' },
+      { id: 'admin-aichat', name: t('aichat'), icon: 'smart_toy' }
     ];
   } else if (currentUser.role === 'org') {
-    suiteSub = "ORG SUITE";
+    suiteSub = t('org_suite');
     menuItems = [
-      { id: 'org-dashboard', name: 'Dashboard', icon: 'dashboard' },
-      { id: 'org-doctors', name: 'Doctors Roster', icon: 'medical_information' },
-      { id: 'org-analytics', name: 'Clinical Analytics', icon: 'analytics' },
-      { id: 'org-subscriptions', name: 'Subscription Health', icon: 'credit_card' }
+      { id: 'org-dashboard', name: t('dashboard'), icon: 'dashboard' },
+      { id: 'org-doctors', name: t('doctor'), icon: 'medical_information' },
+      { id: 'org-analytics', name: t('dashboard'), icon: 'analytics' },
+      { id: 'org-subscriptions', name: t('subscription'), icon: 'credit_card' }
     ];
   } else {
     menuItems = [
-      { id: 'dashboard', name: 'Dashboard', icon: 'dashboard' },
-      { id: 'patients', name: 'Patients', icon: 'group' },
-      { id: 'appointments', name: 'Appointments', icon: 'calendar_month' },
-      { id: 'visits', name: 'Medical Visits', icon: 'medical_information' },
-      { id: 'aichat', name: 'SBR AI Chat', icon: 'smart_toy' },
-      { id: 'subscription', name: 'My Subscription', icon: 'card_membership' }
+      { id: 'dashboard', name: t('dashboard'), icon: 'dashboard' },
+      { id: 'patients', name: t('patients'), icon: 'group' },
+      { id: 'appointments', name: t('appointments'), icon: 'calendar_month' },
+      { id: 'visits', name: t('visits'), icon: 'medical_information' },
+      { id: 'aichat', name: t('aichat'), icon: 'smart_toy' },
+      { id: 'subscription', name: t('subscription'), icon: 'card_membership' }
     ];
   }
 
+  // Adjust sidebar fixed positioning class: left-0 for English LTR, right-0 for Arabic RTL
+  const sideNavPosClass = isArabic ? 'right-0 border-l' : 'left-0 border-r';
+  const mainMarginClass = isArabic ? 'md:mr-64 md:ml-0' : 'md:ml-64 md:mr-0';
+
   return (
-    <div class="min-h-screen flex bg-bg-canvas text-on-background">
+    <div className="min-h-screen flex bg-bg-canvas text-on-background">
       {/* SideNavBar */}
-      <nav class="hidden md:flex bg-bg-canvas text-primary font-body-sm h-screen w-64 fixed left-0 top-0 border-r border-border-subtle flex flex-col py-stack-lg z-40">
-        <div class="px-stack-md mb-stack-lg">
-          <div class="px-stack-md block mb-4">
+      <nav className={`hidden md:flex bg-bg-canvas text-primary font-body-sm h-screen w-64 fixed ${sideNavPosClass} top-0 border-border-subtle flex flex-col py-stack-lg z-40`}>
+        <div className="px-stack-md mb-stack-lg">
+          <div className="px-stack-md block mb-4">
             <SbrLogo size={36} color="#24564C" showText={true} textClass="text-primary" />
             {suiteSub && (
-              <span class="text-[9px] font-black text-secondary tracking-widest block uppercase mt-1.5 ml-1">{suiteSub}</span>
+              <span className={`text-[9px] font-black text-secondary tracking-widest block uppercase mt-1.5 ${isArabic ? 'mr-1' : 'ml-1'}`}>{suiteSub}</span>
             )}
           </div>
 
-          <div class="flex items-center gap-stack-sm px-stack-md mb-6">
-            <div class="w-10 h-10 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold border border-border-subtle shadow-sm uppercase">
+          <div className="flex items-center gap-stack-sm px-stack-md mb-6">
+            <div className="w-10 h-10 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold border border-border-subtle shadow-sm uppercase">
               {currentUser.name ? currentUser.name.split(' ').map(n => n[0]).join('') : 'U'}
             </div>
             <div>
-              <p class="font-button text-button text-on-surface text-sm font-bold truncate max-w-[140px]">{currentUser.name}</p>
-              <p class="font-body-sm text-body-sm text-on-surface-variant text-xs truncate max-w-[140px]">
+              <p className="font-button text-button text-on-surface text-sm font-bold truncate max-w-[140px]">{currentUser.name}</p>
+              <p className="font-body-sm text-body-sm text-on-surface-variant text-xs truncate max-w-[140px]">
                 {currentUser.role === 'admin'
-                  ? 'Super Admin'
+                  ? t('super_admin')
                   : currentUser.role === 'org'
-                    ? (currentUser.specialty || 'Organization')
-                    : (currentUser.department || 'Doctor')
+                    ? (currentUser.specialty || t('department'))
+                    : (currentUser.department || t('doctor'))
                 }
               </p>
             </div>
           </div>
         </div>
 
-        <ul class="px-stack-sm space-y-1">
+        <ul className="px-stack-sm space-y-1">
           {menuItems.map(item => (
             <li key={item.id}>
               <button
                 onClick={() => setActivePage(item.id)}
-                class={`w-full flex items-center gap-stack-md px-stack-md py-stack-sm cursor-pointer rounded-lg transition-colors text-left ${
+                className={`w-full flex items-center gap-stack-md px-stack-md py-stack-sm cursor-pointer rounded-lg transition-colors text-start ${
                   activePage === item.id || (item.id === 'aichat' && activePage.startsWith('aichat-patient-'))
                     ? 'bg-primary-light text-primary font-bold shadow-sm'
                     : 'text-secondary hover:bg-surface-container'
                 }`}
               >
-                <span class="material-symbols-outlined text-[20px]">{item.icon}</span>
-                <span class="text-xs font-semibold">{item.name}</span>
+                <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+                <span className="text-xs font-semibold">{item.name}</span>
               </button>
             </li>
           ))}
@@ -92,67 +100,67 @@ export default function Layout({ children, activePage, setActivePage }) {
 
         {/* Active Session Indicator Widget */}
         {isRecording && appointmentId && (
-          <div class="mx-4 my-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl space-y-2 text-left animate-pulse">
-            <div class="flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-red-500 shrink-0"></span>
-              <span class="text-[9px] font-black text-red-500 uppercase tracking-widest">Active Recording</span>
+          <div className="mx-4 my-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl space-y-2 text-start animate-pulse">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-red-500 shrink-0"></span>
+              <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">{t('active_recording')}</span>
             </div>
             {patient && (
-              <p class="text-xs font-bold text-on-surface truncate max-w-[190px]">{patient.name}</p>
+              <p className="text-xs font-bold text-on-surface truncate max-w-[190px]">{patient.name}</p>
             )}
             <button
               onClick={() => setActivePage(`live-session-${appointmentId}`)}
-              class="w-full py-1.5 bg-red-500 hover:bg-red-600 text-white text-[10px] font-black rounded-lg text-center transition-colors flex items-center justify-center gap-1 shadow-sm"
+              className="w-full py-1.5 bg-red-500 hover:bg-red-600 text-white text-[10px] font-black rounded-lg text-center transition-colors flex items-center justify-center gap-1 shadow-sm"
             >
-              <span class="material-symbols-outlined text-[12px]">keyboard_return</span>
-              Return to Session
+              <span className="material-symbols-outlined text-[12px]">keyboard_return</span>
+              {t('return_to_session')}
             </button>
           </div>
         )}
 
-        {/* Dynamic Role Action Buttons */}
-        {currentUser.role === 'admin' && (
-          <div class="px-4 my-4">
-            <button
-              onClick={() => setActivePage('admin-users')}
-              class="w-full flex items-center justify-center gap-2 py-2 px-3 bg-primary text-on-primary text-xs font-bold rounded-lg hover:bg-primary-hover shadow-sm transition-colors"
-            >
-              <span class="material-symbols-outlined text-[16px]">add</span>
-              Add New Department
-            </button>
-          </div>
-        )}
-
-        {currentUser.role === 'org' && (
-          <div class="px-4 my-4">
-            <button
-              onClick={() => setActivePage('org-doctors')}
-              class="w-full flex items-center justify-center gap-2 py-2 px-3 bg-primary text-on-primary text-xs font-bold rounded-lg hover:bg-primary-hover shadow-sm transition-colors"
-            >
-              <span class="material-symbols-outlined text-[16px]">add</span>
-              Add New Doctor
-            </button>
-          </div>
-        )}
-
-        <ul class="px-stack-sm mt-auto space-y-1">
+        <ul className="px-stack-sm mt-auto space-y-1">
           <li>
             <button
-              onClick={logout}
-              class="w-full flex items-center gap-stack-md px-stack-md py-stack-sm cursor-pointer text-secondary hover:bg-surface-container rounded-lg transition-colors text-left"
+              onClick={() => setActivePage('settings')}
+              className={`w-full flex items-center gap-stack-md px-stack-md py-stack-sm cursor-pointer rounded-lg transition-colors text-start ${
+                activePage === 'settings'
+                  ? 'bg-primary-light text-primary font-bold shadow-sm'
+                  : 'text-secondary hover:bg-surface-container'
+              }`}
             >
-              <span class="material-symbols-outlined text-[20px]">logout</span>
-              <span class="text-xs font-semibold">Sign Out</span>
+              <span className="material-symbols-outlined text-[20px]">settings</span>
+              <span className="text-xs font-semibold">{t('settings')}</span>
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={() => setShowLogoutModal(true)}
+              className="w-full flex items-center gap-stack-md px-stack-md py-stack-sm cursor-pointer text-secondary hover:bg-surface-container rounded-lg transition-colors text-start"
+            >
+              <span className="material-symbols-outlined text-[20px]">logout</span>
+              <span className="text-xs font-semibold">{t('signout')}</span>
             </button>
           </li>
         </ul>
       </nav>
 
       {/* Main Content Area */}
-      <div class={`flex-1 md:ml-64 bg-bg-canvas min-h-screen ${(activePage === 'aichat' || activePage === 'admin-aichat') ? 'p-0' : 'p-margin-desktop'
-        }`}>
+      <div className={`flex-1 ${mainMarginClass} bg-bg-canvas min-h-screen ${(activePage === 'aichat' || activePage === 'admin-aichat') ? 'p-0' : 'p-margin-desktop'}`}>
         {children}
       </div>
+
+      <ConfirmModal
+        isOpen={showLogoutModal}
+        title={t('signout_confirm_title')}
+        message={t('signout_confirm_message')}
+        confirmLabel={t('yes_logout')}
+        cancelLabel={t('cancel')}
+        onConfirm={() => {
+          logout();
+          setShowLogoutModal(false);
+        }}
+        onCancel={() => setShowLogoutModal(false)}
+      />
     </div>
   );
 }

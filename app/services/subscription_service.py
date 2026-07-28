@@ -29,7 +29,7 @@ class SubscriptionService:
         async with db.pool.acquire() as connection:
             if is_department:
                 query = """
-                SELECT s.*, b.name as bundle_name,
+                SELECT s.*, b.name as bundle_name, b.name_ar as bundle_name_ar,
                        (SELECT COUNT(*) FROM subscription_doctors WHERE subscription_id = s.id) as seats_used
                 FROM subscriptions s
                 JOIN subscription_bundles b ON s.bundle_id = b.id
@@ -40,7 +40,7 @@ class SubscriptionService:
                 """
             else:
                 query = """
-                SELECT s.*, b.name as bundle_name,
+                SELECT s.*, b.name as bundle_name, b.name_ar as bundle_name_ar,
                        (SELECT COUNT(*) FROM subscription_doctors WHERE subscription_id = s.id) as seats_used,
                        (s.department_id IS NOT NULL) as managed_by_org
                 FROM subscriptions s
@@ -120,7 +120,7 @@ class SubscriptionService:
             # Fetch the subscription and its bundle
             sub = await connection.fetchrow(
                 """
-                SELECT s.*, b.duration_days, b.name as bundle_name
+                SELECT s.*, b.duration_days, b.name as bundle_name, b.name_ar as bundle_name_ar
                 FROM subscriptions s
                 JOIN subscription_bundles b ON s.bundle_id = b.id
                 WHERE s.id = $1
@@ -170,7 +170,7 @@ class SubscriptionService:
             # 1. Fetch and validate subscription
             sub = await connection.fetchrow(
                 """
-                SELECT s.*, b.name as bundle_name
+                SELECT s.*, b.name as bundle_name, b.name_ar as bundle_name_ar
                 FROM subscriptions s
                 JOIN subscription_bundles b ON s.bundle_id = b.id
                 WHERE s.id = $1 AND s.department_id = $2

@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const COLORS = ['#00837A', '#00c8b4', '#707978', '#b2dfdb'];
 
 export default function OrgAnalytics() {
   const { currentUser } = useApp();
+  const { isArabic } = useLanguage();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -58,32 +60,36 @@ export default function OrgAnalytics() {
   const adoptionRate = stats?.ai_adoption_rate || 0;
 
   return (
-    <div class="space-y-stack-lg font-body-md animate-fade-in">
+    <div className={`space-y-stack-lg font-body-md animate-fade-in ${isArabic ? 'text-right' : 'text-left'}`}>
       {/* Header */}
-      <header class="flex justify-between items-end border-b border-border-subtle pb-stack-md">
+      <header className="flex justify-between items-end border-b border-border-subtle pb-stack-md">
         <div>
-          <div class="flex items-center gap-1.5 text-xs text-secondary font-semibold">
+          <div className={`flex items-center gap-1.5 text-xs text-secondary font-semibold ${isArabic ? 'flex-row-reverse' : ''}`}>
             <span>{currentUser?.name}</span>
-            <span class="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span>Analytics</span>
+            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+            <span>{isArabic ? 'التحليلات' : 'Analytics'}</span>
           </div>
-          <h1 class="font-display-lg text-headline-lg text-on-surface font-bold mt-1">Clinical Analytics</h1>
-          <p class="font-body-lg text-body-lg text-on-surface-variant mt-1">
-            Real-time metrics, AI transcription metrics, and doctor performance insights.
+          <h1 className="font-display-lg text-headline-lg text-on-surface font-bold mt-1">
+            {isArabic ? 'التحليلات السريرية' : 'Clinical Analytics'}
+          </h1>
+          <p className="font-body-lg text-body-lg text-on-surface-variant mt-1">
+            {isArabic
+              ? 'المقاييس الفورية، مقاييس تحويل الكلام بنظام الذكاء الاصطناعي، ورؤى أداء الأطباء.'
+              : 'Real-time metrics, AI transcription metrics, and doctor performance insights.'}
           </p>
         </div>
       </header>
 
       {loading && (
-        <div class="flex items-center justify-center py-16 text-secondary text-sm gap-2">
-          <span class="material-symbols-outlined animate-spin text-primary">progress_activity</span>
-          جاري تحميل البيانات...
+        <div className="flex items-center justify-center py-16 text-secondary text-sm gap-2">
+          <span className="material-symbols-outlined animate-spin text-primary">progress_activity</span>
+          {isArabic ? 'جاري تحميل البيانات...' : 'Loading data...'}
         </div>
       )}
 
       {error && (
-        <div class="bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2">
-          <span class="material-symbols-outlined text-[16px]">error</span>
+        <div className="bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2">
+          <span className="material-symbols-outlined text-[16px]">error</span>
           {error}
         </div>
       )}
@@ -91,73 +97,87 @@ export default function OrgAnalytics() {
       {!loading && stats && (
         <>
           {/* 4 Stats Cards */}
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
-            <div class="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
-              <div class="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
-              <span class="text-xs font-semibold text-secondary uppercase tracking-wider block">Monthly Consultations</span>
-              <div class="flex items-baseline gap-2">
-                <span class="text-4xl font-bold text-on-surface font-display-lg">{totalConsults.toLocaleString()}</span>
-                <span class="text-xs font-semibold text-primary flex items-center gap-0.5">
-                  <span class="material-symbols-outlined text-xs">monitoring</span>
-                  هذا الشهر
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
+            <div className="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
+              <div className="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
+              <span className="text-xs font-semibold text-secondary uppercase tracking-wider block">
+                {isArabic ? 'الاستشارات الشهرية' : 'Monthly Consultations'}
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-bold text-on-surface font-display-lg">{totalConsults.toLocaleString()}</span>
+                <span className="text-xs font-semibold text-primary flex items-center gap-0.5">
+                  <span className="material-symbols-outlined text-xs">monitoring</span>
+                  {isArabic ? 'هذا الشهر' : 'This Month'}
                 </span>
               </div>
             </div>
 
-            <div class="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
-              <div class="absolute right-0 top-0 w-24 h-24 bg-tertiary-fixed-dim/5 rounded-full blur-2xl"></div>
-              <span class="text-xs font-semibold text-secondary uppercase tracking-wider block">AI Adoption Rate</span>
-              <div class="flex items-baseline gap-2">
-                <span class="text-4xl font-bold text-on-surface font-display-lg">{adoptionRate}%</span>
-                <span class="text-xs font-semibold text-primary flex items-center gap-0.5">
-                  across dept
+            <div className="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
+              <div className="absolute right-0 top-0 w-24 h-24 bg-tertiary-fixed-dim/5 rounded-full blur-2xl"></div>
+              <span className="text-xs font-semibold text-secondary uppercase tracking-wider block">
+                {isArabic ? 'معدل تبني الذكاء الاصطناعي' : 'AI Adoption Rate'}
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-bold text-on-surface font-display-lg">{adoptionRate}%</span>
+                <span className="text-xs font-semibold text-primary flex items-center gap-0.5">
+                  {isArabic ? 'عبر القسم' : 'across dept'}
                 </span>
               </div>
             </div>
 
-            <div class="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
-              <div class="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
-              <span class="text-xs font-semibold text-secondary uppercase tracking-wider block">Total Doctors</span>
-              <div class="flex items-baseline gap-2">
-                <span class="text-4xl font-bold text-on-surface font-display-lg">{totalDoctors}</span>
-                <span class="text-xs font-semibold text-secondary flex items-center gap-0.5">
-                  registered
+            <div className="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
+              <div className="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
+              <span className="text-xs font-semibold text-secondary uppercase tracking-wider block">
+                {isArabic ? 'إجمالي الأطباء' : 'Total Doctors'}
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-bold text-on-surface font-display-lg">{totalDoctors}</span>
+                <span className="text-xs font-semibold text-secondary flex items-center gap-0.5">
+                  {isArabic ? 'مسجلين' : 'registered'}
                 </span>
               </div>
             </div>
 
-            <div class="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
-              <div class="absolute right-0 top-0 w-24 h-24 bg-tertiary-fixed-dim/5 rounded-full blur-2xl"></div>
-              <span class="text-xs font-semibold text-secondary uppercase tracking-wider block">Active Licenses</span>
-              <div class="flex items-baseline gap-2">
-                <span class="text-4xl font-bold text-on-surface font-display-lg">{activeLicenses}/{totalDoctors}</span>
-                <span class="text-xs font-semibold text-secondary">
-                  {totalDoctors > 0 ? Math.round((activeLicenses / totalDoctors) * 100) : 0}% active
+            <div className="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
+              <div className="absolute right-0 top-0 w-24 h-24 bg-tertiary-fixed-dim/5 rounded-full blur-2xl"></div>
+              <span className="text-xs font-semibold text-secondary uppercase tracking-wider block">
+                {isArabic ? 'التراخيص النشطة' : 'Active Licenses'}
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-bold text-on-surface font-display-lg">{activeLicenses}/{totalDoctors}</span>
+                <span className="text-xs font-semibold text-secondary">
+                  {totalDoctors > 0 ? Math.round((activeLicenses / totalDoctors) * 100) : 0}% {isArabic ? 'نشط' : 'active'}
                 </span>
               </div>
             </div>
           </div>
 
           {/* Charts Grid */}
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
             {/* Consultation Trends Bar Chart */}
-            <div class="lg:col-span-8 bg-white border border-border-subtle rounded-xl shadow-sm p-6 space-y-6">
-              <div class="flex justify-between items-center border-b border-border-subtle pb-3">
+            <div className="lg:col-span-8 bg-white border border-border-subtle rounded-xl shadow-sm p-6 space-y-6">
+              <div className="flex justify-between items-center border-b border-border-subtle pb-3">
                 <div>
-                  <h3 class="font-button text-sm text-on-surface font-bold">Consultation Trends (Last 4 Weeks)</h3>
-                  <p class="text-[10px] text-secondary mt-0.5">Number of appointments per week</p>
+                  <h3 className="font-button text-sm text-on-surface font-bold">
+                    {isArabic ? 'اتجاهات الاستشارات (آخر 4 أسابيع)' : 'Consultation Trends (Last 4 Weeks)'}
+                  </h3>
+                  <p className="text-[10px] text-secondary mt-0.5">
+                    {isArabic ? 'عدد المواعيد في كل أسبوع' : 'Number of appointments per week'}
+                  </p>
                 </div>
               </div>
 
-              <div class="flex items-end justify-around gap-3 h-48 px-4">
+              <div className="flex items-end justify-around gap-3 h-48 px-4">
                 {(stats.consultation_trends || [0, 0, 0, 0]).map((val, i) => {
                   const maxVal = Math.max(...(stats.consultation_trends || [1]), 1);
                   const heightPct = maxVal > 0 ? (val / maxVal) * 100 : 0;
                   return (
-                    <div key={i} class="flex flex-col items-center gap-2 flex-1">
-                      <span class="text-xs font-bold text-on-surface">{val}</span>
-                      <div class="w-full rounded-t-md bg-primary transition-all duration-500" style={{ height: `${Math.max(heightPct, 4)}%`, maxHeight: '160px', minHeight: '4px' }}></div>
-                      <span class="text-[10px] text-secondary font-semibold">Week {i + 1}</span>
+                    <div key={i} className="flex flex-col items-center gap-2 flex-1">
+                      <span className="text-xs font-bold text-on-surface">{val}</span>
+                      <div className="w-full rounded-t-md bg-primary transition-all duration-500" style={{ height: `${Math.max(heightPct, 4)}%`, maxHeight: '160px', minHeight: '4px' }}></div>
+                      <span className="text-[10px] text-secondary font-semibold">
+                        {isArabic ? `الأسبوع ${i + 1}` : `Week ${i + 1}`}
+                      </span>
                     </div>
                   );
                 })}
@@ -165,16 +185,20 @@ export default function OrgAnalytics() {
             </div>
 
             {/* Workload Distribution Donut */}
-            <div class="lg:col-span-4 bg-white border border-border-subtle rounded-xl shadow-sm p-6 space-y-6">
-              <div class="border-b border-border-subtle pb-3">
-                <h3 class="font-button text-sm text-on-surface font-bold">Workload Distribution</h3>
-                <p class="text-[10px] text-secondary mt-0.5">Consultations conducted per clinician</p>
+            <div className="lg:col-span-4 bg-white border border-border-subtle rounded-xl shadow-sm p-6 space-y-6">
+              <div className="border-b border-border-subtle pb-3">
+                <h3 className="font-button text-sm text-on-surface font-bold">
+                  {isArabic ? 'توزيع عبء العمل' : 'Workload Distribution'}
+                </h3>
+                <p className="text-[10px] text-secondary mt-0.5">
+                  {isArabic ? 'الاستشارات التي أجريت لكل طبيب ممارس' : 'Consultations conducted per clinician'}
+                </p>
               </div>
 
-              <div class="flex flex-col items-center justify-center space-y-6">
-                <div class="relative w-36 h-36 flex items-center justify-center">
+              <div className="flex flex-col items-center justify-center space-y-6">
+                <div className="relative w-36 h-36 flex items-center justify-center">
                   {donutTotal > 0 ? (
-                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                       <circle cx="18" cy="18" r="15.9" fill="transparent" stroke="#E8F5F4" strokeWidth="3" />
                       {segments.map((seg, i) => (
                         <circle
@@ -189,28 +213,32 @@ export default function OrgAnalytics() {
                       ))}
                     </svg>
                   ) : (
-                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                       <circle cx="18" cy="18" r="15.9" fill="transparent" stroke="#E8F5F4" strokeWidth="3" />
                     </svg>
                   )}
-                  <div class="absolute flex flex-col items-center justify-center">
-                    <span class="text-sm font-bold text-on-surface">{donutTotal > 999 ? `${(donutTotal / 1000).toFixed(1)}k` : donutTotal}</span>
-                    <span class="text-[9px] text-secondary uppercase font-semibold">Total Cases</span>
+                  <div className="absolute flex flex-col items-center justify-center">
+                    <span className="text-sm font-bold text-on-surface">{donutTotal > 999 ? `${(donutTotal / 1000).toFixed(1)}k` : donutTotal}</span>
+                    <span className="text-[9px] text-secondary uppercase font-semibold">
+                      {isArabic ? 'إجمالي الحالات' : 'Total Cases'}
+                    </span>
                   </div>
                 </div>
 
                 {/* Legend */}
-                <div class="w-full space-y-2 text-xs leading-relaxed">
+                <div className="w-full space-y-2 text-xs leading-relaxed text-start">
                   {segments.length > 0 ? segments.map((seg, i) => (
-                    <div key={i} class="flex justify-between items-center">
-                      <span class="flex items-center gap-2 text-secondary">
-                        <span class="w-2.5 h-2.5 rounded-full block" style={{ backgroundColor: seg.color }}></span>
-                        Dr. {seg.doc.name}
+                    <div key={i} className={`flex justify-between items-center ${isArabic ? 'flex-row-reverse' : ''}`}>
+                      <span className={`flex items-center gap-2 text-secondary ${isArabic ? 'flex-row-reverse' : ''}`}>
+                        <span className="w-2.5 h-2.5 rounded-full block" style={{ backgroundColor: seg.color }}></span>
+                        {isArabic ? `د. ${seg.doc.name}` : `Dr. ${seg.doc.name}`}
                       </span>
-                      <span class="font-bold text-on-surface">{seg.pct}% <span class="text-[10px] text-secondary font-normal">({seg.doc.patients_count})</span></span>
+                      <span className="font-bold text-on-surface">{seg.pct}% <span className="text-[10px] text-secondary font-normal">({seg.doc.patients_count})</span></span>
                     </div>
                   )) : (
-                    <p class="text-center text-secondary text-xs py-4">No consultation data yet</p>
+                    <p className="text-center text-secondary text-xs py-4">
+                      {isArabic ? 'لا توجد بيانات استشارات بعد' : 'No consultation data yet'}
+                    </p>
                   )}
                 </div>
               </div>
@@ -219,16 +247,18 @@ export default function OrgAnalytics() {
 
           {/* Recent Activity */}
           {stats.department_activity && stats.department_activity.length > 0 && (
-            <div class="bg-white border border-border-subtle rounded-xl shadow-sm p-6">
-              <h3 class="font-button text-sm text-on-surface font-bold mb-4">Recent Activity</h3>
-              <div class="space-y-3">
+            <div className="bg-white border border-border-subtle rounded-xl shadow-sm p-6 text-start">
+              <h3 className="font-button text-sm text-on-surface font-bold mb-4">
+                {isArabic ? 'النشاط الأخير' : 'Recent Activity'}
+              </h3>
+              <div className="space-y-3">
                 {stats.department_activity.map((item) => (
-                  <div key={item.id} class="flex items-start gap-3 text-xs text-secondary">
-                    <span class="material-symbols-outlined text-primary text-[16px] mt-0.5">event</span>
-                    <div class="flex-1">
-                      <span class="text-on-surface font-semibold">{item.message}</span>
+                  <div key={item.id} className={`flex items-start gap-3 text-xs text-secondary ${isArabic ? 'flex-row-reverse text-right' : ''}`}>
+                    <span className="material-symbols-outlined text-primary text-[16px] mt-0.5">event</span>
+                    <div className="flex-1">
+                      <span className="text-on-surface font-semibold">{item.message}</span>
                     </div>
-                    <span class="text-[10px] whitespace-nowrap">{item.time_ago}</span>
+                    <span className="text-[10px] whitespace-nowrap">{item.time_ago}</span>
                   </div>
                 ))}
               </div>
@@ -238,8 +268,8 @@ export default function OrgAnalytics() {
       )}
 
       {!loading && !error && !stats && (
-        <div class="flex items-center justify-center py-16 text-secondary text-sm">
-          No analytics data available yet.
+        <div className="flex items-center justify-center py-16 text-secondary text-sm">
+          {isArabic ? 'لا توجد بيانات تحليلات متاحة بعد.' : 'No analytics data available yet.'}
         </div>
       )}
     </div>

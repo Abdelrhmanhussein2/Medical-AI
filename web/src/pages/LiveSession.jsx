@@ -4,7 +4,7 @@ import { useSession } from '../context/SessionContext';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function LiveSession({ appointmentId, setActivePage }) {
-  const { appointments, patients } = useApp();
+  const { appointments, patients, updatePatient } = useApp();
   const { t, isArabic } = useLanguage();
   const {
     isRecording,
@@ -34,10 +34,34 @@ export default function LiveSession({ appointmentId, setActivePage }) {
   const patient = appointment ? patients.find(p => p.id === appointment.patient_id) : null;
   const transcriptEndRef = useRef(null);
 
-  // Modals for Auto-Drafted Documents
-  const [activeDoc, setActiveDoc] = useState(null); // 'soap' | 'patient_summary' | 'prescriptions'
-  const [pastSessions, setPastSessions] = useState([]);
-  const [selectedPastSession, setSelectedPastSession] = useState(null);
+  // Editing Patient Medical Info state
+  const [isEditingMedicalInfo, setIsEditingMedicalInfo] = useState(false);
+  const [tempDiseases, setTempDiseases] = useState('');
+  const [tempHabits, setTempHabits] = useState('');
+  const [isSavingMedicalInfo, setIsSavingMedicalInfo] = useState(false);
+
+  const startEditingMedicalInfo = () => {
+    setTempDiseases(patient?.diseases || '');
+    setTempHabits(patient?.habits || '');
+    setIsEditingMedicalInfo(true);
+  };
+
+  const handleSaveMedicalInfo = async () => {
+    if (!patient?.id) return;
+    setIsSavingMedicalInfo(true);
+    try {
+      await updatePatient(patient.id, {
+        diseases: tempDiseases || null,
+        habits: tempHabits || null
+      });
+      setIsEditingMedicalInfo(false);
+    } catch (err) {
+      console.error(err);
+      alert(isArabic ? 'فشل حفظ البيانات الطبية.' : 'Failed to save medical info.');
+    } finally {
+      setIsSavingMedicalInfo(false);
+    }
+  };
 
   // Load historical sessions for this patient
   useEffect(() => {
@@ -159,19 +183,85 @@ export default function LiveSession({ appointmentId, setActivePage }) {
               </div>
               
               {patient && (
-                <div class="w-full mt-2 pt-4 border-t border-border-subtle space-y-3 text-right" dir="rtl">
-                  <div class="space-y-1">
-                    <span class="text-[10px] font-bold text-secondary block">الأمراض المزمنة:</span>
-                    <p class="text-xs text-on-surface bg-surface-container-low p-2 rounded-lg border border-border-subtle whitespace-pre-wrap min-h-[32px]">
-                      {patient.diseases || 'لا يوجد'}
-                    </p>
-                  </div>
-                  <div class="space-y-1">
-                    <span class="text-[10px] font-bold text-secondary block">العادات والأسلوب:</span>
-                    <p class="text-xs text-on-surface bg-surface-container-low p-2 rounded-lg border border-border-subtle min-h-[32px]">
-                      {patient.habits || 'لا يوجد'}
-                    </p>
-                  </div>
+                <div class="w-full mt-2 pt-4 border-t border-border-subtle space-y-3 text-right animate-fade-in" dir="rtl">
+                  {!isEditingMedicalInfo ? (
+                    <>
+                      <div class="space-y-1">
+                        <div class="flex justify-between items-center">
+                          <span class="text-[10px] font-bold text-secondary">الأمراض المزمنة:</span>
+                          <button 
+                            onClick={startEditingMedicalInfo}
+                            className="p-1 hover:text-primary text-secondary transition-colors"
+                            title="تعديل البيانات الطبية"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">edit</span>
+                          </button>
+                        </div>
+                        <p class="text-xs text-on-surface bg-surface-container-low p-2 rounded-lg border border-border-subtle whitespace-pre-wrap min-h-[32px]">
+                          {patient.diseases || 'لا يوجد'}
+                        </p>
+                      </div>
+                      <div class="space-y-1">
+                        <span class="text-[10px] font-bold text-secondary block">العادات والأسلوب:</span>
+                        <p class="text-xs text-on-surface bg-surface-container-low p-2 rounded-lg border border-border-subtle min-h-[32px]">
+                          {patient.habits || 'لا يوجد'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={startEditingMedicalInfo}
+                        className="w-full mt-2 border border-border-subtle text-secondary hover:text-primary hover:bg-primary-light py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">edit</span>
+                        <span>تعديل الملف الطبي للمريض</span>
+                      </button>
+                    </>
+                  ) : (
+                    <div class="space-y-3">
+                      <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-primary block">الأمراض المزمنة:</label>
+                        <textarea
+                          value={tempDiseases}
+                          onChange={(e) => setTempDiseases(e.target.value)}
+                          placeholder="اكتب الأمراض المزمنة..."
+                          rows="2"
+                          className="w-full px-3 py-2 bg-white text-on-surface border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none outline-none"
+                        />
+                      </div>
+                      <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-primary block">العادات والأسلوب:</label>
+                        <input
+                          type="text"
+                          value={tempHabits}
+                          onChange={(e) => setTempHabits(e.target.value)}
+                          placeholder="اكتب العادات والأسلوب..."
+                          className="w-full px-3 py-2 bg-white text-on-surface border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                        />
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          type="button"
+                          disabled={isSavingMedicalInfo}
+                          onClick={handleSaveMedicalInfo}
+                          className="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-1 shadow-sm transition-all disabled:opacity-50 active:scale-95 cursor-pointer"
+                        >
+                          {isSavingMedicalInfo ? (
+                            <span className="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>
+                          ) : (
+                            <span className="material-symbols-outlined text-[14px]">save</span>
+                          )}
+                          <span>حفظ</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isSavingMedicalInfo}
+                          onClick={() => setIsEditingMedicalInfo(false)}
+                          className="flex-1 bg-white border border-border-subtle text-secondary py-2 rounded-lg text-xs hover:bg-surface-container font-bold transition-all active:scale-95 cursor-pointer"
+                        >
+                          إلغاء
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -250,7 +340,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                 {isSummarizing 
                   ? (isArabic ? 'جاري تحليل الجلسة بواسطة الذكاء الاصطناعي...' : 'AI is analyzing the session...') 
                   : isRecording 
-                    ? (isArabic ? 'تسجيل الصوت وكتابة النص الفورية نشطة...' : 'Voice Recording & Whisper Transcription Active...') 
+                    ? (isArabic ? 'تسجيل الصوت وكتابة النص الفورية نشطة...' : 'Voice Recording & Transcription Active...') 
                     : summaryDone 
                       ? (isArabic ? 'اكتمل الملخص الطبي ✓' : 'Session Summarized ✓') 
                       : (isArabic ? 'اضغط على المايك لبدء جلسة الكشف الطبي' : 'Click Mic to Start Consultation Session')
@@ -262,7 +352,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
             <div className="bg-white rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col h-[380px]">
               <div className="p-5 border-b border-border-subtle flex justify-between items-center">
                 <h3 className="text-xs font-black tracking-widest text-secondary uppercase">
-                  {isArabic ? 'النص الطبي الفوري (Whisper)' : 'Session Transcript (Whisper)'}
+                  {isArabic ? 'النص الطبي الفوري' : 'Session Transcript'}
                 </h3>
                 <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded">AUTOMATIC LANG</span>
               </div>
@@ -272,7 +362,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                   <div className="flex flex-col items-center justify-center h-full text-center text-secondary">
                     <span className="material-symbols-outlined text-3xl mb-2 text-outline-variant">transcribe</span>
                     <p className="text-sm">
-                      {isArabic ? 'سيظهر النص المترجم المحول من المحادثة هنا مباشرة...' : 'Real-time Whisper transcription will appear here in chunks...'}
+                      {isArabic ? 'سيظهر النص المترجم المحول من المحادثة هنا مباشرة...' : 'Real-time transcription will appear here in chunks...'}
                     </p>
                   </div>
                 ) : (

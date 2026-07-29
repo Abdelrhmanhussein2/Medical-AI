@@ -126,6 +126,14 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
                         "gender": {
                             "type": "string",
                             "description": "الجنس: ذكر أو أنثى (اختياري)"
+                        },
+                        "diseases": {
+                            "type": "string",
+                            "description": "الأمراض المزمنة للمريض إن وجدت (مثل: الضغط، السكر، إلخ) (اختياري)"
+                        },
+                        "habits": {
+                            "type": "string",
+                            "description": "العادات اليومية وأسلوب الحياة للمريض إن وجد (مثل: تدخين، رياضة، إلخ) (اختياري)"
                         }
                     },
                     "required": ["name", "phone"]

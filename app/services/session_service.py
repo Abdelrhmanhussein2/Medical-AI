@@ -15,14 +15,70 @@ class SessionService:
     
     @staticmethod
     async def create_session(doctor_id: str, appointment_id: Optional[str] = None, patient_id: Optional[str] = None) -> dict:
-        """إنشاء جلسة جديدة"""
+        """إنشاء جلسة جديدة بعد التحقق من حدود الباقة والاشتراك"""
+        from app.services.subscription_service import SubscriptionService
+        
+        # 1. جلب بيانات الطبيب للتأكد من وجود حد مخصص للدقائق
+        async with db.pool.acquire() as conn_check:
+            doc_info = await conn_check.fetchrow(
+                "SELECT custom_minutes_limit, department_id FROM doctors WHERE id = $1", 
+                UUID(str(doctor_id))
+            )
+        custom_minutes_limit = doc_info.get("custom_minutes_limit") if doc_info else None
+        is_org_doctor = bool(doc_info.get("department_id")) if doc_info else False
+        
+        # 2. جلب الاشتراك النشط للطبيب
+        sub = await SubscriptionService.get_active_subscription(UUID(str(doctor_id)), is_department=False)
+        if not sub:
+            if is_org_doctor:
+                raise ValueError("حسابك تابع لمنظمة. يرجى التواصل مع مسؤول المنظمة لتفعيل اشتراكك قبل بدء الجلسات الطبية.")
+            else:
+                raise ValueError("انتهت الفترة التجريبية أو ليس لديك اشتراك نشط. يرجى الاشتراك في إحدى الباقات للتمكن من بدء الجلسات الطبية.")
+            
+        # 3. تحديد الدقائق المتاحة للباقة المفعّلة أو الحد المخصص
+        if custom_minutes_limit is not None:
+            allowed_minutes = custom_minutes_limit
+        else:
+            bundle_name = sub.get("bundle_name") or ""
+            name_clean = bundle_name.lower().strip()
+            allowed_minutes = 60  # باقة Free Trial كافتراضية
+            
+            if "starter" in name_clean:
+                allowed_minutes = 1000
+            elif "pro" in name_clean:
+                allowed_minutes = 2000
+            elif "business" in name_clean:
+                allowed_minutes = 3500
+            elif "enterprise" in name_clean:
+                allowed_minutes = 5000
+            elif "silver" in name_clean:
+                allowed_minutes = 10000
+            elif "gold" in name_clean:
+                allowed_minutes = 20000
+            elif "platinum" in name_clean:
+                allowed_minutes = 50000
+            
+        # 3. التحقق من تجاوز الاستهلاك للدقائق المتاحة
+        used_minutes = sub.get("used_minutes", 0)
+        if used_minutes >= allowed_minutes:
+            raise ValueError(
+                f"لقد استهلكت كافة الدقائق المتاحة في باقتك الحالية ({used_minutes}/{allowed_minutes} دقيقة). "
+                "يرجى تجديد اشتراكك أو الترقية لباقة أعلى للتمكن من بدء جلسات كشف جديدة."
+            )
+            
+        # 4. إنشاء الجلسة في حالة سماح الرصيد
         query = """
             INSERT INTO sessions (doctor_id, appointment_id, patient_id, status)
             VALUES ($1, $2, $3, 'in_progress')
             RETURNING id, doctor_id, appointment_id, patient_id, status, created_at
         """
         async with db.pool.acquire() as conn:
-            row = await conn.fetchrow(query, doctor_id, appointment_id, patient_id)
+            row = await conn.fetchrow(
+                query, 
+                UUID(str(doctor_id)), 
+                UUID(str(appointment_id)) if appointment_id else None, 
+                UUID(str(patient_id)) if patient_id else None
+            )
             return dict(row) if row else None
             
     @staticmethod
@@ -31,9 +87,9 @@ class SessionService:
         يستقبل جزء من الصوت، يرسله لـ Groq Whisper لتفريغه،
         ثم يدمجه في transcript_raw للجلسة المعنية.
         """
-        api_key = settings.GROQ_API_KEY or os.environ.get("GROQ_API_KEY", "")
-        if not api_key:
-            raise ValueError("Groq API Key is not configured.")
+        openai_key = settings.OPENAI_API_KEY or os.environ.get("OPENAI_API_KEY", "")
+        if not openai_key:
+            raise ValueError("OpenAI API Key is not configured.")
 
         # 1. التحقق من وجود الجلسة أولاً
         check_query = "SELECT id, transcript_raw FROM sessions WHERE id = $1"
@@ -61,21 +117,22 @@ class SessionService:
         except Exception as e:
             raise RuntimeError(f"Failed to save chunk file: {str(e)}")
             
-        # 3. إرسال لـ Groq Whisper
+        # 3. إرسال لـ OpenAI Whisper
         chunk_text = ""
         try:
-            client = AsyncGroq(api_key=api_key.strip())
+            from openai import AsyncOpenAI
+            client = AsyncOpenAI(api_key=openai_key.strip())
             with open(saved_file_path, "rb") as audio_file:
                 transcription = await client.audio.transcriptions.create(
                     file=(unique_name, audio_file.read()),
-                    model="whisper-large-v3",
+                    model="whisper-1",
                     response_format="text"
                 )
                 chunk_text = str(transcription).strip()
         except Exception as e:
             if os.path.exists(saved_file_path):
                 os.remove(saved_file_path)
-            raise RuntimeError(f"Groq Whisper transcription failed: {str(e)}")
+            raise RuntimeError(f"OpenAI Whisper transcription failed: {str(e)}")
             
         # 4. مسح الملف المؤقت من القرص فوراً
         if os.path.exists(saved_file_path):
@@ -224,11 +281,43 @@ class SessionService:
         if patient_id:
             try:
                 from app.services.patient_service import PatientService
+                # Update patient chronic diseases & habits if extracted in the current session
+                extracted_diseases = ai_result.get("extracted_diseases")
+                extracted_habits = ai_result.get("extracted_habits")
+                if (extracted_diseases and extracted_diseases.strip() and extracted_diseases.lower() != "null") or (extracted_habits and extracted_habits.strip() and extracted_habits.lower() != "null"):
+                    patient_data = await PatientService.get_patient(str(patient_id))
+                    if patient_data:
+                        patient_updates = {}
+                        
+                        # Merge chronic diseases
+                        if extracted_diseases and extracted_diseases.strip() and extracted_diseases.lower() != "null":
+                            existing_diseases = patient_data.get("diseases") or ""
+                            clean_existing = existing_diseases.strip().lower()
+                            if not clean_existing or clean_existing in ["لا يوجد", "none", "null", ""]:
+                                patient_updates["diseases"] = extracted_diseases.strip()
+                            elif extracted_diseases.strip().lower() not in clean_existing:
+                                # Append newly mentioned diseases
+                                patient_updates["diseases"] = f"{existing_diseases.strip()}، {extracted_diseases.strip()}"
+                                
+                        # Merge habits
+                        if extracted_habits and extracted_habits.strip() and extracted_habits.lower() != "null":
+                            existing_habits = patient_data.get("habits") or ""
+                            clean_existing = existing_habits.strip().lower()
+                            if not clean_existing or clean_existing in ["لا يوجد", "none", "null", ""]:
+                                patient_updates["habits"] = extracted_habits.strip()
+                            elif extracted_habits.strip().lower() not in clean_existing:
+                                # Append newly mentioned habits
+                                patient_updates["habits"] = f"{existing_habits.strip()}، {extracted_habits.strip()}"
+                                
+                        if patient_updates:
+                            from app.schemes.patient_schema import PatientUpdate
+                            await PatientService.update_patient(str(patient_id), PatientUpdate(**patient_updates))
+
                 # This compiles all historical sessions (including the one just finalized)
                 # and updates general_summary in the patients table
                 await PatientService.generate_general_summary(str(patient_id))
             except Exception as ex:
-                print(f"Failed to automatically generate patient general summary: {ex}")
+                print(f"Failed to automatically update patient medical details / summary: {ex}")
 
         return result
     

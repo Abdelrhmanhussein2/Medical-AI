@@ -241,6 +241,9 @@ export default function AiChat({ initialPatientId }) {
           if (aiRes.ok) {
             const aiMsg = await aiRes.json();
             setMessages(prev => [...prev, aiMsg]);
+          } else {
+            const errData = await aiRes.json().catch(() => ({}));
+            alert(errData.detail || "حدث خطأ أثناء الاتصال بالذكاء الاصطناعي.");
           }
         } catch (err) {
           console.error("Failed to generate AI reply", err);
@@ -348,6 +351,9 @@ export default function AiChat({ initialPatientId }) {
           if (aiRes.ok) {
             const aiMsg = await aiRes.json();
             setMessages(prev => [...prev, aiMsg]);
+          } else {
+            const errData = await aiRes.json().catch(() => ({}));
+            alert(errData.detail || "حدث خطأ أثناء الاتصال بالذكاء الاصطناعي.");
           }
         } catch (err) {
           console.error("Failed to generate AI reply for audio", err);

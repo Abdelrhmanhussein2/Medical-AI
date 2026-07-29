@@ -319,12 +319,12 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const addOrgDoctor = async (name, email, phone, orgId, specialty) => {
+  const addOrgDoctor = async (name, email, phone, orgId, specialty, password) => {
     const formData = new FormData();
     formData.append('name', name);
     formData.append('email', email);
     formData.append('phone', phone);
-    formData.append('password', "defaultpassword123");
+    formData.append('password', password || "defaultpassword123");
     formData.append('specialization', specialty || "General");
     formData.append('department_id', orgId);
     formData.append('status', 'pending');
@@ -362,10 +362,15 @@ export const AppProvider = ({ children }) => {
     setOrganizations(prev => prev.map(o => o.id === id ? { ...o, ...updatedFields } : o));
   };
 
-  const activateSubscription = async (doctorId, plan, expiryDate) => {
+  const activateSubscription = async (doctorId, plan, expiryDate, customMinutesLimit = null, customTokensLimit = null) => {
     const updated = await apiFetch(`/doctors/${doctorId}/activate-subscription`, {
       method: 'PATCH',
-      body: JSON.stringify({ subscription_plan: plan, subscription_expiry: expiryDate })
+      body: JSON.stringify({ 
+        subscription_plan: plan, 
+        subscription_expiry: expiryDate,
+        custom_minutes_limit: customMinutesLimit ? parseInt(customMinutesLimit) : null,
+        custom_tokens_limit: customTokensLimit ? parseInt(customTokensLimit) : null
+      })
     });
     setDoctors(prev => prev.map(d => d.id === doctorId ? { ...d, ...updated } : d));
     return updated;

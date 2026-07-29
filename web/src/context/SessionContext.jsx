@@ -287,7 +287,8 @@ export const SessionProvider = ({ children }) => {
 
     } catch (err) {
       console.error("Failed to start session recording:", err);
-      alert("تعذر الوصول إلى الميكروفون أو تهيئة الجلسة.");
+      const errMsg = err.message || "تعذر الوصول إلى الميكروفون أو تهيئة الجلسة.";
+      alert(errMsg);
     }
   };
 

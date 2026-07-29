@@ -12,6 +12,7 @@ export default function OrgDoctors() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   // Selected doctor modal states
@@ -48,16 +49,21 @@ export default function OrgDoctors() {
     e.preventDefault();
     setError('');
 
-    if (!name || !email || !phone) {
+    if (!name || !email || !phone || !password) {
       setError(isArabic ? 'يرجى ملء جميع الحقول' : 'Please fill in all fields');
+      return;
+    }
+    if (password.length < 6) {
+      setError(isArabic ? 'يجب أن تتكون كلمة المرور من 6 أحرف على الأقل' : 'Password must be at least 6 characters');
       return;
     }
 
     try {
-      await addOrgDoctor(name, email, phone, currentUser.id, currentUser.specialty);
+      await addOrgDoctor(name, email, phone, currentUser.id, currentUser.specialty, password);
       setName('');
       setEmail('');
       setPhone('');
+      setPassword('');
       setShowAddModal(false);
     } catch (err) {
       setError(err.message || (isArabic ? 'فشل تعيين الطبيب' : 'Failed to assign doctor'));
@@ -331,6 +337,32 @@ export default function OrgDoctors() {
                   type="text" disabled value={getSpecialtyLabel(currentUser.specialty)}
                   className={`w-full px-3 py-2 bg-surface-container-low border border-border-subtle rounded-lg text-sm text-secondary cursor-not-allowed font-semibold ${isArabic ? 'text-right' : 'text-left'}`}
                 />
+              </div>
+
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 space-y-3">
+                <p className="text-xs font-bold text-primary flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[15px]">lock</span>
+                  {isArabic ? 'بيانات دخول الطبيب — سيدخل بها على النظام' : 'Doctor Login Credentials — share with the doctor'}
+                </p>
+                <div>
+                  <label className="block text-[10px] font-semibold text-secondary mb-1">
+                    {isArabic ? 'البريد الإلكتروني' : 'Email (Login ID)'}
+                  </label>
+                  <input
+                    type="text" disabled value={email || '—'}
+                    className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-xs text-secondary font-semibold cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-secondary mb-1">
+                    {isArabic ? 'كلمة المرور المؤقتة *' : 'Temporary Password *'}
+                  </label>
+                  <input
+                    type="text" required value={password} onChange={(e) => setPassword(e.target.value)}
+                    placeholder={isArabic ? 'مثال: clinic2025' : 'e.g. clinic2025'}
+                    className="w-full px-3 py-2 bg-white border border-primary/40 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
               </div>
 
               <div className={`flex gap-3 mt-6 pt-4 border-t border-border-subtle ${isArabic ? 'flex-row-reverse' : ''}`}>

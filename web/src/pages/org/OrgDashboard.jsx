@@ -101,8 +101,14 @@ export default function OrgDashboard({ setActivePage }) {
           </span>
           <div className="flex items-baseline gap-2">
             <span className="text-4xl font-bold text-on-surface font-display-lg">{ai_adoption_rate || 0}%</span>
-            <span className="text-xs font-semibold text-primary">
-              {isArabic ? 'استخدام مرتفع' : 'High Usage'}
+            <span className={`text-xs font-semibold ${(ai_adoption_rate || 0) >= 60 ? 'text-primary' : (ai_adoption_rate || 0) >= 30 ? 'text-status-warning' : 'text-error'}`}>
+              {(ai_adoption_rate || 0) >= 60
+                ? (isArabic ? 'استخدام مرتفع' : 'High Usage')
+                : (ai_adoption_rate || 0) >= 30
+                  ? (isArabic ? 'استخدام متوسط' : 'Moderate Usage')
+                  : (ai_adoption_rate || 0) > 0
+                    ? (isArabic ? 'استخدام منخفض' : 'Low Usage')
+                    : (isArabic ? 'لا يوجد استخدام بعد' : 'No Usage Yet')}
             </span>
           </div>
         </div>

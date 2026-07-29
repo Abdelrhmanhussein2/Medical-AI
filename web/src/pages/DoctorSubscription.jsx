@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 import { PLANS } from '../data/plans';
 
 export default function DoctorSubscription() {
+  const navigate = useNavigate();
   const { renewSubscription } = useApp();
   const { t, isArabic } = useLanguage();
   const [subscription, setSubscription] = useState(null);
@@ -44,20 +46,18 @@ export default function DoctorSubscription() {
     fetchSubscription();
   }, []);
 
-  const handleRenew = async () => {
+  const handleRenew = () => {
     if (!subscription) return;
-    setRenewing(true);
-    try {
-      const updated = await renewSubscription(subscription.id);
-      if (updated) {
-          setSubscription({ ...subscription, ...updated });
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setRenewing(false);
-    }
+    const planNameLower = (subscription.bundle_name || '').toLowerCase();
+    const matchedPlan = PLANS.find(p => 
+      p.id === planNameLower || 
+      p.nameEn.toLowerCase() === planNameLower || 
+      (subscription.bundle_name_ar && p.nameAr === subscription.bundle_name_ar)
+    ) || PLANS[1];
+    
+    navigate(`/checkout?plan=${matchedPlan.id}`);
   };
+
 
   if (loading) {
     return (
@@ -107,7 +107,7 @@ export default function DoctorSubscription() {
           : (subscription.bundle_name || matchedPlan.nameEn);
           
         const totalMinutes = matchedPlan.minutes || 1000;
-        const usedMinutes = 150; // Mocked usage
+        const usedMinutes = subscription.used_minutes || 0;
         const percentMinutes = Math.min(Math.round((usedMinutes / totalMinutes) * 100), 100);
 
         return (
@@ -215,23 +215,7 @@ export default function DoctorSubscription() {
                       <div className="bg-primary h-2.5 rounded-full" style={{ width: `${percentMinutes}%` }}></div>
                     </div>
                   </div>
-                  
-                  <div>
-                    <div className="flex justify-between items-end mb-2">
-                      <div>
-                        <h3 className="text-sm font-bold text-on-surface">
-                          {isArabic ? 'مساحة التخزين السحابي المستخدمة' : 'Cloud Storage Used'}
-                        </h3>
-                        <p className="text-xs text-secondary">
-                          {isArabic ? '2.5 جيجابايت مستخدمة من أصل 10' : '2.5 GB used out of 10 GB'}
-                        </p>
-                      </div>
-                      <span className="text-sm font-bold text-secondary">25%</span>
-                    </div>
-                    <div className="w-full bg-surface-container-high rounded-full h-2.5 overflow-hidden">
-                      <div className="bg-secondary h-2.5 rounded-full" style={{ width: '25%' }}></div>
-                    </div>
-                  </div>
+
                 </div>
               </div>
             </div>

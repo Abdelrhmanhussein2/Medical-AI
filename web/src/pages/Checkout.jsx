@@ -3,12 +3,17 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { PLANS } from '../data/plans';
 import SbrLogo from '../components/SbrLogo';
+import { useApp } from '../context/AppContext';
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { currentUser, activateSubscription } = useApp();
   const { lang, setLang, t, isArabic } = useLanguage();
-  const planId = searchParams.get('plan') || 'starter';
+  let planId = searchParams.get('plan') || 'starter';
+  if (currentUser && currentUser.role === 'doctor' && planId === 'free') {
+    planId = 'starter';
+  }
 
   // State for form fields
   const [cardNumber, setCardNumber] = useState('');
@@ -47,6 +52,11 @@ export default function Checkout() {
     setCardCvv(value);
   };
 
+  // Handle Plan selection change
+  const handlePlanChange = (newPlanId) => {
+    setSearchParams({ plan: newPlanId });
+  };
+
   // Handle Form Submission
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -64,12 +74,40 @@ export default function Checkout() {
       // Step 2: Securing (1s)
       setTimeout(() => {
         setProcessStep(3);
-        // Save plan context in sessionStorage
-        sessionStorage.setItem('paidPlan', selectedPlan.id);
-        // Step 3: Success redirect (1.5s)
-        setTimeout(() => {
-          navigate('/register?role=doctor');
-        }, 1500);
+        
+        // Check if user is logged in
+        if (currentUser && currentUser.role === 'doctor') {
+          const planMap = {
+            'free': 'Free Trial',
+            'starter': 'SBR AI Starter',
+            'pro': 'SBR AI Pro',
+            'business': 'SBR AI Business',
+            'enterprise': 'SBR AI Enterprise'
+          };
+          const planName = planMap[selectedPlan.id] || 'SBR AI Starter';
+          const expiryDate = new Date();
+          expiryDate.setDate(expiryDate.getDate() + 30);
+          
+          activateSubscription(currentUser.id, planName, expiryDate.toISOString().split('T')[0])
+            .then(() => {
+              setTimeout(() => {
+                navigate('/subscription');
+              }, 1500);
+            })
+            .catch((err) => {
+              console.error(err);
+              alert(isArabic ? 'حدث خطأ أثناء تجديد الاشتراك.' : 'Failed to renew subscription.');
+              setIsProcessing(false);
+              setProcessStep(0);
+            });
+        } else {
+          // Save plan context in sessionStorage
+          sessionStorage.setItem('paidPlan', selectedPlan.id);
+          // Step 3: Success redirect (1.5s)
+          setTimeout(() => {
+            navigate('/register?role=doctor');
+          }, 1500);
+        }
       }, 1000);
     }, 1000);
   };
@@ -101,13 +139,6 @@ export default function Checkout() {
         </button>
         
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-border-subtle bg-white text-secondary hover:text-primary rounded-lg text-xs font-bold shadow-sm transition-all duration-300 active:scale-95 cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[16px]">language</span>
-            <span>{lang === 'ar' ? 'English' : 'العربية'}</span>
-          </button>
           <SbrLogo size={36} color="#24564C" showText={true} textClass="text-primary" />
         </div>
       </header>
@@ -301,6 +332,64 @@ export default function Checkout() {
                   </div>
                 </div>
 
+              </div>
+            </div>
+
+            {/* Plan Selector Grid */}
+            <div className="space-y-3 mb-6 text-start">
+              <label className="block text-xs font-bold text-primary uppercase tracking-wider mb-2">
+                {isArabic ? 'باقة الاشتراك المتاحة:' : 'Selected Subscription Plan:'}
+              </label>
+              <div className="space-y-2">
+                {(() => {
+                  const plansToShow = currentUser && currentUser.role === 'doctor'
+                    ? PLANS.filter(p => p.id !== 'free')
+                    : PLANS;
+                  return plansToShow.map((plan) => {
+                    const isSelected = plan.id === planId;
+                    return (
+                      <button
+                        key={plan.id}
+                        type="button"
+                        disabled={isProcessing}
+                        onClick={() => handlePlanChange(plan.id)}
+                        className={`w-full p-3.5 rounded-xl border text-start flex items-center justify-between transition-all duration-200 cursor-pointer ${
+                          isSelected 
+                            ? 'border-primary bg-primary/[0.03] shadow-sm ring-1 ring-primary' 
+                            : 'border-border-subtle bg-white hover:border-primary-light hover:bg-bg-canvas'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
+                            isSelected ? 'border-primary bg-primary' : 'border-outline-variant'
+                          }`}>
+                            {isSelected && (
+                              <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm text-primary">
+                              {isArabic ? plan.nameAr : plan.nameEn}
+                            </p>
+                            <p className="text-[10px] text-secondary mt-0.5">
+                              {plan.id === 'free' 
+                                ? (isArabic ? '60 دقيقة مجانية' : '60 free minutes')
+                                : (isArabic ? `${plan.minutes} دقيقة شهرياً` : `${plan.minutes} mins/month`)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-end">
+                          <span className="font-extrabold text-sm text-primary">
+                            {plan.price} {isArabic ? plan.currencyAr : plan.currencyEn}
+                          </span>
+                          <span className="text-[9px] text-secondary block">
+                            {plan.id === 'free' ? '' : (isArabic ? '/شهرياً' : '/mo')}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  });
+                })()}
               </div>
             </div>
 

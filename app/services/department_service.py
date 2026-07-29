@@ -50,14 +50,33 @@ class DepartmentService:
             else:
                 consultation_trends = [0, 0, 0, 0]
 
+            # Real AI adoption rate: % of dept doctors who used AI sessions vs total dept doctors
+            doctors_with_sessions = await connection.fetchval(
+                """
+                SELECT COUNT(DISTINCT s.doctor_id)
+                FROM sessions s
+                JOIN doctors d ON s.doctor_id = d.id
+                WHERE d.department_id = $1
+                  AND s.created_at >= CURRENT_DATE - INTERVAL '30 days'
+                """, department_id
+            )
+            ai_adoption_rate = 0
+            if total_doctors and total_doctors > 0:
+                ai_adoption_rate = round((doctors_with_sessions / total_doctors) * 100)
+
+            # Per-doctor real ai_adoption: sessions this month vs total appointments
             top_doctors_records = await connection.fetch(
                 """
-                SELECT d.id, d.name, d.status, COUNT(a.id) as patients_count
+                SELECT d.id, d.name, d.status,
+                    COUNT(DISTINCT a.id) as patients_count,
+                    COUNT(DISTINCT s.id) as session_count
                 FROM doctors d
                 LEFT JOIN appointments a ON d.id = a.doctor_id
+                LEFT JOIN sessions s ON d.id = s.doctor_id 
+                    AND s.created_at >= CURRENT_DATE - INTERVAL '30 days'
                 WHERE d.department_id = $1
                 GROUP BY d.id, d.name, d.status
-                ORDER BY patients_count DESC
+                ORDER BY session_count DESC, patients_count DESC
                 LIMIT 5
                 """, department_id
             )
@@ -66,23 +85,35 @@ class DepartmentService:
                     "id": row["id"],
                     "name": row["name"],
                     "patients_count": row["patients_count"],
-                    "ai_adoption": 85,
+                    "ai_adoption": min(100, round((row["session_count"] / row["patients_count"]) * 100)) if row["patients_count"] > 0 else 0,
                     "status": row["status"]
                 } for row in top_doctors_records
             ]
-            
+
+            # Also replace monthly_consults to use sessions count (AI clinical sessions)
+            monthly_consults = await connection.fetchval(
+                """
+                SELECT COUNT(s.id) 
+                FROM sessions s
+                JOIN doctors d ON s.doctor_id = d.id
+                WHERE d.department_id = $1 
+                  AND s.created_at >= CURRENT_DATE - INTERVAL '30 days'
+                """, department_id
+            ) or 0
+
+            # Department activity from recent AI sessions
             activity_records = await connection.fetch(
                 """
-                SELECT a.id, d.name as doctor_name, p.name as patient_name, a.created_at
-                FROM appointments a
-                JOIN doctors d ON a.doctor_id = d.id
-                JOIN patients p ON a.patient_id = p.id
+                SELECT s.id, d.name as doctor_name, p.name as patient_name, s.created_at
+                FROM sessions s
+                JOIN doctors d ON s.doctor_id = d.id
+                LEFT JOIN patients p ON s.patient_id = p.id
                 WHERE d.department_id = $1
-                ORDER BY a.created_at DESC
+                ORDER BY s.created_at DESC
                 LIMIT 5
                 """, department_id
             )
-            
+
             department_activity = []
             now = datetime.now(timezone.utc)
             for row in activity_records:
@@ -99,17 +130,17 @@ class DepartmentService:
                     else:
                         mins = diff.seconds // 60
                         time_ago = f"{mins} mins ago"
-
+                patient_str = row["patient_name"] if row["patient_name"] else "مريض"
                 department_activity.append({
                     "id": str(row["id"]),
-                    "message": f"Dr. {row['doctor_name']} scheduled a visit with {row['patient_name']}",
+                    "message": f"Dr. {row['doctor_name']} أجرى جلسة ذكاء اصطناعي مع {patient_str}",
                     "time_ago": time_ago
                 })
 
             return {
                 "total_doctors": total_doctors,
                 "active_licenses": active_licenses,
-                "ai_adoption_rate": 86,
+                "ai_adoption_rate": ai_adoption_rate,
                 "monthly_consults": monthly_consults,
                 "consultation_trends": consultation_trends,
                 "top_performing_doctors": top_performing_doctors,

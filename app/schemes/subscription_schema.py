@@ -42,6 +42,8 @@ class SubscriptionResponse(BaseModel):
     bundle_name_ar: Optional[str] = None
     seats_used: Optional[int] = None
     managed_by_org: Optional[bool] = False
+    used_minutes: Optional[int] = 0
 
     class Config:
         from_attributes = True
+

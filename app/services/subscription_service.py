@@ -56,7 +56,36 @@ class SubscriptionService:
                 LIMIT 1
                 """
             row = await connection.fetchrow(query, owner_id)
-            return dict(row) if row else None
+            if not row:
+                return None
+                
+            sub_dict = dict(row)
+            sub_id = sub_dict["id"]
+            start_dt = sub_dict["start_date"]
+            
+            # Fetch total call duration in seconds for the current billing cycle
+            if is_department:
+                duration_query = """
+                    SELECT COALESCE(SUM(duration_seconds), 0)
+                    FROM sessions s
+                    JOIN subscription_doctors sd ON s.doctor_id = sd.doctor_id
+                    WHERE sd.subscription_id = $1
+                      AND s.created_at >= $2
+                """
+                duration_sec = await connection.fetchval(duration_query, sub_id, start_dt)
+            else:
+                duration_query = """
+                    SELECT COALESCE(SUM(duration_seconds), 0)
+                    FROM sessions
+                    WHERE doctor_id = $1
+                      AND created_at >= $2
+                """
+                duration_sec = await connection.fetchval(duration_query, UUID(str(owner_id)), start_dt)
+                
+            sub_dict["used_minutes"] = int(duration_sec // 60)
+            return sub_dict
+
+
 
     @staticmethod
     async def create_subscription(owner_id: UUID, is_department: bool, bundle_id: UUID) -> dict:
@@ -68,8 +97,24 @@ class SubscriptionService:
             bundle = await connection.fetchrow("SELECT * FROM subscription_bundles WHERE id = $1 AND is_active = true", bundle_id)
             if not bundle:
                 raise ValueError("الباقة المطلوبة غير متوفرة أو غير نشطة.")
-            
             bundle_dict = dict(bundle)
+            
+            # Prevent doctor from taking Free Trial more than once
+            if not is_department and (bundle_dict["price"] == 0 or bundle_dict["name"] == "Free Trial"):
+                has_had_trial = await connection.fetchval(
+                    """
+                    SELECT EXISTS(
+                        SELECT 1 
+                        FROM subscriptions s
+                        JOIN subscription_bundles b ON s.bundle_id = b.id
+                        WHERE s.doctor_id = $1 AND (b.name = 'Free Trial' OR b.price = 0)
+                    )
+                    """,
+                    owner_id
+                )
+                if has_had_trial:
+                    raise ValueError("لقد قمت بالاشتراك في الفترة التجريبية المجانية بالفعل سابقاً. يمكنك الاختيار من بين باقات الدفع المتاحة.")
+
             
             # Verify target type matches owner type
             expected_target = "department" if is_department else "doctor"

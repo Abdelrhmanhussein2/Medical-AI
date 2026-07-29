@@ -49,6 +49,7 @@ CREATE TABLE departments (
     name          VARCHAR(100) NOT NULL UNIQUE,
     email         VARCHAR(255) NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
+    is_active     BOOLEAN NOT NULL DEFAULT true,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -81,6 +82,8 @@ CREATE TABLE doctors (
     calendar_id            VARCHAR(255),             -- id بتاع الكالندر المرتبط
 
     is_active              BOOLEAN NOT NULL DEFAULT true,
+    custom_minutes_limit   INT DEFAULT NULL,
+    custom_tokens_limit    INT DEFAULT NULL,
     created_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at             TIMESTAMPTZ NOT NULL DEFAULT now()
 );

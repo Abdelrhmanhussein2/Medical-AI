@@ -41,7 +41,9 @@ Return ONLY valid JSON with this exact structure:
   "tasks": [
     "Follow up task 1",
     "Follow up task 2"
-  ]
+  ],
+  "extracted_diseases": "Any chronic diseases mentioned by the patient or doctor in this session (e.g., 'السكري'، 'الضغط') or null if none mentioned",
+  "extracted_habits": "Any lifestyle habits mentioned in this session (e.g., 'التدخين'، 'الرياضة') or null if none mentioned"
 }"""
 
                 user_prompt = f"""Patient Name: {patient_name}
@@ -122,7 +124,9 @@ Return ONLY valid JSON with this exact structure:
   "tasks": [
     "Follow up task 1",
     "Follow up task 2"
-  ]
+  ],
+  "extracted_diseases": "Any chronic diseases mentioned by the patient or doctor in this session (e.g., 'السكري'، 'الضغط') or null if none mentioned",
+  "extracted_habits": "Any lifestyle habits mentioned in this session (e.g., 'التدخين'، 'الرياضة') or null if none mentioned"
 }"""
 
         user_prompt = f"""Patient Name: {patient_name}

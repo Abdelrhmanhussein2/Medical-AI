@@ -36,6 +36,8 @@ class DoctorResponse(DoctorBase):
     subscription_plan: Optional[str] = None
     subscription_expiry: Optional[str] = None
     subscription_activated_at: Optional[datetime] = None
+    custom_minutes_limit: Optional[int] = None
+    custom_tokens_limit: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 

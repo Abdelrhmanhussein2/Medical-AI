@@ -100,7 +100,8 @@ _ROUTER_SYSTEM_PROMPT_TEMPLATE = """\
 - "سجل مواعيدي / جدول مواعيدي / هات مواعيدي" → get_my_appointments أو get_today_schedule (فهذا استعراض للمواعيد وليس حجز book_appointment)
 - إذا سأل المساعد "هل تريد تسجيله كمريض جديد؟" وأجاب الطبيب بالموافقة (اه / نعم / سجل / ضيفه) → النية هي ADD_NEW_PATIENT والأداة هي add_new_patient فقط (ولا تضف book_appointment أو search_my_patients لأننا نحتاج تسجيله أولاً)
 - إذا أجاب الطبيب برقم هاتف وكان المساعد يسأل عنه لإكمال التسجيل → add_new_patient
-- إذا قال الطبيب "ضيفه / سجله / اضفه" مع "احجزله / بكره / الساعة" في نفس الرسالة → [add_new_patient, book_appointment] معاً
+- إذا قال الطبيب "ضيفه / سجله / اضفه" مع "احجزله / بكره / الساعة" في نفس الرسالة، أو إذا طلب حجز موعد وذكر اسم المريض ورقم هاتفه معاً في نفس الرسالة → اختر [add_new_patient, book_appointment] معاً
+
 - إذا اختار الطبيب مريضاً من قائمة (كتب اسماً بعد سؤال المساعد): تابع الطلب الأصلي الذي كان يريده
   (إذا كان يريد حجز موعد → book_appointment + search_my_patients)
   (إذا كان يريد تسجيل → add_new_patient)
@@ -366,7 +367,17 @@ class SmartRouter:
 
         # ── Step 4: Security guard + prerequisite resolution ───────────────
         final_tools = cls._validate_and_expand(decision.tools)
+        
+        # Heuristic: If phone number is provided alongside booking/adding keywords, always include add_new_patient
+        has_phone = re.search(r"\d{8,15}", current_user_msg) is not None
+        has_booking_kw = any(kw in current_user_msg for kw in ["احجز", "حجز", "موعد", "ميعاد", "ضيف", "اضف", "سجل", "سجلني"])
+        if has_phone and has_booking_kw:
+            if "add_new_patient" not in final_tools:
+                final_tools.append("add_new_patient")
+                final_tools = final_tools[:MAX_TOOLS]
+                
         decision.final_tools = final_tools
+
 
         # ── Step 5: Print debug table ──────────────────────────────────────
         cls._print_debug(decision, final_tools)

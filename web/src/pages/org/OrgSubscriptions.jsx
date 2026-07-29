@@ -3,11 +3,8 @@ import { useApp } from '../../context/AppContext';
 import { useLanguage } from '../../context/LanguageContext';
 
 const PLANS = [
-  { id: 'basic', label: 'Basic Access', labelAr: 'الوصول الأساسي', price: 200 },
-  { id: 'trial', label: 'Trial Access', labelAr: 'الوصول التجريبي', price: 0 },
-  { id: 'clinical_pro', label: 'Clinical Pro', labelAr: 'السريري المتقدم', price: 500 },
-  { id: 'pro_ai', label: 'Pro AI Suite', labelAr: 'باقة ذكاء اصطناعي برو', price: 900 },
-  { id: 'enterprise', label: 'Enterprise AI', labelAr: 'الذكاء الاصطناعي للمؤسسات', price: 1500 },
+  { id: 'business', label: 'SBR AI Business', labelAr: 'SBR AI Business', price: 449, minutes: 3500 },
+  { id: 'enterprise', label: 'SBR AI Enterprise', labelAr: 'SBR AI Enterprise', price: 599, minutes: 5000 },
 ];
 
 export default function OrgSubscriptions() {
@@ -26,13 +23,13 @@ export default function OrgSubscriptions() {
         });
         if (res.ok) {
           const data = await res.json();
-          setOrgSubscription(data || { bundle_name: 'Pro AI Suite (Mock)', end_date: '2026-12-31' });
+          setOrgSubscription(data || { bundle_name: 'SBR AI Business', end_date: '2026-12-31' });
         } else {
-          setOrgSubscription({ bundle_name: 'Pro AI Suite (Mock)', end_date: '2026-12-31' });
+          setOrgSubscription({ bundle_name: 'SBR AI Business', end_date: '2026-12-31' });
         }
       } catch (e) {
         console.error('Failed to load org subscription', e);
-        setOrgSubscription({ bundle_name: 'Pro AI Suite (Mock)', end_date: '2026-12-31' });
+        setOrgSubscription({ bundle_name: 'SBR AI Business', end_date: '2026-12-31' });
       }
     };
     loadOrgSub();
@@ -41,10 +38,109 @@ export default function OrgSubscriptions() {
   // Subscribe modal state
   const [showSubModal, setShowSubModal] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState(null);
-  const [selectedPlan, setSelectedPlan] = useState('pro_ai');
+  const [selectedPlan, setSelectedPlan] = useState('business');
   const [expiryDate, setExpiryDate] = useState('');
   const [subLoading, setSubLoading] = useState(false);
   const [subError, setSubError] = useState('');
+
+  // Doctor custom limits input states
+  const [customMinutes, setCustomMinutes] = useState('');
+  const [customTokens, setCustomTokens] = useState('');
+
+  // Org Renewal Modal States
+  const [showOrgRenewModal, setShowOrgRenewModal] = useState(false);
+  const [selectedBundleId, setSelectedBundleId] = useState('');
+  const [orgBundles, setOrgBundles] = useState([]);
+  const [loadingBundles, setLoadingBundles] = useState(false);
+  const [renewLoading, setRenewLoading] = useState(false);
+  const [renewError, setRenewError] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardName, setCardName] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
+
+  // Load department bundles from API
+  useEffect(() => {
+    const fetchOrgBundles = async () => {
+      setLoadingBundles(true);
+      try {
+        const token = sessionStorage.getItem('accessToken');
+        const res = await fetch('/api/v1/subscriptions/bundles?target_type=department', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setOrgBundles(data || []);
+          if (data && data.length > 0) {
+            setSelectedBundleId(data[0].id);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch department bundles', e);
+      } finally {
+        setLoadingBundles(false);
+      }
+    };
+    fetchOrgBundles();
+  }, []);
+
+  const handleCardNumberChange = (e) => {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length > 16) value = value.slice(0, 16);
+    const formattedValue = value.match(/.{1,4}/g)?.join(' ') || '';
+    setCardNumber(formattedValue);
+  };
+
+  const handleExpiryChange = (e) => {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length > 4) value = value.slice(0, 4);
+    if (value.length > 2) {
+      value = `${value.slice(0, 2)}/${value.slice(2)}`;
+    }
+    setCardExpiry(value);
+  };
+
+  const handleCvvChange = (e) => {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length > 3) value = value.slice(0, 3);
+    setCardCvv(value);
+  };
+
+  const handleOrgRenewSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedBundleId) {
+      setRenewError(isArabic ? 'الرجاء اختيار باقة الاشتراك.' : 'Please select a subscription plan.');
+      return;
+    }
+
+    setRenewLoading(true);
+    setRenewError('');
+    try {
+      const token = sessionStorage.getItem('accessToken');
+      const res = await fetch('/api/v1/subscriptions/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ bundle_id: selectedBundleId })
+      });
+      if (res.ok) {
+        const newSub = await res.json();
+        setOrgSubscription(newSub);
+        setShowOrgRenewModal(false);
+        alert(isArabic ? 'تم تجديد الاشتراك وتفعيل الباقة بنجاح!' : 'Subscription renewed and plan activated successfully!');
+        window.location.reload();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || (isArabic ? 'فشل تجديد الاشتراك' : 'Failed to renew subscription'));
+      }
+    } catch (err) {
+      setRenewError(err.message);
+    } finally {
+      setRenewLoading(false);
+    }
+  };
 
   // All doctors in state are already scoped to this department
   const deptDocs = doctors;
@@ -100,11 +196,13 @@ export default function OrgSubscriptions() {
 
   const openSubscribeModal = (license) => {
     setSelectedDoc(license);
-    setSelectedPlan('pro_ai');
+    setSelectedPlan('business');
     const d = new Date();
     d.setFullYear(d.getFullYear() + 1);
     setExpiryDate(d.toISOString().split('T')[0]);
     setSubError('');
+    setCustomMinutes('');
+    setCustomTokens('');
     setShowSubModal(true);
   };
 
@@ -113,9 +211,17 @@ export default function OrgSubscriptions() {
     setSubLoading(true);
     setSubError('');
     try {
-      const planLabel = PLANS.find(p => p.id === selectedPlan)?.label || selectedPlan;
-      await activateSubscription(selectedDoc.id, planLabel, expiryDate);
+      const planLabel = orgSubscription?.bundle_name || 'SBR AI Business';
+      await activateSubscription(
+        selectedDoc.id, 
+        planLabel, 
+        expiryDate,
+        customMinutes ? parseInt(customMinutes, 10) : null,
+        customTokens ? parseInt(customTokens, 10) : null
+      );
       setShowSubModal(false);
+      alert(isArabic ? 'تم تفعيل حساب الطبيب وتعيين صلاحيات الاستهلاك المخصصة بنجاح!' : 'Doctor activated and custom consumption limits set successfully!');
+      window.location.reload();
     } catch (err) {
       setSubError(err.message || (isArabic ? 'فشل تفعيل الاشتراك' : 'Failed to activate subscription'));
     } finally {
@@ -172,7 +278,7 @@ export default function OrgSubscriptions() {
   return (
     <div className={`space-y-stack-lg font-body-md animate-fade-in ${isArabic ? 'text-right' : 'text-left'}`}>
       {/* Header */}
-      <header className="flex justify-between items-end border-b border-border-subtle pb-stack-md">
+      <header className={`flex justify-between items-end border-b border-border-subtle pb-stack-md ${isArabic ? 'flex-row-reverse' : ''}`}>
         <div>
           <div className={`flex items-center gap-1.5 text-xs text-secondary font-semibold ${isArabic ? 'flex-row-reverse' : ''}`}>
             <span>{currentUser.name}</span>
@@ -188,6 +294,14 @@ export default function OrgSubscriptions() {
               : 'Manage clinician seat allocation and activate doctor accounts.'}
           </p>
         </div>
+        
+        <button
+          onClick={() => setShowOrgRenewModal(true)}
+          className="px-4 py-2 bg-primary hover:bg-primary-hover text-white font-bold text-xs rounded-lg shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[16px]">credit_card</span>
+          {isArabic ? 'تجديد أو ترقية الاشتراك' : 'Renew or Upgrade Subscription'}
+        </button>
       </header>
 
       {/* Stats Cards */}
@@ -351,40 +465,7 @@ export default function OrgSubscriptions() {
                 </div>
               )}
 
-              <div>
-                <label className="block text-xs font-semibold text-on-surface-variant mb-2">
-                  {isArabic ? 'اختر الخطة' : 'Choose Plan'}
-                </label>
-                <div className="space-y-2">
-                  {PLANS.map(plan => (
-                    <label
-                      key={plan.id}
-                      className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
-                        selectedPlan === plan.id
-                          ? 'border-primary bg-primary-light'
-                          : 'border-border-subtle hover:bg-surface-container-low'
-                      } ${isArabic ? 'flex-row-reverse' : ''}`}
-                    >
-                      <div className={`flex items-center gap-2 ${isArabic ? 'flex-row-reverse' : ''}`}>
-                        <input
-                          type="radio" name="plan" value={plan.id}
-                          checked={selectedPlan === plan.id}
-                          onChange={() => setSelectedPlan(plan.id)}
-                          className="accent-primary"
-                        />
-                        <span className="text-xs font-semibold text-on-surface">
-                          {isArabic ? plan.labelAr : plan.label}
-                        </span>
-                      </div>
-                      <span className="text-xs font-bold text-primary">
-                        {plan.price === 0 
-                          ? (isArabic ? 'مجاني' : 'Free') 
-                          : `${plan.price} ${isArabic ? 'ريال/شهر' : 'SAR/mo'}`}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+
 
               <div>
                 <label className="block text-xs font-semibold text-on-surface-variant mb-1">
@@ -392,6 +473,28 @@ export default function OrgSubscriptions() {
                 </label>
                 <input
                   type="date" required value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary mb-3"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                  {isArabic ? 'الحد الأقصى لدقائق الذكاء الاصطناعي للطبيب (دقائق) - اختياري' : 'Custom AI Minutes Limit (Optional)'}
+                </label>
+                <input
+                  type="number" placeholder={isArabic ? "مثال: 1000 (اتركه فارغاً لاستخدام كامل رصيد الباقة)" : "e.g., 1000 (leave blank for unlimited/full package)"}
+                  value={customMinutes} onChange={(e) => setCustomMinutes(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary mb-3"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                  {isArabic ? 'الحد الأقصى لتوكنز الدردشة اليومي (توكن) - اختياري' : 'Custom Daily Chat Tokens Limit (Optional)'}
+                </label>
+                <input
+                  type="number" placeholder={isArabic ? "مثال: 50000" : "e.g., 50000"}
+                  value={customTokens} onChange={(e) => setCustomTokens(e.target.value)}
                   className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
@@ -414,6 +517,108 @@ export default function OrgSubscriptions() {
                     </>
                   ) : (
                     isArabic ? 'تفعيل وتمكين الطبيب' : 'Activate & Enable Doctor'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Org Renew Modal */}
+      {showOrgRenewModal && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl border border-border-subtle shadow-lg max-w-lg w-full overflow-hidden animate-fade-in text-start">
+            <div className={`px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas ${isArabic ? 'flex-row-reverse' : ''}`}>
+              <div>
+                <h3 className="font-headline-md text-base text-primary font-bold">
+                  {isArabic ? 'تجديد أو ترقية الاشتراك للمنظمة' : 'Renew or Upgrade Org Subscription'}
+                </h3>
+                <p className="text-xs text-secondary mt-0.5">
+                  {isArabic ? 'اختر باقة المستشفى/العيادة وأدخل بيانات الدفع' : 'Choose hospital/clinic plan and enter payment details'}
+                </p>
+              </div>
+              <button onClick={() => setShowOrgRenewModal(false)} className="p-1 hover:bg-surface-container rounded-full text-secondary">
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleOrgRenewSubmit} className="p-6 space-y-4 text-start">
+              {renewError && (
+                <div className="bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px]">error</span>
+                  {renewError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-2">
+                  {isArabic ? 'اختر الباقة المناسبة للعيادة' : 'Choose Department Plan'}
+                </label>
+                {loadingBundles ? (
+                  <div className="text-center py-4 text-xs text-secondary flex items-center justify-center gap-2">
+                    <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+                    {isArabic ? 'جاري تحميل الباقات المتاحة...' : 'Loading available plans...'}
+                  </div>
+                ) : orgBundles.length === 0 ? (
+                  <div className="text-center py-4 text-xs text-secondary">
+                    {isArabic ? 'لا توجد باقات متاحة حالياً.' : 'No plans available currently.'}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {orgBundles.map(bundle => (
+                      <label
+                        key={bundle.id}
+                        className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                          selectedBundleId === bundle.id
+                            ? 'border-primary bg-primary-light font-bold'
+                            : 'border-border-subtle hover:bg-surface-container-low'
+                        } ${isArabic ? 'flex-row-reverse' : ''}`}
+                      >
+                        <div className={`flex items-center gap-2 ${isArabic ? 'flex-row-reverse' : ''}`}>
+                          <input
+                            type="radio" name="orgPlan" value={bundle.id}
+                            checked={selectedBundleId === bundle.id}
+                            onChange={() => setSelectedBundleId(bundle.id)}
+                            className="accent-primary"
+                          />
+                          <div>
+                            <span className="text-xs font-bold text-on-surface block">
+                              {isArabic ? (bundle.name_ar || bundle.name) : bundle.name}
+                            </span>
+                            <span className="text-[10px] text-secondary">
+                              {isArabic ? `الحد الأقصى: ${bundle.max_doctors} أطباء` : `Limit: ${bundle.max_doctors} doctors`}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-xs font-bold text-primary font-display-sm">
+                          {bundle.price} {isArabic ? 'ريال/شهرياً' : 'SAR/mo'}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+
+
+              <div className={`flex gap-3 mt-6 pt-4 border-t border-border-subtle ${isArabic ? 'flex-row-reverse' : ''}`}>
+                <button
+                  type="button" onClick={() => setShowOrgRenewModal(false)}
+                  className="flex-1 bg-white border border-border-subtle text-secondary py-2 rounded-lg text-xs hover:bg-surface-container-low transition-colors font-semibold"
+                >
+                  {isArabic ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button
+                  type="submit" disabled={renewLoading || loadingBundles || orgBundles.length === 0}
+                  className="flex-1 bg-primary hover:bg-primary-hover text-white py-2 rounded-lg text-xs transition-colors shadow-sm font-semibold disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {renewLoading ? (
+                    <>
+                      <span className="material-symbols-outlined animate-spin text-[14px]">progress_activity</span>
+                      {isArabic ? 'جاري معالجة الدفع...' : 'Processing...'}
+                    </>
+                  ) : (
+                    isArabic ? 'دفع وتفعيل الاشتراك' : 'Pay & Activate Plan'
                   )}
                 </button>
               </div>

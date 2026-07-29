@@ -107,6 +107,8 @@ async def tool_add_new_patient(fn_args: dict, owner_id: str, conn) -> dict:
     p_phone = fn_args.get("phone")
     p_dob = fn_args.get("date_of_birth")
     p_gender = fn_args.get("gender")
+    p_diseases = fn_args.get("diseases")
+    p_habits = fn_args.get("habits")
 
     if not p_name:
         return {"status": "error", "message": "اسم المريض مطلوب."}
@@ -144,11 +146,11 @@ async def tool_add_new_patient(fn_args: dict, owner_id: str, conn) -> dict:
 
         row = await conn.fetchrow(
             """
-            INSERT INTO patients (id, doctor_id, name, phone, date_of_birth, gender, created_at, updated_at)
-            VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            INSERT INTO patients (id, doctor_id, name, phone, date_of_birth, gender, diseases, habits, created_at, updated_at)
+            VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             RETURNING id
             """,
-            UUID(owner_id), p_name, p_phone, d_obj, p_gender
+            UUID(owner_id), p_name, p_phone, d_obj, p_gender, p_diseases, p_habits
         )
         return {
             "status": "success",

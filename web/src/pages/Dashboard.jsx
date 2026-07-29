@@ -1,10 +1,49 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
+import { PLANS } from '../data/plans';
 
 export default function Dashboard({ setActivePage }) {
   const { currentUser, appointments, patients } = useApp();
   const { t, isArabic } = useLanguage();
+  const [subscription, setSubscription] = useState(null);
+
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      try {
+        const token = sessionStorage.getItem("accessToken");
+        const response = await fetch(`/api/v1/subscriptions/my`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (response.ok && response.status !== 204) {
+          const data = await response.json();
+          setSubscription(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch subscription in Dashboard:", err);
+      }
+    };
+    fetchSubscription();
+  }, []);
+
+  // Calculate remaining AI minutes
+  const getRemainingMinutes = () => {
+    if (!subscription) return 60; // Fallback to 60 for new users with trial
+    const planNameLower = (subscription.bundle_name || '').toLowerCase();
+    const matchedPlan = PLANS.find(p => 
+      p.id === planNameLower || 
+      p.nameEn.toLowerCase() === planNameLower || 
+      (subscription.bundle_name_ar && p.nameAr === subscription.bundle_name_ar)
+    ) || PLANS[1]; // Fallback to starter
+    
+    const totalMinutes = matchedPlan.minutes || 1000;
+    const usedMinutes = subscription.used_minutes || 0;
+    return Math.max(totalMinutes - usedMinutes, 0);
+  };
+
+  const remainingMinutes = getRemainingMinutes();
 
   // Get only today's appointments for Julian Vance (current user)
   const myAppts = appointments.filter(a => a.doctor_id === currentUser.id);
@@ -110,7 +149,7 @@ export default function Dashboard({ setActivePage }) {
             </div>
             <div className="flex items-baseline gap-2">
               <h3 className="font-headline-lg text-headline-lg text-on-surface font-bold">
-                {isArabic ? '٨٥٠ دقيقة' : '850 mins'}
+                {isArabic ? `${remainingMinutes} دقيقة` : `${remainingMinutes} mins`}
               </h3>
               <span className="font-body-sm text-xs text-on-surface-variant">
                 {isArabic ? 'متبقية' : 'remaining'}

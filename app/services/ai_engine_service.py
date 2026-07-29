@@ -91,7 +91,27 @@ class AIEngineService:
     @staticmethod
     async def generate_ai_response(thread_id: str, owner_id: str, owner_type: str) -> dict:
         # Import inside method to avoid circular import issues
-        
+        from app.services.subscription_service import SubscriptionService
+
+        # ── Check Active Subscription ──
+        if owner_type == "doctor":
+            async with db.pool.acquire() as conn_doc:
+                doc_dept = await conn_doc.fetchval(
+                    "SELECT department_id FROM doctors WHERE id = $1", UUID(owner_id)
+                )
+            is_org_doctor = bool(doc_dept)
+            active_sub = await SubscriptionService.get_active_subscription(UUID(owner_id), is_department=False)
+            if not active_sub:
+                if is_org_doctor:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="حسابك تابع لمنظمة. يرجى التواصل مع مسؤول المنظمة لتفعيل اشتراكك للتمكن من استخدام المساعد الطبي."
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="انتهت الفترة التجريبية المجانية أو ليس لديك اشتراك نشط. يرجى الاشتراك في إحدى الباقات للتمكن من استخدام المساعد الطبي."
+                    )
 
         try:
             use_openai = settings.OPENAI_API_KEY and not settings.OPENAI_API_KEY.startswith("sk-your")
@@ -119,6 +139,14 @@ class AIEngineService:
 
             # ── Check Daily Token Limit ──
             async with db.pool.acquire() as conn_limit:
+                # Fetch custom token limit set by organization
+                doc_limits = await conn_limit.fetchrow(
+                    "SELECT custom_tokens_limit FROM doctors WHERE id = $1",
+                    UUID(owner_id)
+                )
+                custom_tokens_limit = doc_limits["custom_tokens_limit"] if doc_limits else None
+                token_limit = custom_tokens_limit if custom_tokens_limit is not None else settings.DAILY_TOKEN_LIMIT
+
                 used_today = await conn_limit.fetchval(
                     """
                     SELECT COALESCE(SUM(total_tokens), 0)
@@ -127,11 +155,11 @@ class AIEngineService:
                     """,
                     UUID(owner_id)
                 )
-                if used_today >= settings.DAILY_TOKEN_LIMIT:
-                    logger.warning(f"[AI ENGINE] Doctor {owner_id} exceeded daily token limit. Used today: {used_today}")
+                if used_today >= token_limit:
+                    logger.warning(f"[AI ENGINE] Doctor {owner_id} exceeded token limit. Used today: {used_today} | Limit: {token_limit}")
                     raise HTTPException(
                         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                        detail="لقد تجاوزت الحد اليومي المسموح به لاستهلاك التوكنز في العيادة. يرجى الانتظار أو التواصل مع الإدارة لزيادة الحد."
+                        detail=f"لقد تجاوزت الحد اليومي المسموح به لاستهلاك التوكنز في العيادة ({used_today}/{token_limit} توكن). يرجى التواصل مع إدارة المنظمة لزيادة الحد."
                     )
 
             user_msg = history[-1]["content"] if history else ""

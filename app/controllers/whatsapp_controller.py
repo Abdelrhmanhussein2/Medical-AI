@@ -124,11 +124,32 @@ async def get_qr_page(service: WhatsAppService = Depends(get_whatsapp_service)):
         async with httpx.AsyncClient() as client:
             response = await client.get(url, headers=headers, timeout=10.0)
             
+        if response.status_code == 404:
+            # The instance does not exist yet. Let's auto-create it.
+            create_url = f"{service.evolution_client.base_url}/instance/create"
+            payload = {
+                "instanceName": service.evolution_client.instance,
+                "qrcode": True
+            }
+            async with httpx.AsyncClient() as client:
+                create_response = await client.post(create_url, json=payload, headers=headers, timeout=15.0)
+                
+            if create_response.status_code in (200, 201):
+                # Request the connection status again now that it has been created
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(url, headers=headers, timeout=10.0)
+            else:
+                return HTMLResponse(
+                    content=f"<h3>Failed to auto-create WhatsApp instance SBR-AI. Status: {create_response.status_code} | {create_response.text}</h3>",
+                    status_code=500
+                )
+                
         if response.status_code != 200:
             return HTMLResponse(
-                content=f"<h3>Failed to connect to Evolution API. Status: {response.status_code}</h3>",
+                content=f"<h3>Failed to connect to Evolution API. Status: {response.status_code} | {response.text}</h3>",
                 status_code=500
             )
+
             
         data = response.json()
         

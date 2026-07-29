@@ -14,7 +14,8 @@ async def tool_get_clinic_stats(fn_args: dict, owner_id: str, conn) -> dict:
           (SELECT COUNT(DISTINCT p.id) FROM patients p LEFT JOIN appointments a ON p.id = a.patient_id WHERE p.doctor_id = $1 OR a.doctor_id = $1) as total_patients_all_time,
           (SELECT COUNT(*) FROM appointments WHERE doctor_id = $1) as total_appointments_all_time,
           (SELECT COUNT(*) FROM appointments WHERE doctor_id = $1 AND date_trunc('month', appointment_date) = date_trunc('month', CURRENT_DATE)) as appointments_this_month,
-          (SELECT COUNT(*) FROM visits WHERE doctor_id = $1 AND date_trunc('month', visit_date) = date_trunc('month', CURRENT_DATE)) as completed_visits_this_month
+          (SELECT COUNT(*) FROM visits WHERE doctor_id = $1 AND date_trunc('month', visit_date) = date_trunc('month', CURRENT_DATE)) as completed_visits_this_month,
+          (SELECT COALESCE(SUM(duration_seconds), 0) FROM sessions WHERE doctor_id = $1) as total_session_seconds
         """,
         UUID(owner_id)
     )
@@ -23,13 +24,15 @@ async def tool_get_clinic_stats(fn_args: dict, owner_id: str, conn) -> dict:
             "إجمالي المرضى": 0,
             "إجمالي المواعيد": 0,
             "مواعيد هذا الشهر": 0,
-            "الزيارات المكتملة هذا الشهر": 0
+            "الزيارات المكتملة هذا الشهر": 0,
+            "دقائق الذكاء الاصطناعي المستهلكة": 0
         }
     return {
         "إجمالي المرضى": stats["total_patients_all_time"] or 0,
         "إجمالي المواعيد": stats["total_appointments_all_time"] or 0,
         "مواعيد هذا الشهر": stats["appointments_this_month"] or 0,
-        "الزيارات المكتملة هذا الشهر": stats["completed_visits_this_month"] or 0
+        "الزيارات المكتملة هذا الشهر": stats["completed_visits_this_month"] or 0,
+        "دقائق الذكاء الاصطناعي المستهلكة": int((stats["total_session_seconds"] or 0) // 60)
     }
 
 def safe_uuid(val: Any) -> Optional[UUID]:

@@ -12,6 +12,8 @@ router = APIRouter(prefix="/doctors", tags=["Doctors"])
 class SubscriptionActivate(BaseModel):
     subscription_plan: str
     subscription_expiry: str  # YYYY-MM-DD
+    custom_minutes_limit: Optional[int] = None
+    custom_tokens_limit: Optional[int] = None
 
 @router.post("/register", response_model=DoctorResponse, status_code=status.HTTP_201_CREATED)
 async def register_doctor(
@@ -66,8 +68,17 @@ async def activate_doctor_subscription(doctor_id: UUID, body: SubscriptionActiva
                 raise HTTPException(status_code=404, detail="Doctor not found")
                 
             await conn.execute(
-                "UPDATE doctors SET status = 'approved', updated_at = now() WHERE id = $1",
-                doctor_id
+                """
+                UPDATE doctors 
+                SET status = 'approved', 
+                    custom_minutes_limit = $2, 
+                    custom_tokens_limit = $3, 
+                    updated_at = now() 
+                WHERE id = $1
+                """,
+                doctor_id,
+                body.custom_minutes_limit,
+                body.custom_tokens_limit
             )
             
             # 2. Map frontend plan name to DB bundle name
@@ -97,6 +108,27 @@ async def activate_doctor_subscription(doctor_id: UUID, body: SubscriptionActiva
                 raise HTTPException(status_code=400, detail="No suitable subscription bundle found in database.")
                 
             bundle_id = bundle["id"]
+            
+            # Prevent doctor from taking Free Trial more than once
+            bundle_details = await conn.fetchrow("SELECT price, name FROM subscription_bundles WHERE id = $1", bundle_id)
+            if bundle_details and (bundle_details["price"] == 0 or bundle_details["name"] == "Free Trial"):
+                has_had_trial = await conn.fetchval(
+                    """
+                    SELECT EXISTS(
+                        SELECT 1 
+                        FROM subscriptions s
+                        JOIN subscription_bundles b ON s.bundle_id = b.id
+                        WHERE s.doctor_id = $1 AND (b.name = 'Free Trial' OR b.price = 0)
+                    )
+                    """,
+                    doctor_id
+                )
+                if has_had_trial:
+                    raise HTTPException(
+                        status_code=400, 
+                        detail="لقد قمت بالاشتراك في الفترة التجريبية المجانية بالفعل سابقاً. يمكنك الاختيار من بين باقات الدفع المتاحة."
+                    )
+
             
             # 4. Deactivate old active subscriptions for this doctor
             await conn.execute(

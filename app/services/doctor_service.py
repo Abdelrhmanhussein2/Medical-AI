@@ -75,6 +75,30 @@ class DoctorService:
                 doctor_data.calendar_id,
                 doctor_data.status if doctor_data.status else 'pending'
             )
+
+            # Auto-assign Free Trial for independent doctors (not org members)
+            if row and not doctor_data.department_id:
+                from datetime import timedelta
+                free_trial_bundle = await connection.fetchrow(
+                    "SELECT id, duration_days FROM subscription_bundles WHERE name = 'Free Trial' AND target_type = 'doctor' AND is_active = true LIMIT 1"
+                )
+                if free_trial_bundle:
+                    from datetime import datetime, timezone
+                    now = datetime.now(timezone.utc)
+                    end_dt = now + timedelta(days=free_trial_bundle["duration_days"])
+                    await connection.execute(
+                        """
+                        INSERT INTO subscriptions (doctor_id, bundle_id, status, start_date, end_date)
+                        VALUES ($1, $2, 'active', $3, $4)
+                        """,
+                        row["id"], free_trial_bundle["id"], now, end_dt
+                    )
+                    # Mark doctor as approved immediately
+                    row = await connection.fetchrow(
+                        "UPDATE doctors SET status = 'approved' WHERE id = $1 RETURNING *",
+                        row["id"]
+                    )
+
             return dict(row) if row else None
 
     async def get_doctor_by_id(self, doctor_id: UUID) -> Optional[dict]:

@@ -95,6 +95,7 @@ _ROUTER_SYSTEM_PROMPT_TEMPLATE = """\
 ━━ قواعد التمييز بين النوايا المتشابهة ━━
 - "الغ / الغي / إلغاء / كنسل" → cancel_appointment (إلغاء نهائي)
 - "أجل / تأجيل / غير الموعد / تغيير الموعد" → reschedule_appointment (تغيير الوقت)
+- "رسالة ترحيبية / ترحيب / تأكيد حجز بالواتس / ابعت تأكيد موعد بالواتساب" → send_appointment_welcome_message (تأكيد الحجز للمريض بالواتساب)
 - "كام / كم عدد / إحصائيات / أرباح / تقرير / شهري" → get_clinic_stats أو get_monthly_report (ليس search_my_patients)
 - "سجل مواعيدي / جدول مواعيدي / هات مواعيدي" → get_my_appointments أو get_today_schedule (فهذا استعراض للمواعيد وليس حجز book_appointment)
 - إذا سأل المساعد "هل تريد تسجيله كمريض جديد؟" وأجاب الطبيب بالموافقة (اه / نعم / سجل / ضيفه) → النية هي ADD_NEW_PATIENT والأداة هي add_new_patient فقط (ولا تضف book_appointment أو search_my_patients لأننا نحتاج تسجيله أولاً)

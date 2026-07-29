@@ -16,6 +16,7 @@ PREREQUISITE_MAP: Dict[str, List[str]] = {
     "update_patient_info": ["search_my_patients"],
     "delete_patient": ["search_my_patients"],
     "add_visit_record": ["search_my_patients"],
+    "send_appointment_welcome_message": ["search_my_patients"],
 }
 
 ROUTER_SHORT_DESCS: Dict[str, str] = {
@@ -34,7 +35,8 @@ ROUTER_SHORT_DESCS: Dict[str, str] = {
     "update_patient_info": "تعديل بيانات مريض موجود",
     "get_patient_full_profile": "الملف الطبي الكامل للمريض",
     "get_today_schedule": "عرض جدول مواعيد اليوم فقط",
-    "get_monthly_report": "التقرير الشهري والمالي للعيادة"
+    "get_monthly_report": "التقرير الشهري والمالي للعيادة",
+    "send_appointment_welcome_message": "إرسال رسالة ترحيبية وتأكيد حجز للمريض عبر الواتساب"
 }
 
 class ToolRegistry:

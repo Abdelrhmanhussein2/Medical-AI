@@ -194,3 +194,62 @@ async def tool_get_today_schedule(fn_args: dict, owner_id: str, conn) -> dict:
     except Exception as e:
         logger.exception(f"Error in get_today_schedule: {e}")
         return {"status": "error", "message": f"حدث خطأ: {str(e)}"}
+
+async def tool_send_appointment_welcome_message(fn_args: dict, owner_id: str, conn) -> dict:
+    patient_id = fn_args.get("patient_id")
+    appt_date = fn_args.get("appointment_date")
+    appt_time = fn_args.get("appointment_time")
+    
+    if not (patient_id and appt_date and appt_time):
+        return {"status": "error", "message": "البيانات المطلوبة لإرسال الرسالة الترحيبية غير مكتملة."}
+        
+    pid_uuid = safe_uuid(patient_id)
+    if not pid_uuid:
+        return {"status": "error", "message": "معرف المريض (patient_id) غير صالح."}
+        
+    try:
+        row = await conn.fetchrow(
+            """
+            SELECT p.name as patient_name, p.phone as patient_phone, d.name as doctor_name
+            FROM patients p
+            JOIN doctors d ON p.doctor_id = d.id
+            WHERE p.id = $1 AND d.id = $2
+            """,
+            pid_uuid, UUID(owner_id)
+        )
+        if not row:
+            return {"status": "error", "message": "المريض غير موجود أو غير تابع لك."}
+            
+        patient_name = row["patient_name"]
+        patient_phone = row["patient_phone"]
+        doctor_name = row["doctor_name"]
+        
+        welcome_text = (
+            f"مرحباً يا {patient_name}، تم تأكيد حجز موعدك بنجاح في عيادة الدكتور {doctor_name} "
+            f"يوم {appt_date} الساعة {appt_time}.\n\n"
+            "نتمنى لك دوام الصحة والعافية! 💚"
+        )
+        
+        from app.services.whatsapp_service import WhatsAppService
+        whatsapp_service = WhatsAppService()
+        success = await whatsapp_service.send_message(patient_phone, welcome_text)
+        
+        status_str = "sent" if success else "failed"
+        await whatsapp_service.repo.log_message(
+            patient_id=pid_uuid,
+            doctor_id=UUID(owner_id),
+            visit_id=None,
+            msg_type="welcome_message",
+            phone=patient_phone,
+            content=welcome_text,
+            status=status_str
+        )
+        
+        if success:
+            return {"status": "success", "message": f"تم إرسال الرسالة الترحيبية وتأكيد الحجز بنجاح للمريض {patient_name}."}
+        else:
+            return {"status": "error", "message": "فشل إرسال الرسالة عبر الواتساب. تأكد من عمل السيرفر وجاهزية الموبايل."}
+            
+    except Exception as e:
+        logger.exception(f"Error in send_appointment_welcome_message tool: {e}")
+        return {"status": "error", "message": f"حدث خطأ داخلي: {str(e)}"}

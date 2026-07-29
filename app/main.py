@@ -4,12 +4,25 @@ from app.core.database import db
 from app.core.redis import redis_client
 from contextlib import asynccontextmanager
 
+from app.scheduler.whatsapp_scheduler import WhatsAppScheduler
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Connect to the database on startup
     await db.connect()
     await redis_client.connect()
+    
+    # Start WhatsApp background scheduler tasks
+    scheduler = WhatsAppScheduler()
+    scheduler.start()
+    app.state.whatsapp_scheduler = scheduler
+    
     yield
+    
+    # Stop WhatsApp background scheduler tasks
+    if hasattr(app.state, "whatsapp_scheduler"):
+        app.state.whatsapp_scheduler.stop()
+        
     # Disconnect from the database on shutdown
     await db.disconnect()
     await redis_client.disconnect()

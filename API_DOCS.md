@@ -82,3 +82,46 @@
   "otp": "123456"
 }
 ```
+
+---
+
+## 7. 💬 تكامل الواتساب (SBR AI WhatsApp Integration)
+
+### 7.1. 🔗 استقبال رسائل الواتساب (Webhook)
+- **المسار:** `POST /api/v1/whatsapp/webhook`
+- **النوع:** `application/json`
+- **وصف:** يستقبل إشعارات Evolution API عند استلام رسائل جديدة من المرضى. (لا يتطلب مصادقة).
+- **المدخلات (مثال):**
+```json
+{
+  "event": "messages.upsert",
+  "instance": "SBR-AI",
+  "data": {
+    "key": {
+      "remoteJid": "966512345678@s.whatsapp.net",
+      "fromMe": false,
+      "id": "MSG_ID"
+    },
+    "message": {
+      "conversation": "أشعر بألم شديد"
+    }
+  }
+}
+```
+
+### 7.2. 📊 إرسال التقرير اليومي للطبيب (Send Report)
+- **المسار:** `POST /api/v1/whatsapp/send-report`
+- **النوع:** `application/json`
+- **حماية:** يتطلب JWT Bearer Token الخاص بالطبيب.
+- **المدخلات:**
+```json
+{
+  "report_text": "تقرير العيادة اليوم: تم فحص 5 حالات اليوم، حالة واحدة حرجة..."
+}
+```
+
+### 7.3. 📜 سجل رسائل الواتساب (Get Logs)
+- **المسار:** `GET /api/v1/whatsapp/logs`
+- **حماية:** يتطلب JWT Bearer Token الخاص بالطبيب أو الأدمن.
+- **وصف:** يعرض آخر 50 رسالة تم إرسالها أو استقبالها عبر النظام.
+

@@ -13,7 +13,14 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: Optional[str] = None
     GROQ_API_KEY: Optional[str] = None
     CHAT_ENCRYPTION_KEY: str = "K_5H6wXz0Zt7wY_VwO45Q0R-gM1tXqK3_Z9iH4R1Lw0="
-    
+
+    # ──────────── WhatsApp / Evolution API ────────────
+    EVOLUTION_API_URL: str = "http://localhost:8080"
+    EVOLUTION_API_KEY: str = "change-me"
+    EVOLUTION_INSTANCE: str = "SBR-AI"
+    # Default country code prefix for phone normalization (Saudi Arabia = 966)
+    PHONE_DEFAULT_COUNTRY_CODE: str = "966"
+
     class Config:
         env_file = ".env"
 

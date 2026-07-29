@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -7,8 +9,6 @@ services:
       - .env
     environment:
       POSTGRES_USER: ${DB_USER}
-
-      
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     ports:
@@ -28,6 +28,30 @@ services:
     restart: unless-stopped
     ports:
       - "${REDIS_PORT:-6379}:6379"
+
+  evolution-api:
+    image: evoapicloud/evolution-api:latest
+    container_name: evolution_api
+    restart: unless-stopped
+    ports:
+      - "${EVOLUTION_PORT:-8080}:8080"
+    environment:
+      - SERVER_URL=http://localhost:8080
+      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY:-your-secret-key-here}
+      - DATABASE_ENABLED=true
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?schema=evolution_api
+      - DATABASE_CONNECTION_CLIENT_NAME=evolution
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://redis:6379
+      - LOG_LEVEL=ERROR
+      - WEBHOOK_GLOBAL_ENABLED=true
+      - WEBHOOK_GLOBAL_URL=http://host.docker.internal:8000/api/v1/whatsapp/webhook
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   medical_postgres_data:

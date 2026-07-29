@@ -24,6 +24,7 @@ class ToolExecutor:
         "add_visit_record":          report_tools.tool_add_visit_record,
         "search_visits_by_diagnosis":report_tools.tool_search_visits_by_diagnosis,
         "get_monthly_report":        report_tools.tool_get_monthly_report,
+        "send_appointment_welcome_message": appointment_tools.tool_send_appointment_welcome_message,
     }
 
     async def dispatch(self, fn_name: str, fn_args: dict, owner_id: str, conn) -> dict:

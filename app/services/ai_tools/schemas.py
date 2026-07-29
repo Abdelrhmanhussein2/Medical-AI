@@ -355,5 +355,30 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
                     }
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "send_appointment_welcome_message",
+                "description": "أرسل رسالة ترحيبية وتأكيد حجز موعد للمريض عبر الواتساب. يجب تحديد رقم المريض (patient_id) والتاريخ والوقت.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "patient_id": {
+                            "type": "string",
+                            "description": "الرقم التعريفي (UUID) للمريض المراد إرسال الرسالة الترحيبية له."
+                        },
+                        "appointment_date": {
+                            "type": "string",
+                            "description": "تاريخ الموعد المحجوز (YYYY-MM-DD)"
+                        },
+                        "appointment_time": {
+                            "type": "string",
+                            "description": "وقت الموعد المحجوز (HH:MM)"
+                        }
+                    },
+                    "required": ["patient_id", "appointment_date", "appointment_time"]
+                }
+            }
         }
     ]

@@ -69,13 +69,10 @@ export default function DoctorSubscription() {
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 text-start">
-      <div className="mb-8">
-        <h1 className="text-2xl font-headline-lg font-bold text-primary mb-2">
+      <div className="mb-8 border-b border-border-subtle pb-4">
+        <h1 className="text-2xl font-headline-lg font-bold text-on-surface">
           {t('my_subscription')}
         </h1>
-        <p className="text-secondary text-sm">
-          {isArabic ? 'إدارة باقة اشتراك الذكاء الاصطناعي الخاصة بعيادتك.' : "Manage your clinic's AI subscription plan."}
-        </p>
       </div>
 
       {error && (
@@ -106,9 +103,28 @@ export default function DoctorSubscription() {
           ? (subscription.bundle_name_ar || matchedPlan.nameAr) 
           : (subscription.bundle_name || matchedPlan.nameEn);
           
-        const totalMinutes = matchedPlan.minutes || 1000;
+        // Use allowed_minutes from API (server-side calculated from actual bundle)
+        const totalMinutes = subscription.allowed_minutes || matchedPlan.minutes || 1000;
         const usedMinutes = subscription.used_minutes || 0;
+        const remainingMinutes = Math.max(totalMinutes - usedMinutes, 0);
         const percentMinutes = Math.min(Math.round((usedMinutes / totalMinutes) * 100), 100);
+
+        // Approximate message limit from plan (same formula used by the DB function)
+        // voice_cost_per_minute=0.007, avg_tokens=6000, input_ratio=0.70, output_ratio=0.30
+        // llm_input=$0.15/M, llm_output=$0.60/M  → cost_per_msg ≈ $0.001710
+        // We map plan minutes to a rough message budget: starter=1000min→$1.71 budget
+        // For simplicity we use a flat approximation based on plan tier
+        const messageLimitByPlan = {
+          free:       350,
+          starter:   2631,
+          pro:       2350,
+          business:  9400,
+          enterprise: 16450,
+        };
+        const totalMessages = matchedPlan.messagesApprox || messageLimitByPlan[matchedPlan.id] || 2631;
+        const usedMessages = subscription.used_messages || 0;
+        const remainingMessages = Math.max(totalMessages - usedMessages, 0);
+        const percentMessages = Math.min(Math.round((usedMessages / totalMessages) * 100), 100);
 
         return (
           <>
@@ -196,23 +212,109 @@ export default function DoctorSubscription() {
                 </p>
               </div>
               <div className="p-6">
-                <div className="space-y-6">
+                <div className="space-y-8">
+
+                  {/* ── Minutes ── */}
                   <div>
                     <div className="flex justify-between items-end mb-2">
                       <div>
-                        <h3 className="text-sm font-bold text-on-surface">
-                          {isArabic ? 'دقائق الذكاء الاصطناعي المستخدمة' : 'AI Minutes Used'}
+                        <h3 className="text-sm font-bold text-on-surface flex items-center gap-2">
+                          <span className="material-symbols-outlined text-[18px] text-primary">mic</span>
+                          {isArabic ? 'دقائق الذكاء الاصطناعي المستخدمة' : 'AI Voice Minutes Used'}
                         </h3>
-                        <p className="text-xs text-secondary">
-                          {isArabic 
-                            ? `${usedMinutes} دقيقة مستخدمة من أصل ${totalMinutes}` 
-                            : `${usedMinutes} minutes used out of ${totalMinutes}`}
+                        <p className="text-xs text-secondary mt-0.5">
+                          {isArabic
+                            ? `${usedMinutes.toLocaleString()} دقيقة مستخدمة من أصل ${totalMinutes.toLocaleString()}`
+                            : `${usedMinutes.toLocaleString()} of ${totalMinutes.toLocaleString()} minutes used`}
                         </p>
                       </div>
-                      <span className="text-sm font-bold text-primary">{percentMinutes}%</span>
+                      <div className="text-end">
+                        <span className={`text-sm font-bold ${percentMinutes >= 90 ? 'text-error' : percentMinutes >= 70 ? 'text-warning' : 'text-primary'}`}>
+                          {percentMinutes}%
+                        </span>
+                        <p className="text-[10px] text-secondary mt-0.5">
+                          {isArabic
+                            ? `${remainingMinutes.toLocaleString()} دقيقة متبقية`
+                            : `${remainingMinutes.toLocaleString()} remaining`}
+                        </p>
+                      </div>
                     </div>
                     <div className="w-full bg-surface-container-high rounded-full h-2.5 overflow-hidden">
-                      <div className="bg-primary h-2.5 rounded-full" style={{ width: `${percentMinutes}%` }}></div>
+                      <div
+                        className={`h-2.5 rounded-full transition-all duration-700 ${
+                          percentMinutes >= 90 ? 'bg-error' : percentMinutes >= 70 ? 'bg-warning' : 'bg-primary'
+                        }`}
+                        style={{ width: `${percentMinutes}%` }}
+                      />
+                    </div>
+                    {/* Remaining chip */}
+                    <div className="mt-2 flex items-center gap-1.5">
+                      <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg ${
+                        remainingMinutes === 0
+                          ? 'bg-error/10 text-error'
+                          : 'bg-primary-light text-primary'
+                      }`}>
+                        <span className="material-symbols-outlined text-[13px]">
+                          {remainingMinutes === 0 ? 'warning' : 'timer'}
+                        </span>
+                        {remainingMinutes === 0
+                          ? (isArabic ? 'نفدت الدقائق' : 'Minutes exhausted')
+                          : (isArabic
+                              ? `${remainingMinutes.toLocaleString()} دقيقة متبقية`
+                              : `${remainingMinutes.toLocaleString()} min left`)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* ── Messages ── */}
+                  <div>
+                    <div className="flex justify-between items-end mb-2">
+                      <div>
+                        <h3 className="text-sm font-bold text-on-surface flex items-center gap-2">
+                          <span className="material-symbols-outlined text-[18px] text-secondary">chat</span>
+                          {isArabic ? 'رسائل الذكاء الاصطناعي المستخدمة' : 'AI Messages Used'}
+                        </h3>
+                        <p className="text-xs text-secondary mt-0.5">
+                          {isArabic
+                            ? `${usedMessages.toLocaleString()} رسالة مستخدمة من أصل ~${totalMessages.toLocaleString()}`
+                            : `${usedMessages.toLocaleString()} of ~${totalMessages.toLocaleString()} messages used`}
+                        </p>
+                      </div>
+                      <div className="text-end">
+                        <span className={`text-sm font-bold ${percentMessages >= 90 ? 'text-error' : percentMessages >= 70 ? 'text-warning' : 'text-secondary'}`}>
+                          {percentMessages}%
+                        </span>
+                        <p className="text-[10px] text-secondary mt-0.5">
+                          {isArabic
+                            ? `~${remainingMessages.toLocaleString()} رسالة متبقية`
+                            : `~${remainingMessages.toLocaleString()} remaining`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="w-full bg-surface-container-high rounded-full h-2.5 overflow-hidden">
+                      <div
+                        className={`h-2.5 rounded-full transition-all duration-700 ${
+                          percentMessages >= 90 ? 'bg-error' : percentMessages >= 70 ? 'bg-warning' : 'bg-secondary'
+                        }`}
+                        style={{ width: `${percentMessages}%` }}
+                      />
+                    </div>
+                    {/* Remaining chip */}
+                    <div className="mt-2 flex items-center gap-1.5">
+                      <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg ${
+                        remainingMessages === 0
+                          ? 'bg-error/10 text-error'
+                          : 'bg-surface-container text-secondary'
+                      }`}>
+                        <span className="material-symbols-outlined text-[13px]">
+                          {remainingMessages === 0 ? 'warning' : 'chat_bubble'}
+                        </span>
+                        {remainingMessages === 0
+                          ? (isArabic ? 'نفدت الرسائل' : 'Messages exhausted')
+                          : (isArabic
+                              ? `~${remainingMessages.toLocaleString()} رسالة متبقية`
+                              : `~${remainingMessages.toLocaleString()} msgs left`)}
+                      </span>
                     </div>
                   </div>
 

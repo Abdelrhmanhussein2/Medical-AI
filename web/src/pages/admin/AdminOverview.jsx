@@ -58,16 +58,11 @@ export default function AdminOverview({ setActivePage }) {
   return (
     <div className={`space-y-stack-lg font-body-md animate-fade-in ${isArabic ? 'text-right' : 'text-left'}`}>
       {/* Header */}
-      <header className="flex justify-between items-end border-b border-border-subtle pb-stack-md">
+      <header className="flex justify-between items-center border-b border-border-subtle pb-4">
         <div>
           <h1 className="font-display-lg text-headline-lg text-on-surface font-bold">
             {isArabic ? 'نظرة عامة على المنظمات' : 'Organization Overview'}
           </h1>
-          <p className="font-body-lg text-body-lg text-on-surface-variant mt-1">
-            {isArabic
-              ? 'لمحة شاملة عن المنظمات السريرية والمقاعد وصحة الاشتراكات.'
-              : 'Global snapshot of clinical organizations, seats, and subscription health.'}
-          </p>
         </div>
       </header>
 
@@ -84,9 +79,9 @@ export default function AdminOverview({ setActivePage }) {
             <span className="text-xs font-semibold text-secondary uppercase tracking-wider block">
               {isArabic ? labelAr : labelEn}
             </span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-on-surface font-display-lg">{value}</span>
-              <span className={`text-xs font-semibold flex items-center gap-0.5 ${subClass}`}>
+            <div className="flex items-center gap-3 mt-1 flex-wrap">
+              <span className="text-3xl font-bold text-on-surface font-display-lg shrink-0">{value}</span>
+              <span className={`text-xs font-semibold flex items-center gap-1 shrink-0 ${subClass}`}>
                 {icon && <span className="material-symbols-outlined text-xs">{icon}</span>}
                 {sub}
               </span>
@@ -115,76 +110,84 @@ export default function AdminOverview({ setActivePage }) {
               </div>
             </div>
 
-            <table className={`min-w-full divide-y divide-border-subtle ${isArabic ? 'text-right' : 'text-left'}`}>
-              <thead className="bg-bg-canvas/50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">
-                    {isArabic ? 'المنظمة' : 'Organization'}
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">
-                    {isArabic ? 'التخصص' : 'Specialty'}
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">
-                    {isArabic ? 'الأطباء' : 'Doctors'}
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">
-                    {isArabic ? 'الاشتراك' : 'Subscription'}
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">
-                    {isArabic ? 'الحالة' : 'Status'}
-                  </th>
-                  <th scope="col" className="relative px-6 py-3">
-                    <span className="sr-only">{isArabic ? 'إجراءات' : 'Actions'}</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-border-subtle text-xs">
-                {filteredOrgs.map((org) => {
-                  const assignedCount = doctors.filter(d => d.org_id === org.id).length;
-                  return (
-                    <tr key={org.id} className="hover:bg-surface-container-low transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-bold text-on-surface">{org.name}</div>
-                        <div className="text-[10px] text-secondary">{org.email}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-secondary font-semibold">{org.specialty}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-secondary font-bold">
-                        {assignedCount} {isArabic ? 'مُعين' : 'assigned'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-semibold text-primary">{org.subscription_plan}</div>
-                        <div className="text-[10px] text-secondary">
-                          {isArabic ? 'ينتهي' : 'Expires'} {org.subscription_expiry}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${
-                          org.status === 'active' ? 'bg-primary-light text-primary' : 'bg-error-container text-error'
-                        }`}>
-                          {org.status === 'active' ? (isArabic ? 'نشط' : 'Active') : (isArabic ? 'موقوف' : 'Suspended')}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-xs font-semibold">
-                        <div className={`flex gap-2 ${isArabic ? 'justify-start' : 'justify-end'}`}>
-                          <button
-                            onClick={() => toggleOrgStatus(org.id)}
-                            className={`px-2.5 py-1 rounded transition-colors text-[10px] font-bold ${
-                              org.status === 'active'
-                                ? 'bg-error-container/10 hover:bg-error-container text-error'
-                                : 'bg-primary-light text-primary hover:bg-primary/20'
-                            }`}
-                          >
-                            {org.status === 'active'
-                              ? (isArabic ? 'إيقاف' : 'Suspend')
-                              : (isArabic ? 'تفعيل' : 'Activate')}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className={`w-full divide-y divide-border-subtle ${isArabic ? 'text-right' : 'text-left'}`}>
+                <thead className="bg-bg-canvas/50">
+                  <tr>
+                    <th scope="col" className="px-4 py-3 text-xs font-medium text-secondary uppercase tracking-wider">
+                      {isArabic ? 'المنظمة' : 'Organization'}
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-xs font-medium text-secondary uppercase tracking-wider">
+                      {isArabic ? 'التخصص' : 'Specialty'}
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-xs font-medium text-secondary uppercase tracking-wider">
+                      {isArabic ? 'الأطباء' : 'Doctors'}
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-xs font-medium text-secondary uppercase tracking-wider">
+                      {isArabic ? 'الاشتراك' : 'Subscription'}
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-xs font-medium text-secondary uppercase tracking-wider">
+                      {isArabic ? 'الحالة' : 'Status'}
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-xs font-medium text-secondary uppercase tracking-wider">
+                      {isArabic ? 'الإجراء' : 'Action'}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-border-subtle text-xs">
+                  {filteredOrgs.map((org) => {
+                    const assignedCount = doctors.filter(d => d.org_id === org.id).length;
+                    return (
+                      <tr key={org.id} className="hover:bg-surface-container-low transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col space-y-0.5 text-start">
+                            <div className="font-bold text-on-surface text-xs leading-snug">{org.name}</div>
+                            <div className="text-xs text-secondary leading-snug truncate max-w-[180px]">{org.email}</div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-secondary font-semibold">{org.specialty}</td>
+                        <td className="px-4 py-3 text-secondary font-bold">
+                          {assignedCount} {isArabic ? 'مُعين' : 'assigned'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col space-y-0.5 text-start">
+                            <div className="font-bold text-primary text-xs leading-snug">{org.subscription_plan}</div>
+                            {org.subscription_expiry && (
+                              <div className="text-xs text-secondary leading-snug">
+                                {isArabic ? `ينتهي: ${org.subscription_expiry}` : `Expires: ${org.subscription_expiry}`}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize whitespace-nowrap ${
+                            (org.status === 'active' || org.is_active) ? 'bg-primary-light text-primary' : 'bg-error-container text-error'
+                          }`}>
+                            {(org.status === 'active' || org.is_active) ? (isArabic ? 'نشط' : 'Active') : (isArabic ? 'موقوف' : 'Suspended')}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs font-semibold">
+                          <div className={`flex gap-2 ${isArabic ? 'justify-start' : 'justify-end'}`}>
+                            <button
+                              onClick={() => toggleOrgStatus(org.id)}
+                              className={`px-2.5 py-1 rounded transition-colors text-[10px] font-bold whitespace-nowrap cursor-pointer ${
+                                (org.status === 'active' || org.is_active)
+                                  ? 'bg-error-container/10 hover:bg-error-container text-error'
+                                  : 'bg-primary-light text-primary hover:bg-primary/20'
+                              }`}
+                            >
+                              {(org.status === 'active' || org.is_active)
+                                ? (isArabic ? 'إيقاف' : 'Suspend')
+                                : (isArabic ? 'تفعيل' : 'Activate')}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div className={`p-4 border-t border-border-subtle bg-bg-canvas/30 ${isArabic ? 'text-left' : 'text-right'}`}>
@@ -204,13 +207,13 @@ export default function AdminOverview({ setActivePage }) {
             <h3 className="font-button text-sm text-on-surface font-bold border-b border-border-subtle pb-3">
               {isArabic ? 'سجل الأنشطة الإدارية' : 'Administrative Log'}
             </h3>
-            <div className="space-y-4 text-xs leading-relaxed max-h-[360px] overflow-y-auto pr-1">
+            <div className={`space-y-4 text-xs leading-relaxed max-h-[360px] overflow-y-auto ${isArabic ? 'pl-2' : 'pr-2'}`}>
               {displayLogs.map(log => (
-                <div key={log.id} className={`flex gap-3 items-start ${isArabic ? 'flex-row-reverse text-right' : ''}`}>
-                  <span className={`material-symbols-outlined p-1 rounded ${log.iconClass}`}>{log.icon}</span>
-                  <div>
-                    <p className="font-bold text-on-surface">{isArabic ? log.textAr : log.textEn}</p>
-                    <span className="text-[10px] text-secondary">{log.time}</span>
+                <div key={log.id} className="flex gap-3 items-start text-start">
+                  <span className={`material-symbols-outlined p-2 rounded-lg shrink-0 ${log.iconClass}`}>{log.icon}</span>
+                  <div className="flex flex-col text-start">
+                    <p className="font-bold text-on-surface text-xs leading-tight">{isArabic ? log.textAr : log.textEn}</p>
+                    <span className="text-xs text-secondary mt-0.5">{log.time}</span>
                   </div>
                 </div>
               ))}

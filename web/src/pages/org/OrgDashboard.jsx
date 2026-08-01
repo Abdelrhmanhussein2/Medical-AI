@@ -57,11 +57,6 @@ export default function OrgDashboard({ setActivePage }) {
           <h1 className="font-display-lg text-headline-lg text-on-surface font-bold">
             {isArabic ? `لوحة تحكم ${currentUser.name}` : `${currentUser.name} Dashboard`}
           </h1>
-          <p className="font-body-lg text-body-lg text-on-surface-variant mt-1">
-            {isArabic
-              ? 'نظرة عامة على عمليات القسم السريري، ونسبة اعتماد أدوات الذكاء الاصطناعي، وتخصيص التراخيص.'
-              : 'Overview of clinical department operations, AI tool adoption, and license allocations.'}
-          </p>
         </div>
       </header>
 
@@ -97,18 +92,18 @@ export default function OrgDashboard({ setActivePage }) {
         <div className="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
           <div className="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
           <span className="text-xs font-semibold text-secondary uppercase tracking-wider block">
-            {isArabic ? 'معدل تبني الذكاء الاصطناعي' : 'AI Adoption Rate'}
+            {isArabic ? 'نسبة استخدام الذكاء الاصطناعي' : 'AI Usage Rate'}
           </span>
           <div className="flex items-baseline gap-2">
             <span className="text-4xl font-bold text-on-surface font-display-lg">{ai_adoption_rate || 0}%</span>
-            <span className={`text-xs font-semibold ${(ai_adoption_rate || 0) >= 60 ? 'text-primary' : (ai_adoption_rate || 0) >= 30 ? 'text-status-warning' : 'text-error'}`}>
+            <span className={`text-xs font-semibold ${(ai_adoption_rate || 0) >= 60 ? 'text-primary' : (ai_adoption_rate || 0) >= 30 ? 'text-status-warning' : (ai_adoption_rate || 0) > 0 ? 'text-status-warning' : 'text-secondary'}`}>
               {(ai_adoption_rate || 0) >= 60
-                ? (isArabic ? 'استخدام مرتفع' : 'High Usage')
+                ? (isArabic ? 'نشاط مرتفع' : 'High Activity')
                 : (ai_adoption_rate || 0) >= 30
-                  ? (isArabic ? 'استخدام متوسط' : 'Moderate Usage')
+                  ? (isArabic ? 'نشاط متوسط' : 'Moderate Activity')
                   : (ai_adoption_rate || 0) > 0
-                    ? (isArabic ? 'استخدام منخفض' : 'Low Usage')
-                    : (isArabic ? 'لا يوجد استخدام بعد' : 'No Usage Yet')}
+                    ? (isArabic ? 'نشاط منخفض' : 'Low Activity')
+                    : (isArabic ? 'لم يبدأ الاستخدام بعد' : 'Not Started Yet')}
             </span>
           </div>
         </div>
@@ -142,27 +137,29 @@ export default function OrgDashboard({ setActivePage }) {
             </div>
             
             {/* CSS & SVG Chart */}
-            <div className="h-64 w-full flex items-end justify-between relative pt-6 px-4">
+            <div className="h-64 w-full flex flex-col relative pt-6 px-4">
               {/* Grid Lines */}
-              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
-                <div className={`w-full border-t border-border-subtle/50 text-[10px] text-secondary pt-1 ${isArabic ? 'text-left pl-2' : 'text-right pr-2'}`}>150</div>
-                <div className={`w-full border-t border-border-subtle/50 text-[10px] text-secondary pt-1 ${isArabic ? 'text-left pl-2' : 'text-right pr-2'}`}>100</div>
-                <div className={`w-full border-t border-border-subtle/50 text-[10px] text-secondary pt-1 ${isArabic ? 'text-left pl-2' : 'text-right pr-2'}`}>50</div>
-                <div className={`w-full border-t border-border-subtle text-[10px] text-secondary pt-1 ${isArabic ? 'text-left pl-2' : 'text-right pr-2'}`}>0</div>
+              <div className="absolute inset-0 pb-8 flex flex-col justify-between pointer-events-none">
+                <div className={`w-full border-t border-border-subtle/50 text-xs text-secondary pt-1 ${isArabic ? 'text-left pl-2' : 'text-right pr-2'}`}>150</div>
+                <div className={`w-full border-t border-border-subtle/50 text-xs text-secondary pt-1 ${isArabic ? 'text-left pl-2' : 'text-right pr-2'}`}>100</div>
+                <div className={`w-full border-t border-border-subtle/50 text-xs text-secondary pt-1 ${isArabic ? 'text-left pl-2' : 'text-right pr-2'}`}>50</div>
+                <div className={`w-full border-t border-border-subtle text-xs text-secondary pt-1 ${isArabic ? 'text-left pl-2' : 'text-right pr-2'}`}>0</div>
               </div>
 
               {/* Bar columns */}
-              {(consultation_trends || [0,0,0,0]).map((count, index) => {
-                 const heightPct = Math.min(100, Math.max(5, (count / 150) * 100));
-                 return (
-                  <div key={index} className="w-10 h-full flex flex-col justify-end items-center z-10">
-                    <div className="w-4 bg-primary rounded-t-sm" style={{ height: `${heightPct}%` }}></div>
-                    <span className="text-[10px] text-secondary mt-2">
-                      {isArabic ? `الأسبوع ${index + 1}` : `Week ${index + 1}`}
-                    </span>
-                  </div>
-                 );
-              })}
+              <div className="flex-1 flex items-end justify-around z-10 pb-8">
+                {(consultation_trends || [0,0,0,0]).map((count, index) => {
+                   const heightPct = Math.min(100, Math.max(5, (count / 150) * 100));
+                   return (
+                    <div key={index} className="w-16 h-full flex flex-col justify-end items-center relative">
+                      <div className="w-4 bg-primary rounded-t-sm" style={{ height: `${heightPct}%` }}></div>
+                      <span className="text-xs font-semibold text-secondary absolute -bottom-7 whitespace-nowrap">
+                        {isArabic ? `الأسبوع ${index + 1}` : `Week ${index + 1}`}
+                      </span>
+                    </div>
+                   );
+                })}
+              </div>
             </div>
           </div>
 
@@ -218,42 +215,6 @@ export default function OrgDashboard({ setActivePage }) {
 
         {/* Right Column: Alerts and Logs */}
         <div className="lg:col-span-4 space-y-6">
-          {/* Action Required Expiring Alerts */}
-          <div className="bg-white border border-border-subtle rounded-xl shadow-sm p-6 space-y-4">
-            <h3 className={`font-button text-sm text-on-surface font-bold border-b border-border-subtle pb-3 text-error flex items-center gap-1.5 ${isArabic ? 'flex-row-reverse' : ''}`}>
-              <span className="material-symbols-outlined text-[20px]">warning</span>
-              {isArabic ? 'مطلوب إجراء' : 'Action Required'}
-            </h3>
-
-            {(!expiring_doctors || expiring_doctors.length === 0) ? (
-              <p className="text-xs text-secondary">
-                {isArabic ? 'تراخيص الأطباء سليمة.' : 'All doctor licenses are healthy.'}
-              </p>
-            ) : (
-              <div className="space-y-3 text-start">
-                {expiring_doctors.map(doc => (
-                  <div key={doc.id} className="p-3 bg-error-container/20 border border-error/10 rounded-lg space-y-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="text-xs font-bold text-on-surface">{doc.name}</h4>
-                        <span className="text-[9px] text-error font-semibold">
-                          {isArabic
-                            ? `ينتهي الترخيص خلال ${doc.days_left} أيام`
-                            : `License expires in ${doc.days_left} days`}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setActivePage('org-subscriptions')}
-                      className="w-full text-center py-1.5 bg-error hover:bg-error/90 text-white rounded text-[10px] font-bold transition-colors shadow-sm"
-                    >
-                      {isArabic ? 'تجديد الترخيص' : 'Renew License'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
 
           {/* Department Activity Feed */}
           <div className="bg-white border border-border-subtle rounded-xl shadow-sm p-6 space-y-4">

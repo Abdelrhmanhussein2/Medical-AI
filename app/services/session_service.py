@@ -38,25 +38,28 @@ class SessionService:
         # 3. تحديد الدقائق المتاحة للباقة المفعّلة أو الحد المخصص
         if custom_minutes_limit is not None:
             allowed_minutes = custom_minutes_limit
+        elif sub.get("allowed_minutes") is not None:
+            # Read directly from subscription_bundles.allowed_minutes (added via migration)
+            allowed_minutes = sub["allowed_minutes"]
         else:
+            # Legacy fallback: derive from bundle name
             bundle_name = sub.get("bundle_name") or ""
             name_clean = bundle_name.lower().strip()
-            allowed_minutes = 60  # باقة Free Trial كافتراضية
-            
-            if "starter" in name_clean:
-                allowed_minutes = 1000
+            allowed_minutes = 60
+            if "basic" in name_clean:
+                allowed_minutes = 1500
             elif "pro" in name_clean:
-                allowed_minutes = 2000
+                allowed_minutes = 3000
+            elif "org_4" in name_clean or "4_doctors" in name_clean:
+                allowed_minutes = 6000
+            elif "org_7" in name_clean or "7_doctors" in name_clean:
+                allowed_minutes = 8000
+            elif "starter" in name_clean:
+                allowed_minutes = 1000
             elif "business" in name_clean:
                 allowed_minutes = 3500
             elif "enterprise" in name_clean:
                 allowed_minutes = 5000
-            elif "silver" in name_clean:
-                allowed_minutes = 10000
-            elif "gold" in name_clean:
-                allowed_minutes = 20000
-            elif "platinum" in name_clean:
-                allowed_minutes = 50000
             
         # 3. التحقق من تجاوز الاستهلاك للدقائق المتاحة
         used_minutes = sub.get("used_minutes", 0)

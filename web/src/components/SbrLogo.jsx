@@ -36,7 +36,7 @@ export default function SbrLogo({ size = 40, showText = false, textClass = '', d
             whiteSpace: 'nowrap'
           }}
         >
-          Smarter Care. Better Outcomes.
+          Smarter Care Better Outcomes
         </span>
       )}
     </div>

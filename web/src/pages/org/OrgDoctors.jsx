@@ -133,71 +133,61 @@ export default function OrgDoctors() {
   return (
     <div className={`space-y-stack-lg font-body-md animate-fade-in ${isArabic ? 'text-right' : 'text-left'}`}>
       {/* Header */}
-      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border-subtle pb-stack-md gap-4">
+      <header className="flex justify-between items-center border-b border-border-subtle pb-4">
         <div>
-          <div className={`flex items-center gap-1.5 text-xs text-secondary font-semibold ${isArabic ? 'flex-row-reverse' : ''}`}>
-            <span>{currentUser.name}</span>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span>{isArabic ? 'الأطباء' : 'Doctors'}</span>
-          </div>
-          <h1 className="font-display-lg text-headline-lg text-on-surface font-bold mt-1">
+          <h1 className="font-display-lg text-headline-lg text-on-surface font-bold">
             {isArabic ? 'قائمة الأطباء النشطين' : 'Active Doctors Roster'}
           </h1>
-          <p className="font-body-lg text-body-lg text-on-surface-variant mt-1">
-            {isArabic
-              ? 'إدارة تعيينات الأطباء، مراقبة استخدام الذكاء الاصطناعي السريري، وتتبع حالة الاشتراكات.'
-              : 'Manage doctor assignments, monitor clinical AI usage, and track subscription health.'}
-          </p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="bg-primary hover:bg-primary-hover text-on-primary font-button text-xs py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm font-semibold"
+          className="bg-primary hover:bg-primary-hover text-on-primary font-button text-xs py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm font-semibold cursor-pointer"
         >
           <span className="material-symbols-outlined text-[18px]">person_add</span>
           {isArabic ? 'تعيين طبيب' : 'Assign Doctor'}
         </button>
       </header>
 
-      {/* Mini KPIs & Search */}
-      <div className={`flex flex-col md:flex-row justify-between gap-gutter ${isArabic ? 'md:flex-row-reverse' : ''}`}>
-        {/* KPI Cards */}
-        <div className={`flex gap-4 w-full md:w-auto ${isArabic ? 'flex-row-reverse' : ''}`}>
-          <div className={`bg-white border border-border-subtle py-3 px-6 rounded-lg shadow-sm flex items-center gap-4 ${isArabic ? 'flex-row-reverse text-right' : ''}`}>
-            <span className="material-symbols-outlined text-primary bg-primary-light p-2 rounded-full text-lg">group</span>
-            <div>
-              <span className="text-[10px] text-secondary font-semibold uppercase block">{isArabic ? 'إجمالي المعينين' : 'Total Assigned'}</span>
-              <span className="text-sm font-bold text-on-surface">
-                {totalAssigned} {isArabic ? 'أطباء' : 'doctors'}
-              </span>
-            </div>
-          </div>
-          
-          <div className={`bg-white border border-border-subtle py-3 px-6 rounded-lg shadow-sm flex items-center gap-4 ${isArabic ? 'flex-row-reverse text-right' : ''}`}>
-            <span className="material-symbols-outlined text-primary bg-primary-light p-2 rounded-full text-lg">monitoring</span>
-            <div>
-              <span className="text-[10px] text-secondary font-semibold uppercase block">{isArabic ? 'متوسط استشارات الـ AI' : 'Avg AI Consults'}</span>
-              <span className="text-sm font-bold text-on-surface">
-                {avgConsults}/{isArabic ? 'شهرياً' : 'mo'}
-              </span>
-            </div>
+      {/* KPI Cards Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="bg-white border border-border-subtle py-4 px-6 rounded-xl shadow-sm flex items-center gap-4">
+          <span className="material-symbols-outlined text-primary bg-primary-light p-2.5 rounded-xl text-xl">group</span>
+          <div>
+            <span className="text-xs text-secondary font-semibold block">{isArabic ? 'إجمالي الأطباء المعينين' : 'Total Assigned Doctors'}</span>
+            <span className="text-lg font-bold text-on-surface">
+              {totalAssigned} {isArabic ? 'أطباء' : 'doctors'}
+            </span>
           </div>
         </div>
-
-        {/* Search */}
-        <div className="relative w-full md:w-72 self-end">
-          <span className={`material-symbols-outlined absolute ${isArabic ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-secondary text-lg`}>search</span>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={isArabic ? 'البحث عن طبيب بالاسم...' : 'Find doctor by name...'}
-            className={`w-full ${isArabic ? 'pr-10 pl-4 text-right' : 'pl-10 pr-4 text-left'} py-2.5 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary shadow-sm`}
-          />
+        
+        <div className="bg-white border border-border-subtle py-4 px-6 rounded-xl shadow-sm flex items-center gap-4">
+          <span className="material-symbols-outlined text-primary bg-primary-light p-2.5 rounded-xl text-xl">monitoring</span>
+          <div>
+            <span className="text-xs text-secondary font-semibold block">{isArabic ? 'متوسط استشارات الـ AI' : 'Avg AI Consults'}</span>
+            <span className="text-lg font-bold text-on-surface">
+              {avgConsults} {isArabic ? 'استشارة / شهرياً' : 'consults / mo'}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Doctors Table */}
+      {/* Doctors Table Card with integrated toolbar */}
       <div className="bg-white rounded-xl border border-border-subtle shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-border-subtle flex flex-col sm:flex-row justify-between items-center gap-4 bg-white">
+          <h3 className="font-bold text-sm text-on-surface">
+            {isArabic ? 'قائمة الأطباء' : 'Doctors List'}
+          </h3>
+          <div className="relative w-full sm:w-72">
+            <span className={`material-symbols-outlined absolute ${isArabic ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-secondary text-lg`}>search</span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={isArabic ? 'البحث عن طبيب بالاسم أو البريد...' : 'Find doctor by name or email...'}
+              className={`w-full ${isArabic ? 'pr-10 pl-4 text-right' : 'pl-10 pr-4 text-left'} py-2 bg-bg-canvas border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary`}
+            />
+          </div>
+        </div>
         <table className={`min-w-full divide-y divide-border-subtle ${isArabic ? 'text-right' : 'text-left'}`}>
           <thead className="bg-bg-canvas">
             <tr>

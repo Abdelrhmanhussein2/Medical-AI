@@ -32,7 +32,7 @@ export default function Layout({ children, activePage, setActivePage }) {
     menuItems = [
       { id: 'org-dashboard', name: t('dashboard'), icon: 'dashboard' },
       { id: 'org-doctors', name: t('doctor'), icon: 'medical_information' },
-      { id: 'org-analytics', name: t('dashboard'), icon: 'analytics' },
+      { id: 'org-analytics', name: isArabic ? 'التحليلات' : 'Analytics', icon: 'analytics' },
       { id: 'org-subscriptions', name: t('subscription'), icon: 'credit_card' }
     ];
   } else {

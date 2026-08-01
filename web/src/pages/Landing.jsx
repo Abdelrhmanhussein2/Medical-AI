@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import SbrLogo from '../components/SbrLogo';
 import { useLanguage } from '../context/LanguageContext';
-import { PLANS } from '../data/plans';
+import { DOCTOR_PLANS, ORG_PLANS } from '../data/plans';
 
 export default function Landing({ setActivePage }) {
   const { t, lang, setLang, isArabic } = useLanguage();
+  const [pricingTab, setPricingTab] = useState('doctor');
   return (
     <div className="bg-bg-canvas text-on-surface antialiased min-h-screen flex flex-col font-body-md">
       {/* TopNavBar */}
@@ -270,89 +271,119 @@ export default function Landing({ setActivePage }) {
         {/* Pricing Section */}
         <section className="py-24 px-margin-desktop bg-white border-t border-border-subtle" id="pricing">
           <div className="max-w-container-max mx-auto">
-            <div className="text-center mb-16">
+
+            <div className="text-center mb-12">
               <h2 className="font-headline-lg text-headline-lg text-on-surface font-bold mb-stack-md">
                 {t('pricing_title')}
               </h2>
               <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
-                {t('pricing_subtitle')}
+                {isArabic
+                  ? 'أسعار شفافة للأطباء المستقلين والمنظمات الطبية.'
+                  : 'Transparent pricing for solo clinicians and medical organizations.'}
               </p>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 items-start">
-              {PLANS.map((plan) => {
-                const name = isArabic ? plan.nameAr : plan.nameEn;
+
+            {/* Tab Switcher */}
+            <div className="flex justify-center mb-10">
+              <div className="inline-flex items-center bg-surface-container-low border border-border-subtle rounded-xl p-1 gap-1">
+                <button
+                  onClick={() => setPricingTab('doctor')}
+                  className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 cursor-pointer flex items-center gap-2 ${
+                    pricingTab === 'doctor'
+                      ? 'bg-white text-primary shadow-sm border border-border-subtle'
+                      : 'text-secondary hover:text-primary'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">stethoscope</span>
+                  {isArabic ? 'للأطباء' : 'For Doctors'}
+                </button>
+                <button
+                  onClick={() => setPricingTab('org')}
+                  className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 cursor-pointer flex items-center gap-2 ${
+                    pricingTab === 'org'
+                      ? 'bg-white text-primary shadow-sm border border-border-subtle'
+                      : 'text-secondary hover:text-primary'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">corporate_fare</span>
+                  {isArabic ? 'للمنظمات' : 'For Organizations'}
+                </button>
+              </div>
+            </div>
+
+            {/* Plans Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+              {(pricingTab === 'doctor' ? DOCTOR_PLANS : ORG_PLANS).map((plan) => {
+                const name     = isArabic ? plan.nameAr     : plan.nameEn;
                 const features = isArabic ? plan.featuresAr : plan.featuresEn;
-                const badge = isArabic ? plan.badgeAr : plan.badgeEn;
-                
+                const badge    = isArabic ? plan.badgeAr    : plan.badgeEn;
                 return (
-                  <div 
+                  <div
                     key={plan.id}
-                    className={`rounded-2xl p-6 border shadow-sm flex flex-col relative transition-all duration-300 hover:shadow-md ${
-                      plan.highlight 
-                        ? 'bg-white border-2 border-primary ring-4 ring-primary-light/50 lg:-translate-y-2' 
-                        : 'bg-bg-canvas border-border-subtle'
+                    className={`rounded-2xl p-7 border flex flex-col relative transition-all duration-300 hover:shadow-lg ${
+                      plan.highlight
+                        ? 'bg-white border-2 border-primary ring-4 ring-primary-light/50 shadow-md -translate-y-1'
+                        : 'bg-bg-canvas border-border-subtle shadow-sm'
                     }`}
                   >
                     {badge && (
-                      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-primary text-on-primary font-label-caps text-[9px] px-3 py-1 rounded-full uppercase tracking-wider font-bold shadow-sm whitespace-nowrap">
+                      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-primary text-on-primary font-label-caps text-[9px] px-4 py-1 rounded-full uppercase tracking-wider font-bold shadow whitespace-nowrap">
                         {badge}
                       </div>
                     )}
-                    
-                    <h3 className="font-headline-md text-base text-on-surface font-bold mb-2">
-                      {name}
-                    </h3>
-                    
-                    <div className="mb-6 flex items-baseline gap-1">
-                      {plan.price === 0 ? (
-                        <span className="font-display-lg text-2xl font-black text-primary">
-                          {isArabic ? plan.priceAr : plan.priceEn}
+
+                    <h3 className="font-headline-md text-lg text-on-surface font-bold mb-1">{name}</h3>
+
+                    <div className="mb-5 flex items-baseline gap-1">
+                      <span className="text-4xl font-black text-primary">$</span>
+                      <span className="text-4xl font-black text-primary">{plan.priceEn}</span>
+                      <span className="text-on-surface-variant text-xs ml-1">USD / {isArabic ? 'شهر' : 'mo'}</span>
+                    </div>
+
+                    <div className="flex gap-2 mb-5 flex-wrap">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-primary-light text-primary px-2.5 py-1 rounded-lg">
+                        <span className="material-symbols-outlined text-[13px]">mic</span>
+                        {plan.minutes.toLocaleString()} {isArabic ? 'د' : 'min'}
+                      </span>
+                      {plan.doctorsIncluded && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-surface-container text-secondary px-2.5 py-1 rounded-lg">
+                          <span className="material-symbols-outlined text-[13px]">group</span>
+                          {plan.doctorsIncluded} {isArabic ? 'أطباء' : 'doctors'}
                         </span>
-                      ) : (
-                        <>
-                          <span className="font-display-lg text-3xl font-bold text-on-surface">
-                            {isArabic ? plan.priceAr : plan.priceEn}
-                          </span>
-                          <span className="text-on-surface-variant font-body-md text-xs">
-                            {isArabic ? plan.currencyAr : plan.currencyEn} / {t('monthly')}
-                          </span>
-                        </>
                       )}
                     </div>
-                    
-                    <ul className="space-y-3 mb-6 font-body-sm text-[11px] text-on-surface-variant flex-grow text-start">
-                      {features.map((feature, idx) => (
-                        <li key={idx} className="flex items-start gap-2">
-                          <span className="material-symbols-outlined text-primary text-[14px] shrink-0 mt-0.5">
-                            check_circle
-                          </span>
-                          <span>{feature}</span>
+
+                    <ul className="space-y-2.5 mb-7 text-[12px] text-on-surface-variant flex-grow text-start">
+                      {features.map((f, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="material-symbols-outlined text-primary text-[15px] shrink-0 mt-0.5">check_circle</span>
+                          <span>{f}</span>
                         </li>
                       ))}
                     </ul>
-                    
-                    <button 
+
+                    <button
                       onClick={() => {
                         sessionStorage.setItem('selectedPlan', plan.id);
-                        if (plan.id === 'free') {
-                          setActivePage('register');
-                        } else {
-                          setActivePage(`/checkout?plan=${plan.id}`);
-                        }
+                        setActivePage(`/checkout?plan=${plan.id}`);
                       }}
-                      className={`w-full font-button py-2.5 rounded-lg transition-colors font-bold text-xs cursor-pointer ${
+                      className={`w-full font-button py-3 rounded-xl transition-all duration-200 font-bold text-sm cursor-pointer active:scale-95 ${
                         plan.highlight
                           ? 'bg-primary hover:bg-primary-hover text-on-primary shadow-sm'
-                          : 'bg-white hover:bg-surface-container text-primary border border-border-subtle'
+                          : 'bg-white hover:bg-surface-container text-primary border-2 border-primary/20 hover:border-primary'
                       }`}
                     >
-                      {plan.id === 'free' ? t('start_free_trial') : t('get_started')}
+                      {t('get_started')}
                     </button>
                   </div>
                 );
               })}
             </div>
+
+            <p className="text-center text-xs text-secondary mt-8">
+              {isArabic ? 'جميع الأسعار بالدولار الأمريكي شهرياً. يمكن الإلغاء في أي وقت.' : 'All prices in USD / month. Cancel anytime.'}
+            </p>
+
           </div>
         </section>
       </main>

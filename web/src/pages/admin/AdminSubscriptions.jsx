@@ -9,6 +9,15 @@ export default function AdminSubscriptions() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Renewal Modal state
+  const [selectedSub, setSelectedSub] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [allowedMinutes, setAllowedMinutes] = useState(1500);
+  const [customMessages, setCustomMessages] = useState('');
+  const [daysToAdd, setDaysToAdd] = useState(30);
+  const [subLoading, setSubLoading] = useState(false);
+  const [subError, setSubError] = useState('');
+
   const filteredSubs = (subscriptions || []).filter(sub => {
     const matchesSearch =
       (sub.entity_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -34,19 +43,42 @@ export default function AdminSubscriptions() {
     return map[status] || status;
   };
 
+  const openRenewModal = (sub) => {
+    setSelectedSub(sub);
+    setAllowedMinutes(sub.allowed_minutes || 1500);
+    setCustomMessages('');
+    setDaysToAdd(30);
+    setSubError('');
+    setShowModal(true);
+  };
+
+  const handleRenewSubmit = async (e) => {
+    e.preventDefault();
+    setSubError('');
+    setSubLoading(true);
+    try {
+      await renewSubscription(selectedSub.id, {
+        days_to_add: Number(daysToAdd) || 30,
+        allowed_minutes: allowedMinutes ? Number(allowedMinutes) : null,
+        daily_message_limit: customMessages ? Number(customMessages) : null
+      });
+      setShowModal(false);
+      setSelectedSub(null);
+    } catch (err) {
+      setSubError(err.message || (isArabic ? 'فشل تجديد الاشتراك' : 'Failed to renew subscription'));
+    } finally {
+      setSubLoading(false);
+    }
+  };
+
   return (
     <div className={`space-y-stack-lg font-body-md animate-fade-in ${isArabic ? 'text-right' : 'text-left'}`}>
       {/* Header */}
-      <header className="flex justify-between items-end border-b border-border-subtle pb-stack-md">
+      <header className="flex justify-between items-center border-b border-border-subtle pb-4">
         <div>
           <h1 className="font-display-lg text-headline-lg text-on-surface font-bold">
             {isArabic ? 'حالة الاشتراكات' : 'Subscription Health'}
           </h1>
-          <p className="font-body-lg text-body-lg text-on-surface-variant mt-1">
-            {isArabic
-              ? 'مراقبة توزيع الخطط والاشتراكات النشطة والتجديدات وتدفقات الإيرادات.'
-              : 'Monitor plan distribution, active subscriptions, renewals, and revenue flows.'}
-          </p>
         </div>
       </header>
 
@@ -63,9 +95,9 @@ export default function AdminSubscriptions() {
             <span className="text-xs font-semibold text-secondary uppercase tracking-wider block">
               {isArabic ? labelAr : labelEn}
             </span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-on-surface font-display-lg">{value}</span>
-              <span className={`text-xs font-semibold flex items-center gap-0.5 ${subClass}`}>
+            <div className="flex items-center gap-3 mt-1 flex-wrap">
+              <span className="text-3xl font-bold text-on-surface font-display-lg shrink-0">{value}</span>
+              <span className={`text-xs font-semibold flex items-center gap-1 shrink-0 ${subClass}`}>
                 {icon && <span className="material-symbols-outlined text-xs">{icon}</span>}
                 {isArabic ? subAr : subEn}
               </span>
@@ -194,10 +226,10 @@ export default function AdminSubscriptions() {
                   <td className="px-6 py-4 whitespace-nowrap text-xs font-semibold">
                     <div className={`flex gap-2 ${isArabic ? 'justify-start' : 'justify-end'}`}>
                       <button
-                        onClick={() => renewSubscription(sub.id)}
-                        className="px-2.5 py-1 rounded bg-primary hover:bg-primary-hover text-on-primary transition-colors text-[10px] font-bold shadow-sm"
+                        onClick={() => openRenewModal(sub)}
+                        className="px-3 py-1.5 rounded bg-primary hover:bg-primary-hover text-on-primary transition-colors text-xs font-bold shadow-sm cursor-pointer"
                       >
-                        {isArabic ? 'تجديد (+30 يوم)' : 'Renew (+30 Days)'}
+                        {isArabic ? 'تجديد وتخصيص' : 'Renew & Customize'}
                       </button>
                     </div>
                   </td>
@@ -207,6 +239,106 @@ export default function AdminSubscriptions() {
           </tbody>
         </table>
       </div>
+
+      {/* Renewal & Customization Modal */}
+      {showModal && selectedSub && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl border border-border-subtle shadow-xl max-w-md w-full overflow-hidden animate-fade-in text-start">
+            <div className={`px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas ${isArabic ? 'flex-row-reverse' : ''}`}>
+              <div>
+                <h3 className="font-bold text-base text-on-surface">
+                  {isArabic ? 'تجديد وتخصيص الاشتراك' : 'Renew & Customize Subscription'}
+                </h3>
+                <p className="text-xs text-secondary mt-0.5">
+                  {selectedSub.entity_name} — ({selectedSub.plan_name})
+                </p>
+              </div>
+              <button onClick={() => setShowModal(false)} className="p-1 hover:bg-surface-container rounded-full text-secondary">
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleRenewSubmit} className="p-6 space-y-4">
+              {subError && (
+                <div className="bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px]">error</span>
+                  {subError}
+                </div>
+              )}
+
+              {/* Voice Minutes Limit */}
+              <div>
+                <label className="block text-xs font-bold text-on-surface mb-1">
+                  {isArabic ? 'عدد الدقائق الصوتية المسموحة (دقيقة)' : 'Allowed Voice Minutes (Min)'}
+                </label>
+                <input
+                  type="number"
+                  value={allowedMinutes}
+                  onChange={(e) => setAllowedMinutes(e.target.value)}
+                  placeholder="1500"
+                  className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary ${isArabic ? 'text-right' : 'text-left'}`}
+                />
+                <p className="text-[10px] text-secondary mt-1">
+                  {isArabic ? 'الأمثلة الشائعة: 1500 (Starter), 3000 (Pro), 5000 (Business), 8000 (Enterprise)' : 'Presets: 1,500 (Starter), 3,000 (Pro), 5,000 (Business), 8,000 (Enterprise)'}
+                </p>
+              </div>
+
+              {/* Chat Message Daily Limit */}
+              <div>
+                <label className="block text-xs font-bold text-on-surface mb-1">
+                  {isArabic ? 'الحد الأقصى لرسائل الدردشة اليومي (رسالة) - اختياري' : 'Daily Chat Message Limit (Optional)'}
+                </label>
+                <input
+                  type="number"
+                  value={customMessages}
+                  onChange={(e) => setCustomMessages(e.target.value)}
+                  placeholder={isArabic ? 'مثال: 100' : 'e.g. 100'}
+                  className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary ${isArabic ? 'text-right' : 'text-left'}`}
+                />
+              </div>
+
+              {/* Days to Add */}
+              <div>
+                <label className="block text-xs font-bold text-on-surface mb-1">
+                  {isArabic ? 'مدة التجديد (بالأيام)' : 'Extension Period (Days)'}
+                </label>
+                <input
+                  type="number"
+                  value={daysToAdd}
+                  onChange={(e) => setDaysToAdd(e.target.value)}
+                  placeholder="30"
+                  className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary ${isArabic ? 'text-right' : 'text-left'}`}
+                />
+              </div>
+
+              {/* Actions */}
+              <div className={`flex gap-3 mt-6 pt-4 border-t border-border-subtle ${isArabic ? 'flex-row-reverse' : ''}`}>
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 bg-white border border-border-subtle text-secondary py-2 rounded-lg text-xs hover:bg-surface-container-low transition-colors font-semibold cursor-pointer"
+                >
+                  {isArabic ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={subLoading}
+                  className="flex-1 bg-primary hover:bg-primary-hover text-on-primary py-2 rounded-lg text-xs transition-colors shadow-sm font-semibold cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {subLoading ? (
+                    <>
+                      <span className="material-symbols-outlined animate-spin text-[14px]">progress_activity</span>
+                      {isArabic ? 'جاري التجديد...' : 'Renewing...'}
+                    </>
+                  ) : (
+                    isArabic ? 'تأكيد وحفظ التجديد' : 'Confirm & Save'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

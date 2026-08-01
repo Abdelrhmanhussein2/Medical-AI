@@ -39,6 +39,9 @@ export default function LiveSession({ appointmentId, setActivePage }) {
   const [tempDiseases, setTempDiseases] = useState('');
   const [tempHabits, setTempHabits] = useState('');
   const [isSavingMedicalInfo, setIsSavingMedicalInfo] = useState(false);
+  const [pastSessions, setPastSessions] = useState([]);
+  const [selectedPastSession, setSelectedPastSession] = useState(null);
+  const [activeDoc, setActiveDoc] = useState(null);
 
   const startEditingMedicalInfo = () => {
     setTempDiseases(patient?.diseases || '');

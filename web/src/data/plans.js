@@ -1,3 +1,13 @@
+/**
+ * plans.js — Client-facing pricing catalogue.
+ * Strictly matches the 5 bundles in subscription_bundles table:
+ * 1. Free Trial       (60 min)   - Free
+ * 2. SBR AI Starter   (1000 min) - 149 SAR
+ * 3. SBR AI Pro       (3000 min) - 249 SAR
+ * 4. SBR AI Business  (5000 min) - 449 SAR
+ * 5. SBR AI Enterprise(8000 min) - 599 SAR
+ */
+
 export const PLANS = [
   {
     id: 'free',
@@ -34,16 +44,16 @@ export const PLANS = [
     priceEn: '149',
     currencyAr: 'ريال',
     currencyEn: 'SAR',
-    minutes: 1000,
+    minutes: 1500,
     featuresAr: [
-      '1000 دقيقة ذكاء اصطناعي شهرياً.',
+      '1500 دقيقة ذكاء اصطناعي شهرياً.',
       'مناسب لطبيب واحد والاستخدام اليومي المتوسط.',
       'تحويل محادثة الطبيب والمريض إلى نص.',
       'تلخيص الزيارة الطبية تلقائياً.',
       'إنشاء الملاحظات الطبية.'
     ],
     featuresEn: [
-      '1000 AI minutes per month.',
+      '1500 AI minutes per month.',
       'Suitable for 1 doctor and average daily use.',
       'Transcribe doctor-patient conversation.',
       'Automatically summarize medical visits.',
@@ -62,15 +72,15 @@ export const PLANS = [
     priceEn: '249',
     currencyAr: 'ريال',
     currencyEn: 'SAR',
-    minutes: 2000,
+    minutes: 3000,
     featuresAr: [
-      '2000 دقيقة ذكاء اصطناعي شهرياً.',
+      '3000 دقيقة ذكاء اصطناعي شهرياً.',
       'مناسب للأطباء ذوي عدد المراجعين الأعلى.',
       'جميع مزايا باقة Starter.',
       'تقارير استخدام ودعم أكثر من مستخدم.'
     ],
     featuresEn: [
-      '2000 AI minutes per month.',
+      '3000 AI minutes per month.',
       'Suitable for doctors with higher patient volumes.',
       'All features in Starter plan.',
       'Usage reports and multi-user support.'
@@ -88,16 +98,16 @@ export const PLANS = [
     priceEn: '449',
     currencyAr: 'ريال',
     currencyEn: 'SAR',
-    minutes: 3500,
+    minutes: 5000,
     featuresAr: [
-      '3500 دقيقة ذكاء اصطناعي شهرياً.',
+      '5000 دقيقة ذكاء اصطناعي شهرياً.',
       'مناسب للعيادات ذات الاستخدام المرتفع.',
       'جميع مزايا باقة Pro.',
       'إدارة عدة مستخدمين وصلاحيات.',
       'الخيار الأفضل لمعظم العيادات.'
     ],
     featuresEn: [
-      '3500 AI minutes per month.',
+      '5000 AI minutes per month.',
       'Suitable for clinics with high usage.',
       'All features in Pro plan.',
       'Manage multiple users and permissions.',
@@ -116,15 +126,15 @@ export const PLANS = [
     priceEn: '599',
     currencyAr: 'ريال',
     currencyEn: 'SAR',
-    minutes: 5000,
+    minutes: 8000,
     featuresAr: [
-      '5000 دقيقة ذكاء اصطناعي شهرياً.',
+      '8000 دقيقة ذكاء اصطناعي شهرياً.',
       'مناسب للمجمعات الطبية والعيادات متعددة الأطباء.',
       'أعلى قدرة استخدام.',
       'أولوية في الدعم الفني.'
     ],
     featuresEn: [
-      '5000 AI minutes per month.',
+      '8000 AI minutes per month.',
       'Suitable for complexes and multi-doctor clinics.',
       'Highest usage limits.',
       'Priority customer & tech support.'
@@ -134,3 +144,6 @@ export const PLANS = [
     highlight: false
   }
 ];
+
+export const DOCTOR_PLANS = PLANS;
+export const ORG_PLANS    = PLANS.filter(p => ['business', 'enterprise'].includes(p.id));

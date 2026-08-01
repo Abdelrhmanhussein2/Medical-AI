@@ -62,21 +62,11 @@ export default function OrgAnalytics() {
   return (
     <div className={`space-y-stack-lg font-body-md animate-fade-in ${isArabic ? 'text-right' : 'text-left'}`}>
       {/* Header */}
-      <header className="flex justify-between items-end border-b border-border-subtle pb-stack-md">
+      <header className="flex justify-between items-center border-b border-border-subtle pb-4">
         <div>
-          <div className={`flex items-center gap-1.5 text-xs text-secondary font-semibold ${isArabic ? 'flex-row-reverse' : ''}`}>
-            <span>{currentUser?.name}</span>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span>{isArabic ? 'التحليلات' : 'Analytics'}</span>
-          </div>
-          <h1 className="font-display-lg text-headline-lg text-on-surface font-bold mt-1">
+          <h1 className="font-display-lg text-headline-lg text-on-surface font-bold">
             {isArabic ? 'التحليلات السريرية' : 'Clinical Analytics'}
           </h1>
-          <p className="font-body-lg text-body-lg text-on-surface-variant mt-1">
-            {isArabic
-              ? 'المقاييس الفورية، مقاييس تحويل الكلام بنظام الذكاء الاصطناعي، ورؤى أداء الأطباء.'
-              : 'Real-time metrics, AI transcription metrics, and doctor performance insights.'}
-          </p>
         </div>
       </header>
 

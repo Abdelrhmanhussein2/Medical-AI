@@ -21,6 +21,28 @@ export default function AdminUsers() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // all, active, disabled/suspended
 
+  // Advanced Filter Popover states
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [deptFilter, setDeptFilter] = useState('all');
+  const [planFilter, setPlanFilter] = useState('all');
+  const [specialtyFilter, setSpecialtyFilter] = useState('all');
+  const [expirySort, setExpirySort] = useState('default');
+
+  const resetFilters = () => {
+    setStatusFilter('all');
+    setDeptFilter('all');
+    setPlanFilter('all');
+    setSpecialtyFilter('all');
+    setExpirySort('default');
+  };
+
+  const activeFilterCount =
+    (statusFilter !== 'all' ? 1 : 0) +
+    (deptFilter !== 'all' ? 1 : 0) +
+    (planFilter !== 'all' ? 1 : 0) +
+    (specialtyFilter !== 'all' ? 1 : 0) +
+    (expirySort !== 'default' ? 1 : 0);
+
   // Add Org Modal states
   const [showOrgModal, setShowOrgModal] = useState(false);
   const [orgName, setOrgName] = useState('');
@@ -205,14 +227,52 @@ export default function AdminUsers() {
   };
 
   // Filter Doctors
-  const filteredDoctors = (doctors || []).filter(doc => {
-    const matchesSearch = (doc.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          (doc.email || '').toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || 
-                          (statusFilter === 'active' && doc.is_active) || 
-                          (statusFilter === 'disabled' && !doc.is_active);
-    return matchesSearch && matchesStatus;
-  });
+  const filteredDoctors = (doctors || [])
+    .filter(doc => {
+      const matchesSearch = (doc.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            (doc.email || '').toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || 
+                            (statusFilter === 'active' && doc.is_active) || 
+                            (statusFilter === 'disabled' && !doc.is_active);
+
+      let matchesDept = true;
+      if (deptFilter !== 'all') {
+        if (deptFilter === 'independent') {
+          matchesDept = !doc.department || doc.department === 'Independent' || doc.department === 'مستقل';
+        } else {
+          matchesDept = doc.department === deptFilter || doc.department_id === deptFilter;
+        }
+      }
+
+      let matchesPlan = true;
+      if (planFilter !== 'all') {
+        const pLower = (doc.subscription_plan || '').toLowerCase();
+        if (planFilter === 'none') {
+          matchesPlan = !doc.subscription_plan || doc.subscription_plan === 'N/A';
+        } else {
+          matchesPlan = pLower.includes(planFilter);
+        }
+      }
+
+      let matchesSpecialty = true;
+      if (specialtyFilter !== 'all') {
+        const docSpec = (doc.specialty || doc.specialization || '').toLowerCase();
+        matchesSpecialty = docSpec === specialtyFilter.toLowerCase();
+      }
+
+      return matchesSearch && matchesStatus && matchesDept && matchesPlan && matchesSpecialty;
+    })
+    .sort((a, b) => {
+      if (expirySort === 'default') return 0;
+      const dateA = a.subscription_expiry ? new Date(a.subscription_expiry).getTime() : (expirySort === 'nearest' ? 9999999999999 : -9999999999999);
+      const dateB = b.subscription_expiry ? new Date(b.subscription_expiry).getTime() : (expirySort === 'nearest' ? 9999999999999 : -9999999999999);
+      if (expirySort === 'nearest') {
+        return dateA - dateB;
+      } else if (expirySort === 'furthest') {
+        return dateB - dateA;
+      }
+      return 0;
+    });
 
   // Filter Organizations
   const filteredOrgs = (organizations || []).filter(org => {
@@ -221,7 +281,11 @@ export default function AdminUsers() {
     const matchesStatus = statusFilter === 'all' || 
                           (statusFilter === 'active' && org.is_active) || 
                           (statusFilter === 'disabled' && !org.is_active);
-    return matchesSearch && matchesStatus;
+    let matchesSpecialty = true;
+    if (specialtyFilter !== 'all') {
+      matchesSpecialty = (org.specialty || '').toLowerCase() === specialtyFilter.toLowerCase();
+    }
+    return matchesSearch && matchesStatus && matchesSpecialty;
   });
 
   const getSpecialtyLabel = (spec) => {
@@ -336,15 +400,21 @@ export default function AdminUsers() {
               />
             </div>
 
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className={`bg-white border border-border-subtle rounded-lg text-xs py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary shadow-sm text-secondary font-semibold ${isArabic ? 'text-right' : 'text-left'}`}
+            <button
+              type="button"
+              onClick={() => setShowFilterModal(true)}
+              className={`bg-white border border-border-subtle hover:bg-surface-container-low rounded-lg text-xs py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary shadow-sm text-secondary font-bold flex items-center gap-2 cursor-pointer transition-colors ${
+                activeFilterCount > 0 ? 'border-primary text-primary bg-primary-light/50' : ''
+              }`}
             >
-              <option value="all">{isArabic ? 'جميع الحالات' : 'All Status'}</option>
-              <option value="active">{isArabic ? 'نشط' : 'Active'}</option>
-              <option value="disabled">{isArabic ? 'موقوف / معطل' : 'Suspended / Disabled'}</option>
-            </select>
+              <span className="material-symbols-outlined text-[18px]">tune</span>
+              <span>{isArabic ? 'تصفية وترتيب' : 'Filters & Sort'}</span>
+              {activeFilterCount > 0 && (
+                <span className="w-4 h-4 rounded-full bg-primary text-on-primary text-[10px] font-bold flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
           </div>
         </div>
 
@@ -359,8 +429,8 @@ export default function AdminUsers() {
                   <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'خطة الاشتراك' : 'Subscription Plan'}</th>
                   <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'الحالة' : 'Status'}</th>
                   <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'تاريخ الانضمام' : 'Join Date'}</th>
-                  <th scope="col" className="relative px-6 py-3">
-                    <span className="sr-only">{isArabic ? 'إجراءات' : 'Actions'}</span>
+                  <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">
+                    {isArabic ? 'الإجراء' : 'Action'}
                   </th>
                 </tr>
               </thead>
@@ -375,14 +445,14 @@ export default function AdminUsers() {
                   filteredDoctors.map((doc) => (
                     <tr key={doc.id} className="hover:bg-surface-container-low transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className={`flex items-center gap-3 ${isArabic ? 'flex-row-reverse' : ''}`}>
-                          <div className="w-8 h-8 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold font-display-md">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold font-display-md shrink-0">
                             {doc.name.split(' ').map(n => n[0]).join('')}
                           </div>
-                          <div>
-                            <div className="font-bold text-on-surface text-xs">{doc.name}</div>
-                            <div className="text-[10px] text-secondary">{doc.email}</div>
-                            <div className="text-[10px] text-secondary">{doc.phone}</div>
+                          <div className="flex flex-col space-y-0.5 text-start">
+                            <div className="font-bold text-on-surface text-xs leading-snug">{doc.name}</div>
+                            <div className="text-xs text-secondary leading-snug">{doc.email}</div>
+                            <div className="text-xs text-secondary leading-snug">{doc.phone}</div>
                           </div>
                         </div>
                       </td>
@@ -390,9 +460,13 @@ export default function AdminUsers() {
                         {doc.department || (isArabic ? 'مستقل' : 'Independent')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-secondary">
-                        <div className="font-semibold text-primary">{getPlanLabel(doc.subscription_plan) || 'N/A'}</div>
-                        <div className="text-[10px] text-secondary">
-                          {isArabic ? 'ينتهي:' : 'Expires:'} {doc.subscription_expiry || 'N/A'}
+                        <div className="flex flex-col space-y-0.5 text-start">
+                          <div className="font-bold text-primary text-xs leading-snug">{getPlanLabel(doc.subscription_plan) || 'N/A'}</div>
+                          {doc.subscription_expiry && (
+                            <div className="text-xs text-secondary leading-snug">
+                              {isArabic ? `ينتهي: ${doc.subscription_expiry}` : `Expires: ${doc.subscription_expiry}`}
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -430,8 +504,8 @@ export default function AdminUsers() {
                   <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'خطة الاشتراك' : 'Subscription Plan'}</th>
                   <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'تاريخ الإنشاء' : 'Created At'}</th>
                   <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'الحالة' : 'Status'}</th>
-                  <th scope="col" className="relative px-6 py-3">
-                    <span className="sr-only">{isArabic ? 'إجراءات' : 'Actions'}</span>
+                  <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">
+                    {isArabic ? 'الإجراء' : 'Action'}
                   </th>
                 </tr>
               </thead>
@@ -448,9 +522,11 @@ export default function AdminUsers() {
                     return (
                       <tr key={org.id} className="hover:bg-surface-container-low transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="font-bold text-on-surface text-xs">{org.name}</div>
-                          <div className="text-[10px] text-secondary">{org.email}</div>
-                          <div className="text-[10px] text-secondary">{org.phone}</div>
+                          <div className="flex flex-col space-y-0.5 text-start">
+                            <div className="font-bold text-on-surface text-xs leading-snug">{org.name}</div>
+                            <div className="text-xs text-secondary leading-snug">{org.email}</div>
+                            <div className="text-xs text-secondary leading-snug">{org.phone}</div>
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-secondary font-semibold">
                           {getSpecialtyLabel(org.specialty)}
@@ -459,9 +535,13 @@ export default function AdminUsers() {
                           {assignedCount} {isArabic ? 'أطباء' : 'doctors'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="font-semibold text-primary">{getPlanLabel(org.subscription_plan)}</div>
-                          <div className="text-[10px] text-secondary">
-                            {isArabic ? 'تنتهي:' : 'Expires:'} {org.subscription_expiry}
+                          <div className="flex flex-col space-y-0.5 text-start">
+                            <div className="font-bold text-primary text-xs leading-snug">{getPlanLabel(org.subscription_plan) || 'N/A'}</div>
+                            {org.subscription_expiry && (
+                              <div className="text-xs text-secondary leading-snug">
+                                {isArabic ? `تنتهي: ${org.subscription_expiry}` : `Expires: ${org.subscription_expiry}`}
+                              </div>
+                            )}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-secondary">
@@ -1123,6 +1203,140 @@ export default function AdminUsers() {
                 className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-colors shadow-sm ${confirmModal.confirmClass}`}
               >
                 {confirmModal.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Advanced Filter Popover Modal */}
+      {showFilterModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4" onClick={() => setShowFilterModal(false)}>
+          <div className="bg-white rounded-2xl border border-border-subtle shadow-2xl max-w-md w-full overflow-hidden animate-fade-in text-start" onClick={e => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className={`px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas ${isArabic ? 'flex-row-reverse' : ''}`}>
+              <div className={`flex items-center gap-2 ${isArabic ? 'flex-row-reverse' : ''}`}>
+                <span className="material-symbols-outlined text-primary text-[22px]">tune</span>
+                <h3 className="font-bold text-base text-on-surface">
+                  {isArabic ? 'تصفية وترتيب قائمة الأطباء' : 'Filter & Sort Doctors'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowFilterModal(false)}
+                className="p-1.5 hover:bg-surface-container rounded-full text-secondary transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4 text-start">
+              {/* 1. Department Filter */}
+              <div>
+                <label className="block text-xs font-bold text-on-surface mb-1.5">
+                  {isArabic ? 'القسم / التبعية' : 'Department / Affiliation'}
+                </label>
+                <select
+                  value={deptFilter}
+                  onChange={(e) => setDeptFilter(e.target.value)}
+                  className={`w-full bg-white border border-border-subtle rounded-xl text-xs py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold ${isArabic ? 'text-right' : 'text-left'}`}
+                >
+                  <option value="all">{isArabic ? 'جميع الأقسام والأطباء المستقلين' : 'All Departments & Independent'}</option>
+                  <option value="independent">{isArabic ? 'أطباء مستقلين فقط' : 'Independent Doctors Only'}</option>
+                  {(organizations || []).map(org => (
+                    <option key={org.id} value={org.name}>
+                      {org.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 2. Account Status */}
+              <div>
+                <label className="block text-xs font-bold text-on-surface mb-1.5">
+                  {isArabic ? 'حالة الحساب' : 'Account Status'}
+                </label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className={`w-full bg-white border border-border-subtle rounded-xl text-xs py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold ${isArabic ? 'text-right' : 'text-left'}`}
+                >
+                  <option value="all">{isArabic ? 'جميع الحالات' : 'All Statuses'}</option>
+                  <option value="active">{isArabic ? 'حساب نشط فقط (Active)' : 'Active Only'}</option>
+                  <option value="disabled">{isArabic ? 'حساب موقوف / معطل (Disabled)' : 'Suspended / Disabled Only'}</option>
+                </select>
+              </div>
+
+              {/* 3. Subscription Expiry Sorting */}
+              <div>
+                <label className="block text-xs font-bold text-on-surface mb-1.5">
+                  {isArabic ? 'ترتيب حسب تاريخ انتهاء الاشتراك' : 'Sort by Subscription Expiry'}
+                </label>
+                <select
+                  value={expirySort}
+                  onChange={(e) => setExpirySort(e.target.value)}
+                  className={`w-full bg-white border border-border-subtle rounded-xl text-xs py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold ${isArabic ? 'text-right' : 'text-left'}`}
+                >
+                  <option value="default">{isArabic ? 'بدون ترتيب (الافتراضي)' : 'Default'}</option>
+                  <option value="nearest">{isArabic ? 'الأقرب للانتهاء أولاً' : 'Nearest Expiry First'}</option>
+                  <option value="furthest">{isArabic ? 'الأبعد للانتهاء أولاً' : 'Furthest Expiry First'}</option>
+                </select>
+              </div>
+
+              {/* 4. Plan Filter */}
+              <div>
+                <label className="block text-xs font-bold text-on-surface mb-1.5">
+                  {isArabic ? 'باقة الاشتراك' : 'Subscription Plan'}
+                </label>
+                <select
+                  value={planFilter}
+                  onChange={(e) => setPlanFilter(e.target.value)}
+                  className={`w-full bg-white border border-border-subtle rounded-xl text-xs py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold ${isArabic ? 'text-right' : 'text-left'}`}
+                >
+                  <option value="all">{isArabic ? 'جميع الباقات' : 'All Plans'}</option>
+                  <option value="starter">{isArabic ? 'Starter' : 'Starter'}</option>
+                  <option value="pro">{isArabic ? 'Pro' : 'Pro'}</option>
+                  <option value="business">{isArabic ? 'Business' : 'Business'}</option>
+                  <option value="enterprise">{isArabic ? 'Enterprise' : 'Enterprise'}</option>
+                  <option value="none">{isArabic ? 'بدون اشتراك (N/A)' : 'No Subscription (N/A)'}</option>
+                </select>
+              </div>
+
+              {/* 5. Medical Specialty Filter */}
+              <div>
+                <label className="block text-xs font-bold text-on-surface mb-1.5">
+                  {isArabic ? 'التخصص السريري' : 'Medical Specialty'}
+                </label>
+                <select
+                  value={specialtyFilter}
+                  onChange={(e) => setSpecialtyFilter(e.target.value)}
+                  className={`w-full bg-white border border-border-subtle rounded-xl text-xs py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold ${isArabic ? 'text-right' : 'text-left'}`}
+                >
+                  <option value="all">{isArabic ? 'جميع التخصصات' : 'All Specialties'}</option>
+                  <option value="Cardiology">{isArabic ? 'أمراض القلب (Cardiology)' : 'Cardiology'}</option>
+                  <option value="Neurology">{isArabic ? 'الأعصاب (Neurology)' : 'Neurology'}</option>
+                  <option value="Pediatrics">{isArabic ? 'طب الأطفال (Pediatrics)' : 'Pediatrics'}</option>
+                  <option value="Oncology">{isArabic ? 'الأورام (Oncology)' : 'Oncology'}</option>
+                  <option value="General Practice">{isArabic ? 'الطب العام (General Practice)' : 'General Practice'}</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className={`px-6 py-4 border-t border-border-subtle bg-bg-canvas flex gap-3 ${isArabic ? 'flex-row-reverse' : ''}`}>
+              <button
+                type="button"
+                onClick={() => resetFilters()}
+                className="flex-1 bg-white border border-border-subtle text-secondary py-2 rounded-xl text-xs hover:bg-surface-container-low transition-colors font-semibold cursor-pointer"
+              >
+                {isArabic ? 'إعادة ضبط' : 'Reset All'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowFilterModal(false)}
+                className="flex-1 bg-primary hover:bg-primary-hover text-on-primary py-2 rounded-xl text-xs transition-colors shadow-sm font-semibold cursor-pointer"
+              >
+                {isArabic ? 'تطبيق الفلتر' : 'Apply Filters'}
               </button>
             </div>
           </div>

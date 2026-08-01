@@ -6,7 +6,8 @@ from app.schemes.subscription_schema import (
     BundleResponse,
     SubscriptionCreateRequest,
     SubscriptionResponse,
-    AssignDoctorRequest
+    AssignDoctorRequest,
+    RenewSubscriptionRequest
 )
 from app.services.subscription_service import subscription_service
 
@@ -25,16 +26,9 @@ async def get_bundles(target_type: Optional[str] = None):
 @router.get("/my", response_model=Optional[SubscriptionResponse])
 async def get_my_subscription(current_user: dict = Depends(get_current_user)):
     """
-    Get active subscription details for the logged in doctor or department.
+    Get current user's active subscription (Doctor or Department).
     """
-    role = current_user.get("role")
-    if role not in ["doctor", "department"]:
-        raise HTTPException(
-            status_code=400,
-            detail="فقط الأطباء والإدارات يمكنهم امتلاك اشتراكات."
-        )
-    
-    is_dept = (role == "department")
+    is_dept = (current_user.get("role") == "department")
     try:
         sub = await subscription_service.get_active_subscription(
             owner_id=current_user["id"],
@@ -44,29 +38,22 @@ async def get_my_subscription(current_user: dict = Depends(get_current_user)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/subscribe", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/subscribe", response_model=SubscriptionResponse)
 async def create_subscription(
-    body: SubscriptionCreateRequest, 
+    body: SubscriptionCreateRequest,
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Subscribe the logged in doctor or department to a bundle.
+    Subscribe to a bundle (Doctor or Department).
     """
-    role = current_user.get("role")
-    if role not in ["doctor", "department"]:
-        raise HTTPException(
-            status_code=400,
-            detail="فقط الأطباء والإدارات يمكنهم الاشتراك في الباقات."
-        )
-    
-    is_dept = (role == "department")
+    is_dept = (current_user.get("role") == "department")
     try:
-        new_sub = await subscription_service.create_subscription(
+        sub = await subscription_service.create_subscription(
             owner_id=current_user["id"],
-            is_department=is_dept,
-            bundle_id=body.bundle_id
+            bundle_id=body.bundle_id,
+            is_department=is_dept
         )
-        return new_sub
+        return sub
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -74,11 +61,12 @@ async def create_subscription(
 
 @router.post("/{subscription_id}/renew", response_model=SubscriptionResponse)
 async def renew_subscription(
-    subscription_id: UUID, 
+    subscription_id: UUID,
+    body: Optional[RenewSubscriptionRequest] = None,
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Renew an existing subscription.
+    Renew an existing subscription with custom options.
     """
     role = current_user.get("role")
     if role not in ["doctor", "department", "admin"]:
@@ -90,11 +78,16 @@ async def renew_subscription(
     is_dept = (role == "department")
     is_admin = (role == "admin")
     try:
+        req_data = body or RenewSubscriptionRequest()
         renewed = await subscription_service.renew_subscription(
             subscription_id=subscription_id,
             owner_id=current_user["id"],
             is_department=is_dept,
-            is_admin=is_admin
+            is_admin=is_admin,
+            days_to_add=req_data.days_to_add,
+            bundle_id=req_data.bundle_id,
+            allowed_minutes=req_data.allowed_minutes,
+            daily_message_limit=req_data.daily_message_limit
         )
         return renewed
     except ValueError as e:

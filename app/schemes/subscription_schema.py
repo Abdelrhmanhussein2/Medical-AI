@@ -22,6 +22,12 @@ class BundleResponse(BaseModel):
 class SubscriptionCreateRequest(BaseModel):
     bundle_id: UUID
 
+class RenewSubscriptionRequest(BaseModel):
+    bundle_id: Optional[UUID] = None
+    days_to_add: Optional[int] = 30
+    allowed_minutes: Optional[int] = None
+    daily_message_limit: Optional[int] = None
+
 class AssignDoctorRequest(BaseModel):
     doctor_id: UUID
 
@@ -43,6 +49,9 @@ class SubscriptionResponse(BaseModel):
     seats_used: Optional[int] = None
     managed_by_org: Optional[bool] = False
     used_minutes: Optional[int] = 0
+    used_messages: Optional[int] = 0
+    allowed_minutes: Optional[int] = 60
+    max_doctors: Optional[int] = None
 
     class Config:
         from_attributes = True

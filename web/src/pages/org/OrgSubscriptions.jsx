@@ -188,8 +188,21 @@ export default function OrgSubscriptions() {
     return true;
   });
 
+  // Derive max allowed doctor seats based on active org subscription bundle (4 or 7 doctors)
+  let maxAllowedSeats = orgSubscription?.max_doctors || orgSubscription?.total_seats;
+  if (!maxAllowedSeats) {
+    const bName = (orgSubscription?.bundle_name || '').toLowerCase();
+    if (bName.includes('7_doctors') || bName.includes('7')) {
+      maxAllowedSeats = 7;
+    } else if (bName.includes('4_doctors') || bName.includes('4')) {
+      maxAllowedSeats = 4;
+    } else {
+      maxAllowedSeats = Math.max(deptDocs.length, 4);
+    }
+  }
+
   const seatsUtilized = deptDocs.filter(d => d.status === 'approved').length;
-  const totalSeats = deptDocs.length || 0;
+  const totalSeats = maxAllowedSeats;
   const capacityPct = totalSeats > 0 ? Math.round((seatsUtilized / totalSeats) * 100) : 0;
   const pendingCount = docLicenses.filter(l => l.status === 'pending').length;
   const expiringSoonCount = docLicenses.filter(l => l.status === 'expiring').length;
@@ -278,28 +291,18 @@ export default function OrgSubscriptions() {
   return (
     <div className={`space-y-stack-lg font-body-md animate-fade-in ${isArabic ? 'text-right' : 'text-left'}`}>
       {/* Header */}
-      <header className={`flex justify-between items-end border-b border-border-subtle pb-stack-md ${isArabic ? 'flex-row-reverse' : ''}`}>
+      <header className="flex justify-between items-center border-b border-border-subtle pb-4">
         <div>
-          <div className={`flex items-center gap-1.5 text-xs text-secondary font-semibold ${isArabic ? 'flex-row-reverse' : ''}`}>
-            <span>{currentUser.name}</span>
-            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span>{isArabic ? 'الاشتراكات' : 'Subscriptions'}</span>
-          </div>
-          <h1 className="font-display-lg text-headline-lg text-on-surface font-bold mt-1">
+          <h1 className="font-display-lg text-headline-lg text-on-surface font-bold">
             {isArabic ? 'اشتراكات القسم' : 'Department Subscriptions'}
           </h1>
-          <p className="font-body-lg text-body-lg text-on-surface-variant mt-1">
-            {isArabic
-              ? 'إدارة توزيع مقاعد الأطباء الممارسين وتفعيل حسابات الأطباء.'
-              : 'Manage clinician seat allocation and activate doctor accounts.'}
-          </p>
         </div>
         
         <button
           onClick={() => setShowOrgRenewModal(true)}
-          className="px-4 py-2 bg-primary hover:bg-primary-hover text-white font-bold text-xs rounded-lg shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+          className="px-4 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold text-xs rounded-lg shadow-sm flex items-center gap-2 transition-colors cursor-pointer"
         >
-          <span className="material-symbols-outlined text-[16px]">credit_card</span>
+          <span className="material-symbols-outlined text-[18px]">credit_card</span>
           {isArabic ? 'تجديد أو ترقية الاشتراك' : 'Renew or Upgrade Subscription'}
         </button>
       </header>
@@ -490,10 +493,10 @@ export default function OrgSubscriptions() {
 
               <div>
                 <label className="block text-xs font-semibold text-on-surface-variant mb-1">
-                  {isArabic ? 'الحد الأقصى لتوكنز الدردشة اليومي (توكن) - اختياري' : 'Custom Daily Chat Tokens Limit (Optional)'}
+                  {isArabic ? 'الحد الأقصى لرسائل الدردشة اليومي (رسالة) - اختياري' : 'Custom Daily Chat Messages Limit (Optional)'}
                 </label>
                 <input
-                  type="number" placeholder={isArabic ? "مثال: 50000" : "e.g., 50000"}
+                  type="number" placeholder={isArabic ? "مثال: 100" : "e.g., 100"}
                   value={customTokens} onChange={(e) => setCustomTokens(e.target.value)}
                   className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />

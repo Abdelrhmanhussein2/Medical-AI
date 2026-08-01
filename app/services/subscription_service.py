@@ -30,6 +30,7 @@ class SubscriptionService:
             if is_department:
                 query = """
                 SELECT s.*, b.name as bundle_name, b.name_ar as bundle_name_ar,
+                       b.allowed_minutes as allowed_minutes, b.max_doctors as max_doctors,
                        (SELECT COUNT(*) FROM subscription_doctors WHERE subscription_id = s.id) as seats_used
                 FROM subscriptions s
                 JOIN subscription_bundles b ON s.bundle_id = b.id
@@ -41,6 +42,7 @@ class SubscriptionService:
             else:
                 query = """
                 SELECT s.*, b.name as bundle_name, b.name_ar as bundle_name_ar,
+                       b.allowed_minutes as allowed_minutes, b.max_doctors as max_doctors,
                        (SELECT COUNT(*) FROM subscription_doctors WHERE subscription_id = s.id) as seats_used,
                        (s.department_id IS NOT NULL) as managed_by_org
                 FROM subscriptions s
@@ -83,6 +85,50 @@ class SubscriptionService:
                 duration_sec = await connection.fetchval(duration_query, UUID(str(owner_id)), start_dt)
                 
             sub_dict["used_minutes"] = int(duration_sec // 60)
+
+            # Count AI messages used since subscription start
+            if is_department:
+                messages_query = """
+                    SELECT COALESCE(COUNT(*), 0)
+                    FROM token_usage_logs tul
+                    JOIN subscription_doctors sd ON tul.doctor_id = sd.doctor_id
+                    WHERE sd.subscription_id = $1
+                      AND tul.created_at >= $2
+                """
+                used_messages = await connection.fetchval(messages_query, sub_id, start_dt)
+            else:
+                messages_query = """
+                    SELECT COALESCE(COUNT(*), 0)
+                    FROM token_usage_logs
+                    WHERE doctor_id = $1
+                      AND created_at >= $2
+                """
+                used_messages = await connection.fetchval(messages_query, UUID(str(owner_id)), start_dt)
+
+            sub_dict["used_messages"] = int(used_messages)
+
+            # Read allowed_minutes directly from the bundle column (added via migration)
+            # Falls back to name-based logic if column is missing for any reason
+            if "allowed_minutes" not in sub_dict or sub_dict["allowed_minutes"] is None:
+                bundle_name_fb = sub_dict.get("bundle_name") or ""
+                name_clean_fb = bundle_name_fb.lower().strip()
+                allowed_minutes_fb = 60
+                if "basic" in name_clean_fb:
+                    allowed_minutes_fb = 1500
+                elif "pro" in name_clean_fb:
+                    allowed_minutes_fb = 3000
+                elif "org_4" in name_clean_fb or "4_doctors" in name_clean_fb:
+                    allowed_minutes_fb = 6000
+                elif "org_7" in name_clean_fb or "7_doctors" in name_clean_fb:
+                    allowed_minutes_fb = 8000
+                elif "starter" in name_clean_fb:
+                    allowed_minutes_fb = 1000
+                elif "business" in name_clean_fb:
+                    allowed_minutes_fb = 3500
+                elif "enterprise" in name_clean_fb:
+                    allowed_minutes_fb = 5000
+                sub_dict["allowed_minutes"] = allowed_minutes_fb
+
             return sub_dict
 
 
@@ -157,9 +203,18 @@ class SubscriptionService:
             return dict(new_sub)
 
     @staticmethod
-    async def renew_subscription(subscription_id: UUID, owner_id: UUID, is_department: bool, is_admin: bool = False) -> dict:
+    async def renew_subscription(
+        subscription_id: UUID, 
+        owner_id: UUID, 
+        is_department: bool, 
+        is_admin: bool = False,
+        days_to_add: Optional[int] = None,
+        bundle_id: Optional[UUID] = None,
+        allowed_minutes: Optional[int] = None,
+        daily_message_limit: Optional[int] = None
+    ) -> dict:
         """
-        Renew an existing subscription.
+        Renew an existing subscription with custom minutes, message limits, and days.
         """
         async with db.pool.acquire() as connection:
             # Fetch the subscription and its bundle
@@ -183,26 +238,43 @@ class SubscriptionService:
                 if sub_dict[owner_field] != owner_id:
                     raise ValueError("لا تملك صلاحية تجديد هذا الاشتراك.")
 
-            duration_days = sub_dict["duration_days"]
+            target_bundle_id = bundle_id or sub_dict["bundle_id"]
+            extension_days = days_to_add if (days_to_add is not None and days_to_add > 0) else sub_dict["duration_days"]
             
-            # Update end_date (extend from current end_date if active, or from now() if expired)
+            # Update end_date and bundle_id
             update_query = """
             UPDATE subscriptions
-            SET end_date = GREATEST(end_date, now()) + $1 * INTERVAL '1 day',
+            SET bundle_id = $1,
+                end_date = GREATEST(end_date, now()) + $2 * INTERVAL '1 day',
                 status = 'active',
                 updated_at = now()
-            WHERE id = $2
+            WHERE id = $3
             RETURNING *
             """
-            updated_sub = await connection.fetchrow(update_query, duration_days, subscription_id)
+            updated_sub = await connection.fetchrow(update_query, target_bundle_id, extension_days, subscription_id)
             updated_sub_dict = dict(updated_sub)
+            
+            # Update allowed minutes on bundle if provided
+            if allowed_minutes is not None and allowed_minutes > 0:
+                await connection.execute(
+                    "UPDATE subscription_bundles SET allowed_minutes = $1, updated_at = now() WHERE id = $2",
+                    allowed_minutes, target_bundle_id
+                )
+
+            # Update daily message limit for assigned doctors if provided
+            if daily_message_limit is not None and daily_message_limit > 0:
+                await connection.execute(
+                    "UPDATE subscription_doctors SET daily_token_limit = $1 WHERE subscription_id = $2",
+                    daily_message_limit, subscription_id
+                )
             
             if not is_department:
                 doc_id = sub_dict.get("doctor_id") or owner_id
-                await connection.execute(
-                    "UPDATE doctors SET status = 'approved', updated_at = now() WHERE id = $1",
-                    doc_id
-                )
+                if doc_id:
+                    await connection.execute(
+                        "UPDATE doctors SET status = 'approved', updated_at = now() WHERE id = $1",
+                        doc_id
+                    )
                 
             return updated_sub_dict
 

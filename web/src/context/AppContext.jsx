@@ -295,7 +295,11 @@ export const AppProvider = ({ children }) => {
       const updated = await apiFetch(`/admins/departments/${id}/toggle-status`, {
         method: 'PATCH'
       });
-      setOrganizations(prev => prev.map(o => o.id === id ? { ...o, is_active: updated.is_active } : o));
+      setOrganizations(prev => prev.map(o => o.id === id ? { 
+        ...o, 
+        is_active: updated.is_active,
+        status: updated.is_active ? 'active' : 'suspended'
+      } : o));
       return updated;
     } catch (err) {
       console.error("Failed to toggle organization status", err);
@@ -303,10 +307,12 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const renewSubscription = async (subId) => {
+  const renewSubscription = async (subId, renewData = {}) => {
     try {
       const updated = await apiFetch(`/subscriptions/${subId}/renew`, {
-        method: 'POST'
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(renewData)
       });
       if (currentUser && currentUser.role === 'admin') {
         const subs = await apiFetch(`/admins/subscriptions`);
@@ -315,7 +321,7 @@ export const AppProvider = ({ children }) => {
       return updated;
     } catch (err) {
       console.error("Failed to renew subscription", err);
-      alert(err.message || "Failed to renew subscription");
+      throw err;
     }
   };
 

@@ -97,8 +97,82 @@ class WhatsAppScheduler:
         loop = asyncio.get_event_loop()
         followup_task = loop.create_task(self._followup_loop())
         reminder_task = loop.create_task(self._reminder_loop())
-        self.running_tasks.extend([followup_task, reminder_task])
+        hot_reminder_task = loop.create_task(self._reminder_hot_loop())
+        safety_reminder_task = loop.create_task(self._reminder_safety_loop())
+        
+        self.running_tasks.extend([
+            followup_task, 
+            reminder_task, 
+            hot_reminder_task, 
+            safety_reminder_task
+        ])
         logger.info("WhatsApp background schedulers started.")
+
+    async def run_due_reminders_job(self):
+        """
+        Processes reminders due in the Redis Sorted Set. Runs every 1 minute.
+        """
+        r = await self._get_redis()
+        lock_key = "wa:lock:due_reminders"
+        # Try to acquire lock for 50 seconds (nx=True)
+        acquired = await r.set(lock_key, "1", ex=50, nx=True)
+        if not acquired:
+            return
+
+        try:
+            logger.info("Executing due appointment reminders check (Redis ZSET)...")
+            count = await self.service.process_due_reminders()
+            if count > 0:
+                logger.info(f"Finished due reminders check. Sent: {count}")
+        except Exception as e:
+            logger.error(f"Error executing due reminders job: {e}")
+
+    async def run_reminder_safety_net_job(self):
+        """
+        Scans DB for missed reminders and re-enqueues them. Runs every 6 hours.
+        """
+        r = await self._get_redis()
+        lock_key = "wa:lock:safety_net"
+        # Try to acquire lock for 5 hours (nx=True)
+        acquired = await r.set(lock_key, "1", ex=18000, nx=True)
+        if not acquired:
+            return
+
+        try:
+            logger.info("Executing safety net appointment reminders scan...")
+            count = await self.service.run_safety_net_scan()
+            if count > 0:
+                logger.info(f"Finished safety net reminders scan. Requeued: {count}")
+        except Exception as e:
+            logger.error(f"Error executing safety net reminders job: {e}")
+
+    async def _reminder_hot_loop(self):
+        """
+        Loop that runs every minute to process due reminders.
+        """
+        interval = 60
+        logger.info("Starting appointment reminders hot loop (interval: 60 seconds)...")
+        await asyncio.sleep(15)
+        while True:
+            try:
+                await self.run_due_reminders_job()
+            except Exception as e:
+                logger.error(f"Error in reminders hot loop: {e}")
+            await asyncio.sleep(interval)
+
+    async def _reminder_safety_loop(self):
+        """
+        Loop that runs every 6 hours to scan DB for any missed reminders.
+        """
+        interval = 21600  # 6 hours
+        logger.info("Starting appointment reminders safety loop (interval: 6 hours)...")
+        await asyncio.sleep(30)
+        while True:
+            try:
+                await self.run_reminder_safety_net_job()
+            except Exception as e:
+                logger.error(f"Error in reminders safety loop: {e}")
+            await asyncio.sleep(interval)
 
     def stop(self):
         """

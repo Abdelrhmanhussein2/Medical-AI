@@ -37,3 +37,20 @@ def build_6m_reminder(patient_name: str) -> str:
 
 def build_fine_response() -> str:
     return "الحمد لله! سعداء جداً بسماع ذلك وعودتك للمسار الصحيح. 💚 نتمنى لك دائماً دوام الصحة والعافية."
+
+
+def build_appointment_reminder_24h(patient_name: str, doctor_name: str, appt_date: str, appt_time: str) -> str:
+    return (
+        f"مرحباً يا {patient_name}، نود تذكيرك بموعدك غداً مع الدكتور {doctor_name} "
+        f"بتاريخ {appt_date} في تمام الساعة {appt_time}. 🌸\n"
+        "نتمنى لك دوام الصحة والعافية."
+    )
+
+
+def build_appointment_reminder_4h(patient_name: str, doctor_name: str, appt_time: str) -> str:
+    return (
+        f"تذكير بموعدك اليوم يا {patient_name}: موعدك مع الدكتور {doctor_name} "
+        f"بعد 4 ساعات في تمام الساعة {appt_time}. 🌸\n"
+        "بانتظارك عافاك الله."
+    )
+

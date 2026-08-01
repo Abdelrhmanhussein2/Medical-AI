@@ -2,7 +2,7 @@
 import logging
 from typing import Dict, Any, List
 from app.services.ai_tools.schemas import get_tool_definitions
-from app.services.ai_tools import patient_tools, appointment_tools, report_tools
+from app.services.ai_tools import patient_tools, appointment_tools, report_tools, admin_tools
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +25,10 @@ class ToolExecutor:
         "search_visits_by_diagnosis":report_tools.tool_search_visits_by_diagnosis,
         "get_monthly_report":        report_tools.tool_get_monthly_report,
         "send_appointment_welcome_message": appointment_tools.tool_send_appointment_welcome_message,
+        "get_system_stats":          admin_tools.tool_get_system_stats,
+        "get_doctor_performance":    admin_tools.tool_get_doctor_performance,
+        "get_revenue_report":        admin_tools.tool_get_revenue_report,
+        "send_report_to_admin":      admin_tools.tool_send_report_to_admin,
     }
 
     async def dispatch(self, fn_name: str, fn_args: dict, owner_id: str, conn) -> dict:

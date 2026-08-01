@@ -129,6 +129,30 @@ async def tool_reschedule_appointment(fn_args: dict, owner_id: str, conn) -> dic
             new_d, new_t, appt_uuid, UUID(owner_id)
         )
         if "UPDATE 1" in res:
+            try:
+                from datetime import datetime, timedelta
+                from app.services.whatsapp.reminder_repository import ReminderRepository
+                
+                appt_dt = datetime.combine(new_d, new_t)
+                now = datetime.now()
+                reminder_repo = ReminderRepository(db_pool=db.pool)
+                
+                # Update/Enqueue in Redis
+                time_24h = appt_dt - timedelta(hours=24)
+                if time_24h > now:
+                    await reminder_repo.enqueue_reminder(str(appt_uuid), "24h", time_24h.timestamp())
+                else:
+                    r = await reminder_repo._get_redis()
+                    await r.zrem(reminder_repo.queue_key, f"{appt_uuid}:24h")
+                
+                time_4h = appt_dt - timedelta(hours=4)
+                if time_4h > now:
+                    await reminder_repo.enqueue_reminder(str(appt_uuid), "4h", time_4h.timestamp())
+                else:
+                    r = await reminder_repo._get_redis()
+                    await r.zrem(reminder_repo.queue_key, f"{appt_uuid}:4h")
+            except Exception as err:
+                logger.error(f"Failed to enqueue/update reminders on reschedule: {err}")
             return {"status": "success", "message": f"تم تغيير الموعد بنجاح إلى {new_date_str} الساعة {new_time_str}."}
         else:
             return {"status": "error", "message": "لم يتم العثور على الموعد."}

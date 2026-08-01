@@ -15,6 +15,7 @@ import LiveSession from './pages/LiveSession';
 import AiChat from './pages/AiChat';
 import Checkout from './pages/Checkout';
 import Settings from './pages/Settings';
+import Templates from './pages/Templates';
 
 // Admin pages
 import AdminOverview from './pages/admin/AdminOverview';
@@ -143,6 +144,13 @@ function AppContent() {
           <ProtectedRoute role="doctor">
             <LayoutWrapper activePage="visits" handleNavigation={handleNavigation}>
               <Visits />
+            </LayoutWrapper>
+          </ProtectedRoute>
+        } />
+        <Route path="/templates" element={
+          <ProtectedRoute role="doctor">
+            <LayoutWrapper activePage="templates" handleNavigation={handleNavigation}>
+              <Templates />
             </LayoutWrapper>
           </ProtectedRoute>
         } />

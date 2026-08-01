@@ -1,0 +1,534 @@
+{
+	"info": {
+		"_postman_id": "7f09ad92-124b-449e-baef-c87db98f86f3",
+		"name": "Medical AI - New Features (Templates & Admin AI)",
+		"description": "Postman Collection for testing Note Templates and Admin AI Chat endpoints.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Authentication",
+			"item": [
+				{
+					"name": "Login (Doctor)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.access_token) {",
+									"    pm.collectionVariables.set(\"doctorToken\", jsonData.access_token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "username",
+									"value": "doctor@medical-ai.com",
+									"type": "text"
+								},
+								{
+									"key": "password",
+									"value": "password123",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/auth/token",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"token"
+							]
+						},
+						"description": "Logs in the doctor and saves the token to collection variables automatically."
+					},
+					"response": []
+				},
+				{
+					"name": "Login (Admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.access_token) {",
+									"    pm.collectionVariables.set(\"adminToken\", jsonData.access_token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "username",
+									"value": "admin@medical-ai.com",
+									"type": "text"
+								},
+								{
+									"key": "password",
+									"value": "password123",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/auth/token",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"token"
+							]
+						},
+						"description": "Logs in the admin and saves the token to collection variables automatically."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2. Clinical Note Templates",
+			"item": [
+				{
+					"name": "Create Template",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.id) {",
+									"    pm.collectionVariables.set(\"templateId\", jsonData.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{doctorToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"متابعة السكري والضغط\",\n    \"fields\": [\n        { \"label\": \"ضغط الدم\" },\n        { \"label\": \"مستوى السكر العشوائي\" },\n        { \"label\": \"الأعراض الحالية\" },\n        { \"label\": \"الخطة العلاجية المقترحة\" }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/templates/",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"templates",
+								""
+							]
+						},
+						"description": "Creates a clinical note template for a doctor (max 6 fields)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Doctor Templates",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{doctorToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/templates/",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"templates",
+								""
+							]
+						},
+						"description": "Lists all note templates designed by the logged in doctor."
+					},
+					"response": []
+				},
+				{
+					"name": "Search Field Registry",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{doctorToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/templates/registry/search?q=ضغط",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"templates",
+								"registry",
+								"search"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "ضغط"
+								}
+							]
+						},
+						"description": "Searches global field autocomplete registry for suggestions."
+					},
+					"response": []
+				},
+				{
+					"name": "Save Patient Template Values (Upsert)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{doctorToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"patient_id\": \"{{patientId}}\",\n    \"template_id\": \"{{templateId}}\",\n    \"filled_data\": {\n        \"ضغط الدم\": \"120/80\",\n        \"مستوى السكر العشوائي\": \"140 mg/dL\",\n        \"الأعراض الحالية\": \"صداع خفيف ومستمر في الجبهة\",\n        \"الخطة العلاجية المقترحة\": \"الاستمرار على العلاج وزيادة شرب السوائل\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/templates/patients/fills",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"templates",
+								"patients",
+								"fills"
+							]
+						},
+						"description": "Saves template field values for a patient during session (updates if already exists)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Patient Fills History",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{doctorToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/templates/patients/{{patientId}}/fills",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"templates",
+								"patients",
+								"{{patientId}}",
+								"fills"
+							]
+						},
+						"description": "Retrieves note templates filled previously for this patient."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Template",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{doctorToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/templates/{{templateId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"templates",
+								"{{templateId}}"
+							]
+						},
+						"description": "Deletes a template (checks doctor ownership)."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3. Admin AI Chat & Tools",
+			"item": [
+				{
+					"name": "Create Chat Thread",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.id) {",
+									"    pm.collectionVariables.set(\"adminThreadId\", jsonData.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"تقرير الأداء العام والتحليلات\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/chat/threads",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"chat",
+								"threads"
+							]
+						},
+						"description": "Creates a chat thread for an Admin."
+					},
+					"response": []
+				},
+				{
+					"name": "Admin Send Message",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"sender_type\": \"user\",\n    \"content\": \"أعطني إحصائيات النظام كاملة لو سمحت ثم ابعتها على الواتساب\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/chat/threads/{{adminThreadId}}/messages",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"chat",
+								"threads",
+								"{{adminThreadId}}",
+								"messages"
+							]
+						},
+						"description": "Admin posts a message to the thread."
+					},
+					"response": []
+				},
+				{
+					"name": "Admin Generate AI Reply",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{adminToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/chat/threads/{{adminThreadId}}/generate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"chat",
+								"threads",
+								"{{adminThreadId}}",
+								"generate"
+							]
+						},
+						"description": "Triggers the OpenAI-based Admin AI engine. The AI will call get_system_stats and send_report_to_admin automatically."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "doctorToken",
+			"value": "PASTE_DOCTOR_TOKEN_HERE",
+			"type": "string"
+		},
+		{
+			"key": "adminToken",
+			"value": "PASTE_ADMIN_TOKEN_HERE",
+			"type": "string"
+		},
+		{
+			"key": "templateId",
+			"value": "TEMPLATE_ID_UUID_HERE",
+			"type": "string"
+		},
+		{
+			"key": "patientId",
+			"value": "PATIENT_ID_UUID_HERE",
+			"type": "string"
+		},
+		{
+			"key": "adminThreadId",
+			"value": "ADMIN_THREAD_ID_UUID_HERE",
+			"type": "string"
+		}
+	]
+}

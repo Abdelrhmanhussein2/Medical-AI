@@ -13,11 +13,14 @@ from app.services.whatsapp.message_builder import (
     build_severe_patient_reply,
     build_doctor_alert,
     build_6m_reminder,
-    build_fine_response
+    build_fine_response,
+    build_appointment_reminder_24h,
+    build_appointment_reminder_4h
 )
 from app.services.whatsapp.evolution_client import EvolutionClient, EvolutionAPIError
 from app.services.whatsapp.response_classifier import ResponseClassifier
 from app.services.whatsapp.repository import WhatsAppRepository
+from app.services.whatsapp.reminder_repository import ReminderRepository
 
 logger = logging.getLogger("whatsapp_service")
 
@@ -28,7 +31,8 @@ class WhatsAppService:
         evolution_client: Optional[EvolutionClient] = None,
         classifier: Optional[ResponseClassifier] = None,
         redis = None,
-        default_country_code: Optional[str] = None
+        default_country_code: Optional[str] = None,
+        reminder_repo: Optional[ReminderRepository] = None
     ):
         self.repo = repo or WhatsAppRepository()
         self.evolution_client = evolution_client or EvolutionClient(
@@ -39,6 +43,8 @@ class WhatsAppService:
         self.classifier = classifier or ResponseClassifier()
         self.redis = redis
         self.default_country_code = default_country_code or settings.PHONE_DEFAULT_COUNTRY_CODE
+        self.reminder_repo = reminder_repo or ReminderRepository(db_pool=self.repo.pool, redis=redis)
+
 
     async def _get_redis(self):
         if not self.redis:
@@ -306,3 +312,115 @@ class WhatsAppService:
             status="sent" if success else "failed"
         )
         return success
+
+    async def process_due_reminders(self) -> int:
+        """
+        Hot path: Fetches due reminders from Redis, resolves details from DB,
+        sends WhatsApp messages, logs them, and removes them from the Redis queue.
+        """
+        import time
+        now_ts = time.time()
+        due_items = await self.reminder_repo.get_due_reminders(now_ts)
+        if not due_items:
+            return 0
+
+        sent_count = 0
+        processed_raw_values = []
+
+        for item in due_items:
+            appt_id = item["appointment_id"]
+            rem_type = item["reminder_type"]
+            raw_val = item["raw_value"]
+
+            processed_raw_values.append(raw_val)
+
+            # Check DB if already sent
+            already_sent = await self.reminder_repo.has_been_sent(appt_id, rem_type)
+            if already_sent:
+                logger.info(f"Reminder {rem_type} for appt {appt_id} already logged as sent in DB. Skipping.")
+                continue
+
+            # Fetch details
+            details = await self.reminder_repo.get_appointment_reminder_details(appt_id)
+            if not details:
+                logger.warning(f"Could not find appointment details for reminder {appt_id}. Skipping.")
+                continue
+
+            if details["status"] != "scheduled":
+                logger.info(f"Appointment {appt_id} status is '{details['status']}' (not scheduled). Skipping reminder.")
+                continue
+
+            phone = details["patient_phone"]
+            patient_name = details["patient_name"]
+            doctor_name = details["doctor_name"]
+            appt_date = str(details["appointment_date"])
+            appt_time = str(details["appointment_time"])
+
+            # Build message based on type
+            if rem_type == "24h":
+                msg = build_appointment_reminder_24h(patient_name, doctor_name, appt_date, appt_time)
+            elif rem_type == "4h":
+                msg = build_appointment_reminder_4h(patient_name, doctor_name, appt_time)
+            else:
+                logger.warning(f"Unknown reminder type '{rem_type}' for appt {appt_id}. Skipping.")
+                continue
+
+            # Send message
+            success = await self.send_message(phone, msg)
+            status = "sent" if success else "failed"
+
+            # Log to DB
+            await self.reminder_repo.log_reminder(appt_id, rem_type, phone, status)
+            if success:
+                sent_count += 1
+                logger.info(f"Successfully sent {rem_type} reminder to patient {patient_name} ({phone})")
+
+        # Cleanup redis queue
+        if processed_raw_values:
+            await self.reminder_repo.remove_from_queue(processed_raw_values)
+
+        return sent_count
+
+    async def run_safety_net_scan(self) -> int:
+        """
+        Safety net: Scans the DB for scheduled appointments in the next 25 hours,
+        checks if reminders should have been sent (based on current time), and
+        re-enqueues them in Redis ZSET to be processed immediately if they were missed.
+        """
+        import time
+        from datetime import datetime, timedelta
+        
+        appointments = await self.reminder_repo.get_appointments_missing_reminders()
+        if not appointments:
+            return 0
+
+        requeued_count = 0
+        now_dt = datetime.now()
+
+        for appt in appointments:
+            appt_id = str(appt["appointment_id"])
+            appt_date = appt["appointment_date"]
+            appt_time = appt["appointment_time"]
+            
+            # Combine date and time
+            appt_dt = datetime.combine(appt_date, appt_time)
+
+            # Check 24h reminder: due if now >= appt_dt - 24 hours
+            time_24h = appt_dt - timedelta(hours=24)
+            if now_dt >= time_24h:
+                already_sent = await self.reminder_repo.has_been_sent(appt_id, "24h")
+                if not already_sent:
+                    # Enqueue with current timestamp so it triggers immediately
+                    await self.reminder_repo.enqueue_reminder(appt_id, "24h", time.time())
+                    requeued_count += 1
+
+            # Check 4h reminder: due if now >= appt_dt - 4 hours
+            time_4h = appt_dt - timedelta(hours=4)
+            if now_dt >= time_4h:
+                already_sent = await self.reminder_repo.has_been_sent(appt_id, "4h")
+                if not already_sent:
+                    await self.reminder_repo.enqueue_reminder(appt_id, "4h", time.time())
+                    requeued_count += 1
+
+        return requeued_count
+

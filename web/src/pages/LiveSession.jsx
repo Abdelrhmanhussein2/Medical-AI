@@ -43,6 +43,108 @@ export default function LiveSession({ appointmentId, setActivePage }) {
   const [selectedPastSession, setSelectedPastSession] = useState(null);
   const [activeDoc, setActiveDoc] = useState(null);
 
+  // Note template states
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [filledData, setFilledData] = useState({});
+  const [isSavingFill, setIsSavingFill] = useState(false);
+  const [saveFillSuccess, setSaveFillSuccess] = useState(false);
+  const [patientFills, setPatientFills] = useState([]);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+
+  // Fetch templates for the dropdown
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const token = sessionStorage.getItem("accessToken");
+        const res = await fetch('/api/v1/templates/', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setTemplates(data);
+        }
+      } catch (err) {
+        console.error("Error fetching templates in LiveSession:", err);
+      }
+    };
+    fetchTemplates();
+  }, []);
+
+  const fetchPatientFills = async () => {
+    if (!patient?.id) return;
+    try {
+      const token = sessionStorage.getItem("accessToken");
+      const res = await fetch(`/api/v1/templates/patients/${patient.id}/fills`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPatientFills(data);
+      }
+    } catch (err) {
+      console.error("Error fetching patient fills in LiveSession:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchPatientFills();
+  }, [patient]);
+
+  // Fetch saved fills when template is selected
+  useEffect(() => {
+    if (!selectedTemplateId) {
+      setFilledData({});
+      return;
+    }
+    const matched = patientFills.find(f => f.template_id === selectedTemplateId);
+    if (matched) {
+      setFilledData(matched.filled_data || {});
+    } else {
+      const selected = templates.find(t => t.id === selectedTemplateId);
+      const empty = {};
+      if (selected) {
+        selected.fields.forEach(f => {
+          empty[f.label] = '';
+        });
+      }
+      setFilledData(empty);
+    }
+  }, [selectedTemplateId, patientFills, templates]);
+
+  const handleSaveFill = async () => {
+    if (!selectedTemplateId || !patient?.id) return;
+    setIsSavingFill(true);
+    setSaveFillSuccess(false);
+    try {
+      const token = sessionStorage.getItem("accessToken");
+      const res = await fetch('/api/v1/templates/patients/fills', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          patient_id: patient.id,
+          template_id: selectedTemplateId,
+          filled_data: filledData
+        })
+      });
+      if (res.ok) {
+        setSaveFillSuccess(true);
+        await fetchPatientFills();
+        setTimeout(() => setSaveFillSuccess(false), 2000);
+      } else {
+        alert('Failed to save template values');
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSavingFill(false);
+    }
+  };
+
+
   const startEditingMedicalInfo = () => {
     setTempDiseases(patient?.diseases || '');
     setTempHabits(patient?.habits || '');
@@ -217,6 +319,53 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                         <span className="material-symbols-outlined text-[16px]">edit</span>
                         <span>تعديل الملف الطبي للمريض</span>
                       </button>
+
+                      {/* Note Templates Section */}
+                      <div className="mt-4 pt-4 border-t border-border-subtle/60 text-right" dir="rtl">
+                        <div className="flex items-center gap-1.5 mb-2.5">
+                          <span className="material-symbols-outlined text-[18px] text-primary">assignment</span>
+                          <span className="text-xs font-bold text-secondary">
+                            {isArabic ? 'ملاحظات الكشف السريعة للمريض' : 'Patient Quick Note Templates'}
+                          </span>
+                        </div>
+
+                        {patientFills.length > 0 ? (
+                          <div className="space-y-2 mb-3">
+                            {patientFills.map(fill => {
+                              const updateDate = new Date(fill.updated_at).toLocaleDateString(isArabic ? 'ar-EG' : 'en-US');
+                              return (
+                                <div 
+                                  key={fill.template_id}
+                                  onClick={() => {
+                                    setSelectedTemplateId(fill.template_id);
+                                    setShowTemplateModal(true);
+                                  }}
+                                  className="flex items-center justify-between p-2.5 bg-surface-container-low hover:bg-surface-container-medium border border-border-subtle rounded-xl cursor-pointer transition-all active:scale-[0.98]"
+                                >
+                                  <span className="text-xs font-bold text-on-surface hover:text-primary">{fill.template_name}</span>
+                                  <span className="text-[9px] text-secondary font-semibold">{updateDate}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-secondary font-semibold mb-3">
+                            {isArabic ? 'لا توجد ملاحظات سريعة مسجلة لهذا المريض.' : 'No quick note templates saved for this patient.'}
+                          </p>
+                        )}
+
+                        <button
+                          onClick={() => {
+                            setSelectedTemplateId('');
+                            setFilledData({});
+                            setShowTemplateModal(true);
+                          }}
+                          className="w-full bg-primary/10 hover:bg-primary/20 text-primary font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">add</span>
+                          <span>{isArabic ? 'ملء قالب جديد للمريض' : 'Fill New Template'}</span>
+                        </button>
+                      </div>
                     </>
                   ) : (
                     <div class="space-y-3">
@@ -683,6 +832,107 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                 إغلاق الملخص
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template Fill Modal */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in" dir="rtl">
+          <div className="bg-white rounded-2xl border border-border-subtle p-6 max-w-lg w-full shadow-2xl relative text-right">
+            <button 
+              onClick={() => {
+                setShowTemplateModal(false);
+                setSelectedTemplateId('');
+                setFilledData({});
+              }}
+              className="absolute top-4 left-4 text-on-surface-variant hover:text-on-surface p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+
+            <div className="flex items-center gap-2 border-b border-border-subtle pb-3 mb-4">
+              <span className="material-symbols-outlined text-primary text-[20px]">assignment</span>
+              <h3 className="text-sm font-bold text-secondary">
+                {isArabic ? 'ملء ملاحظات الكشف السريعة للمريض' : 'Fill Patient Note Template'}
+              </h3>
+            </div>
+
+            {/* Template Selector (only if we are filling a new template) */}
+            {!patientFills.some(f => f.template_id === selectedTemplateId) && (
+              <div className="mb-4">
+                <label className="block text-xs font-bold text-secondary mb-1">
+                  {isArabic ? 'اختر قالب الملاحظات:' : 'Select Note Template:'}
+                </label>
+                <select
+                  value={selectedTemplateId}
+                  onChange={e => setSelectedTemplateId(e.target.value)}
+                  className="w-full bg-surface-container border border-border-subtle px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-primary font-bold cursor-pointer"
+                >
+                  <option value="">{isArabic ? '-- اختر قالب --' : '-- Select Template --'}</option>
+                  {templates.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {selectedTemplateId && (
+              <div className="space-y-4">
+                {saveFillSuccess && (
+                  <div className="bg-success/15 text-success text-xs font-bold p-3 rounded-xl text-center animate-fade-in">
+                    {isArabic ? 'تم حفظ التعديلات بنجاح ✓' : 'Saved successfully ✓'}
+                  </div>
+                )}
+
+                <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                  {(() => {
+                    const selected = templates.find(t => t.id === selectedTemplateId);
+                    if (!selected) return null;
+                    return selected.fields.map((f, i) => (
+                      <div key={i} className="space-y-1">
+                        <label className="text-xs font-bold text-primary block">{f.label}:</label>
+                        <textarea
+                          rows="3"
+                          value={filledData[f.label] || ''}
+                          onChange={e => setFilledData({ ...filledData, [f.label]: e.target.value })}
+                          placeholder={isArabic ? `اكتب ${f.label}...` : `Enter ${f.label}`}
+                          className="w-full px-3 py-2 bg-surface-container-low text-on-surface border border-border-subtle rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none outline-none font-medium"
+                        />
+                      </div>
+                    ));
+                  })()}
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    disabled={isSavingFill}
+                    onClick={handleSaveFill}
+                    className="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1 shadow-sm transition-all disabled:opacity-50 active:scale-95 cursor-pointer"
+                  >
+                    {isSavingFill ? (
+                      <span className="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>
+                    ) : (
+                      <span className="material-symbols-outlined text-[14px]">save</span>
+                    )}
+                    <span>{isArabic ? 'حفظ الملاحظات' : 'Save Notes'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowTemplateModal(false);
+                      setSelectedTemplateId('');
+                      setFilledData({});
+                    }}
+                    className="flex-1 bg-surface-container hover:bg-surface-container-hover text-secondary font-bold py-2.5 rounded-xl text-xs transition-colors border border-border-subtle cursor-pointer"
+                  >
+                    {isArabic ? 'إغلاق' : 'Close'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

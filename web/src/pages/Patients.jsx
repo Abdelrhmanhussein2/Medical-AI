@@ -8,6 +8,25 @@ export default function Patients({ setActivePage }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const [patientFills, setPatientFills] = useState([]);
+
+  const fetchPatientFills = async (pid) => {
+    try {
+      const token = sessionStorage.getItem("accessToken");
+      const res = await fetch(`/api/v1/templates/patients/${pid}/fills`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPatientFills(data);
+      } else {
+        setPatientFills([]);
+      }
+    } catch (err) {
+      console.error(err);
+      setPatientFills([]);
+    }
+  };
 
   // Add Patient Form states
   const [name, setName] = useState('');
@@ -109,6 +128,7 @@ export default function Patients({ setActivePage }) {
     setEditGeneralSummary(patient.general_summary || '');
     setEditError('');
     setExpandedVisitId(null);
+    fetchPatientFills(patient.id);
   };
 
   const handleEditPatientSubmit = async (e) => {
@@ -515,6 +535,41 @@ export default function Patients({ setActivePage }) {
                         <p className={`p-3 bg-primary-light/30 text-primary rounded-xl border border-primary/20 text-on-surface-variant text-[11px] leading-relaxed ${isArabic ? 'text-right' : 'text-left'} whitespace-pre-wrap`}>
                           {selectedPatient.general_summary || t('no_general_summary')}
                         </p>
+                      </div>
+
+                      {/* Patient Note Templates Fills Display */}
+                      <div className="mt-4 pt-4 border-t border-border-subtle/50 space-y-3 text-right" dir="rtl">
+                        <strong className="text-xs text-on-surface block flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[16px] text-primary">assignment</span>
+                          {isArabic ? 'ملاحظات الكشف الطبية السريعة:' : 'Clinical Note Fills:'}
+                        </strong>
+
+                        {patientFills.length > 0 ? (
+                          <div className="space-y-3 max-h-60 overflow-y-auto">
+                            {patientFills.map(fill => (
+                              <div key={fill.template_id} className="bg-surface-container-low p-3 rounded-xl border border-border-subtle space-y-2">
+                                <div className="flex justify-between items-center border-b border-border-subtle/40 pb-1.5">
+                                  <span className="text-xs font-bold text-primary">{fill.template_name}</span>
+                                  <span className="text-[9px] text-secondary font-semibold">
+                                    {new Date(fill.updated_at).toLocaleDateString(isArabic ? 'ar-EG' : 'en-US')}
+                                  </span>
+                                </div>
+                                <div className="space-y-1.5">
+                                  {Object.entries(fill.filled_data).map(([label, val]) => (
+                                    <div key={label} className="text-[11px] leading-relaxed">
+                                      <strong className="text-secondary">{label}:</strong>{' '}
+                                      <span className="text-on-surface font-medium">{val || '—'}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-on-surface-variant italic font-semibold">
+                            {isArabic ? 'لا توجد ملاحظات سريعة مسجلة لهذا المريض.' : 'No clinical note fills recorded.'}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>

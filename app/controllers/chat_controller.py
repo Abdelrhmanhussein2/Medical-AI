@@ -145,7 +145,12 @@ async def generate_ai_reply(
     current_user: dict = Depends(get_current_user)
 ):
     owner_id, owner_type = _verify_chat_user(current_user)
-    message = await ChatService.generate_ai_response(str(thread_id), owner_id, owner_type)
+    if owner_type == "admin":
+        from app.services.admin_ai_service import AdminAIEngineService
+        message = await AdminAIEngineService.generate_ai_response(str(thread_id), owner_id)
+    else:
+        message = await ChatService.generate_ai_response(str(thread_id), owner_id, owner_type)
+        
     if not message:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

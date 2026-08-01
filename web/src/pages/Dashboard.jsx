@@ -7,6 +7,7 @@ export default function Dashboard({ setActivePage }) {
   const { currentUser, appointments, patients } = useApp();
   const { t, isArabic } = useLanguage();
   const [subscription, setSubscription] = useState(null);
+  const [showAllToday, setShowAllToday] = useState(false);
 
   useEffect(() => {
     const fetchSubscription = async () => {
@@ -45,11 +46,18 @@ export default function Dashboard({ setActivePage }) {
 
   const remainingMinutes = getRemainingMinutes();
 
-  // Get only today's appointments for Julian Vance (current user)
-  const myAppts = appointments.filter(a => a.doctor_id === currentUser.id);
+  // Filter to today's appointments only
+  const todayStr = new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
+  const myAppts = appointments.filter(a => {
+    if (a.doctor_id !== currentUser.id) return false;
+    if (!a.appointment_date) return false;
+    // appointment_date can be 'YYYY-MM-DD' or a full ISO string
+    const apptDay = a.appointment_date.slice(0, 10);
+    return apptDay === todayStr;
+  });
 
   // Map patients to appointments for displaying
-  const upcomingPatients = myAppts.map(appt => {
+  const allTodayPatients = myAppts.map(appt => {
     const patientObj = patients.find(p => p.id === appt.patient_id);
     return {
       ...appt,
@@ -57,6 +65,62 @@ export default function Dashboard({ setActivePage }) {
       initials: patientObj ? patientObj.name.split(' ').map(n => n[0]).join('') : 'UN'
     };
   });
+
+  const upcomingPatients = showAllToday ? allTodayPatients : allTodayPatients.slice(0, 3);
+
+  // Build real activity feed from doctor's own data
+  const buildActivityFeed = () => {
+    const items = [];
+
+    // Completed / summarized appointments → "أكملت جلسة مع ..."
+    appointments
+      .filter(a => a.doctor_id === currentUser.id && (a.status === 'completed' || a.status === 'summarized'))
+      .forEach(a => {
+        const p = patients.find(pt => pt.id === a.patient_id);
+        items.push({
+          id: `appt-done-${a.id}`,
+          icon: 'task_alt',
+          color: 'text-success',
+          bg: 'bg-success/10',
+          textAr: `اكتملت جلسة مع ${p?.name || 'مريض'}`,
+          textEn: `Completed session with ${p?.name || 'Patient'}`,
+          date: a.updated_at || a.created_at || a.appointment_date,
+        });
+      });
+
+    // Scheduled / confirmed appointments → "حجزت موعداً جديداً مع ..."
+    appointments
+      .filter(a => a.doctor_id === currentUser.id && (a.status === 'scheduled' || a.status === 'confirmed'))
+      .forEach(a => {
+        const p = patients.find(pt => pt.id === a.patient_id);
+        items.push({
+          id: `appt-new-${a.id}`,
+          icon: 'calendar_add_on',
+          color: 'text-primary',
+          bg: 'bg-primary/10',
+          textAr: `موعد جديد مع ${p?.name || 'مريض'} — ${a.appointment_date || ''}`,
+          textEn: `New appointment with ${p?.name || 'Patient'} — ${a.appointment_date || ''}`,
+          date: a.created_at || a.appointment_date,
+        });
+      });
+
+    // Sort by date descending, take latest 5
+    items.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    return items.slice(0, 5);
+  };
+
+  const activityFeed = buildActivityFeed();
+
+  const relativeTime = (dateStr) => {
+    if (!dateStr) return '';
+    const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
+    if (diff < 1) return isArabic ? 'الآن' : 'Just now';
+    if (diff < 60) return isArabic ? `منذ ${diff} دقيقة` : `${diff}m ago`;
+    const hrs = Math.floor(diff / 60);
+    if (hrs < 24) return isArabic ? `منذ ${hrs} ساعة` : `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return isArabic ? `منذ ${days} يوم` : `${days}d ago`;
+  };
 
   return (
     <div className="text-start">
@@ -158,69 +222,100 @@ export default function Dashboard({ setActivePage }) {
           </div>
         </div>
 
-        {/* Left Column: Upcoming Patients */}
+        {/* Left Column: Upcoming Patients Today */}
         <div className="col-span-12 md:col-span-7 space-y-gutter">
           <div className="bg-bg-card rounded-xl border border-border-subtle p-stack-lg shadow-sm">
             <div className="flex justify-between items-center mb-stack-md pb-stack-sm border-b border-border-subtle">
-              <h2 className="font-headline-md text-headline-md text-on-surface font-bold">
-                {isArabic ? 'المرضى القادمون اليوم' : 'Upcoming Patients'}
-              </h2>
+              <div>
+                <h2 className="font-headline-md text-headline-md text-on-surface font-bold">
+                  {isArabic ? 'المرضى القادمون اليوم' : "Today's Patients"}
+                </h2>
+                <p className="text-[10px] text-on-surface-variant mt-0.5 font-semibold">
+                  {new Date().toLocaleDateString(isArabic ? 'ar-EG' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                </p>
+              </div>
               <button 
-                onClick={() => setActivePage('patients')}
+                onClick={() => setActivePage('appointments')}
                 className="text-primary hover:text-primary-hover font-button text-sm transition-colors font-bold"
               >
-                {isArabic ? 'عرض الكل' : 'View All'}
+                {isArabic ? 'كل المواعيد' : 'All Appointments'}
               </button>
             </div>
-            <div className="space-y-4">
-              {upcomingPatients.length === 0 ? (
-                <p className="text-secondary text-sm py-4 text-center">
-                  {t('no_appointments')}
-                </p>
+            <div className="space-y-3">
+              {allTodayPatients.length === 0 ? (
+                <div className="py-10 text-center space-y-2">
+                  <span className="material-symbols-outlined text-3xl text-on-surface-variant/40">event_available</span>
+                  <p className="text-secondary text-sm font-semibold">
+                    {isArabic ? 'لا توجد مواعيد لهذا اليوم' : 'No appointments scheduled for today'}
+                  </p>
+                </div>
               ) : (
-                upcomingPatients.map((patient, idx) => (
-                  <div 
-                    key={patient.id} 
-                    onClick={() => setActivePage('visits')}
-                    className="flex items-center justify-between p-4 hover:bg-surface-container-low rounded-lg transition-colors border border-transparent hover:border-border-subtle group cursor-pointer"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center font-button text-sm font-bold ${
-                        patient.is_high_priority 
-                          ? 'bg-error-container text-error' 
-                          : 'bg-primary-light text-primary'
-                      }`}>
-                        {patient.initials}
+                <>
+                  {upcomingPatients.map((patient, idx) => (
+                    <div 
+                      key={patient.id} 
+                      onClick={() => setActivePage('visits')}
+                      className="flex items-center justify-between p-4 hover:bg-surface-container-low rounded-xl transition-colors border border-transparent hover:border-border-subtle group cursor-pointer"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`w-11 h-11 rounded-full flex items-center justify-center font-button text-sm font-bold shrink-0 ${
+                          patient.is_high_priority 
+                            ? 'bg-error-container text-error' 
+                            : 'bg-primary-light text-primary'
+                        }`}>
+                          {patient.initials}
+                        </div>
+                        <div>
+                          <h4 className="font-button text-sm text-on-surface group-hover:text-primary transition-colors font-semibold">
+                            {patient.patientName}
+                          </h4>
+                          <p className="font-body-sm text-xs text-on-surface-variant">
+                            {patient.appointment_time && <span>{patient.appointment_time} • </span>}
+                            {patient.description || (isArabic ? 'كشف عام' : 'General')}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-button text-sm text-on-surface group-hover:text-primary transition-colors font-semibold">
-                          {patient.patientName}
-                        </h4>
-                        <p className="font-body-sm text-xs text-on-surface-variant">
-                          {patient.appointment_time} • {patient.description} • Room {idx + 1}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {patient.is_high_priority && (
-                        <span className="px-3 py-1 bg-error-container text-error font-label-caps text-[10px] rounded-full flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[12px]">priority_high</span> 
-                          {isArabic ? 'أولوية عالية' : 'High Priority'}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {patient.is_high_priority && (
+                          <span className="px-2.5 py-1 bg-error-container text-error font-label-caps text-[10px] rounded-full flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[12px]">priority_high</span> 
+                            {isArabic ? 'عاجل' : 'Urgent'}
+                          </span>
+                        )}
+                        <span className={`px-2.5 py-1 font-label-caps text-[10px] rounded-full ${
+                          patient.status === 'confirmed' || patient.status === 'scheduled'
+                            ? 'bg-primary/10 text-primary font-bold'
+                            : patient.status === 'completed'
+                            ? 'bg-success/15 text-success font-bold'
+                            : 'bg-surface-container-high text-secondary'
+                        }`}>
+                          {isArabic
+                            ? patient.status === 'confirmed' || patient.status === 'scheduled' ? 'مجدول'
+                              : patient.status === 'completed' ? 'مكتمل' : patient.status
+                            : patient.status.toUpperCase()
+                          }
                         </span>
-                      )}
-                      <span className={`px-3 py-1 font-label-caps text-[10px] rounded-full flex items-center gap-1 ${
-                        patient.status === 'confirmed' 
-                          ? 'bg-tertiary-fixed text-on-tertiary-fixed-variant'
-                          : 'bg-surface-container-high text-secondary'
-                      }`}>
-                        {patient.status.toUpperCase()}
-                      </span>
-                      <button className="p-2 text-secondary group-hover:text-primary transition-colors">
-                        <span className={`material-symbols-outlined ${isArabic ? 'rotate-180' : ''}`}>chevron_right</span>
-                      </button>
+                        <span className={`material-symbols-outlined text-secondary group-hover:text-primary transition-colors text-[20px] ${isArabic ? 'rotate-180' : ''}`}>chevron_right</span>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+
+                  {/* Show More / Show Less */}
+                  {allTodayPatients.length > 3 && (
+                    <button
+                      onClick={() => setShowAllToday(p => !p)}
+                      className="w-full mt-1 py-2.5 rounded-xl border border-dashed border-primary/40 text-primary text-xs font-bold hover:bg-primary/5 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">
+                        {showAllToday ? 'expand_less' : 'expand_more'}
+                      </span>
+                      {showAllToday
+                        ? (isArabic ? 'عرض أقل' : 'Show Less')
+                        : (isArabic ? `عرض المزيد (${allTodayPatients.length - 3} آخرين)` : `Show More (${allTodayPatients.length - 3} more)`)
+                      }
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -264,23 +359,39 @@ export default function Dashboard({ setActivePage }) {
               <h2 className="font-button text-sm text-on-surface font-bold">
                 {isArabic ? 'آخر النشاطات' : 'Recent Activity'}
               </h2>
+              {activityFeed.length > 0 && (
+                <span className="text-[10px] font-bold text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full">
+                  {activityFeed.length}
+                </span>
+              )}
             </div>
-            <div className={`relative border-l ${isArabic ? 'border-r border-l-0 mr-3 ml-0' : 'border-l ml-3 mr-0'} border-border-subtle space-y-6`}>
-              <div className={`relative ${isArabic ? 'pr-6 pl-0' : 'pl-6 pr-0'}`}>
-                <div className={`absolute w-3 h-3 bg-primary rounded-full ${isArabic ? '-right-[6.5px]' : '-left-[6.5px]'} top-1 ring-4 ring-bg-card`}></div>
-                <p className="font-body-sm text-xs text-on-surface">
-                  <span className="font-semibold">{currentUser.name}</span> {isArabic ? 'وقع تقرير المريض #8821' : 'signed Patient Report #8821'}
+
+            {activityFeed.length === 0 ? (
+              <div className="py-8 text-center space-y-2">
+                <span className="material-symbols-outlined text-3xl text-on-surface-variant/30">history</span>
+                <p className="text-xs text-on-surface-variant font-semibold">
+                  {isArabic ? 'لا توجد نشاطات حديثة' : 'No recent activity'}
                 </p>
-                <p className="font-label-caps text-[10px] text-on-surface-variant mt-1">10 mins ago</p>
               </div>
-              <div className={`relative ${isArabic ? 'pr-6 pl-0' : 'pl-6 pr-0'}`}>
-                <div className={`absolute w-3 h-3 bg-surface-container-high border-2 border-border-subtle rounded-full ${isArabic ? '-right-[6.5px]' : '-left-[6.5px]'} top-1 ring-4 ring-bg-card`}></div>
-                <p className="font-body-sm text-xs text-on-surface">
-                  <span className="font-semibold">System</span> {isArabic ? 'أنتج ملخص الزيارة الطبية لـ إلينور.' : 'generated clinical notes for Eleanor Sullivan.'}
-                </p>
-                <p className="font-label-caps text-[10px] text-on-surface-variant mt-1">45 mins ago</p>
+            ) : (
+              <div className="space-y-3">
+                {activityFeed.map((item, idx) => (
+                  <div key={item.id} className="flex items-start gap-3">
+                    <div className={`w-8 h-8 rounded-lg ${item.bg} flex items-center justify-center shrink-0 mt-0.5`}>
+                      <span className={`material-symbols-outlined text-[16px] ${item.color}`}>{item.icon}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-on-surface font-semibold leading-snug">
+                        {isArabic ? item.textAr : item.textEn}
+                      </p>
+                      <p className="text-[10px] text-on-surface-variant mt-0.5 font-medium">
+                        {relativeTime(item.date)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

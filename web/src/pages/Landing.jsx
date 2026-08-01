@@ -3,9 +3,62 @@ import SbrLogo from '../components/SbrLogo';
 import { useLanguage } from '../context/LanguageContext';
 import { DOCTOR_PLANS, ORG_PLANS } from '../data/plans';
 
+// ── FAQ Data ──────────────────────────────────────────────────────────────────
+const FAQ_ITEMS = [
+  {
+    qAr: 'ما هو SBR AI وكيف يُفيد الأطباء؟',
+    qEn: 'What is SBR AI and how does it benefit clinicians?',
+    aAr: 'SBR AI هو مساعد ذكاء اصطناعي سريري متكامل مصمَّم خصيصاً للأطباء. يقوم بتوثيق مقابلات المرضى تلقائياً عبر الإملاء الصوتي المحيطي، ويُنشئ ملاحظات SOAP دقيقة، ويدير الجداول الزمنية — مما يُتيح للطبيب التركيز الكامل على رعاية المريض بدلاً من الإدخال اليدوي للبيانات.',
+    aEn: 'SBR AI is a comprehensive clinical AI assistant designed specifically for physicians. It automatically documents patient encounters through ambient voice dictation, generates accurate SOAP notes, and manages schedules — allowing clinicians to focus entirely on patient care instead of manual data entry.',
+  },
+  {
+    qAr: 'هل SBR AI متوافق مع معايير الخصوصية الطبية (HIPAA)؟',
+    qEn: 'Is SBR AI HIPAA compliant?',
+    aAr: 'نعم. يتمتع SBR AI ببنية أمنية مؤسسية كاملة تضمن تشفير جميع بيانات صحة المرضى أثناء النقل وفي حالة السكون. النظام مُصمَّم وفق أعلى المعايير الأمنية الطبية ومتوافق تماماً مع لوائح HIPAA وSOC2.',
+    aEn: 'Yes. SBR AI features enterprise-grade security architecture ensuring all patient health data is encrypted both in transit and at rest. The system is fully compliant with HIPAA regulations and SOC2 standards.',
+  },
+  {
+    qAr: 'كيف يعمل الإملاء الصوتي المحيطي؟',
+    qEn: 'How does ambient voice dictation work?',
+    aAr: 'يستمع النظام إلى محادثة الطبيب والمريض بشكل طبيعي دون الحاجة إلى أي أوامر يدوية. يقوم الذكاء الاصطناعي بتحليل السياق الطبي في الوقت الفعلي وتحويله إلى ملاحظات سريرية منظَّمة جاهزة للمراجعة فور انتهاء الزيارة.',
+    aEn: 'The system listens to the doctor-patient conversation naturally without any manual commands. The AI analyzes the medical context in real time and converts it into structured clinical notes ready for review immediately after the visit ends.',
+  },
+  {
+    qAr: 'هل يمكنني تخصيص قوالب التوثيق السريري؟',
+    qEn: 'Can I customize clinical documentation templates?',
+    aAr: 'بالتأكيد. يُتيح SBR AI إنشاء قوالب توثيق مخصصة تتناسب مع تخصصك الطبي وأسلوب ممارستك. يمكنك تحديد الحقول السريرية المطلوبة، والاستعانة بالذكاء الاصطناعي لاستخراجها تلقائياً من محادثة المريض.',
+    aEn: 'Absolutely. SBR AI allows you to create custom documentation templates tailored to your specialty and practice style. You can define the required clinical fields and leverage AI to automatically extract them from patient conversations.',
+  },
+  {
+    qAr: 'ما الفرق بين باقة الطبيب وباقة المنظمة؟',
+    qEn: 'What is the difference between the Doctor and Organization plans?',
+    aAr: 'باقة الطبيب مُصمَّمة للممارسين المستقلين وتشمل الميزات الأساسية للإملاء الصوتي وإدارة المرضى. أما باقة المنظمة فتشمل دعماً لعدد متعدد من الأطباء، ولوحة تحكم مركزية، وتقارير إحصائية متقدمة، وتكاملاً مع الأنظمة الطبية الحالية.',
+    aEn: 'The Doctor plan is designed for independent practitioners and includes core features for voice dictation and patient management. The Organization plan includes support for multiple physicians, a centralized dashboard, advanced analytics, and integration with existing medical systems.',
+  },
+  {
+    qAr: 'هل توجد فترة تجريبية مجانية؟',
+    qEn: 'Is there a free trial period?',
+    aAr: 'نعم، يمكنك البدء بتجربة مجانية تتيح لك استكشاف كافة ميزات المنصة دون الحاجة إلى بيانات بطاقة ائتمانية. ستتمكن من تجربة الإملاء الصوتي، وإنشاء القوالب، وإدارة المواعيد بشكل كامل خلال فترة التجربة.',
+    aEn: 'Yes, you can start with a free trial that lets you explore all platform features without requiring a credit card. You will be able to test voice dictation, template creation, and appointment management in full during the trial period.',
+  },
+  {
+    qAr: 'كيف تتعامل المنصة مع اللغة العربية؟',
+    qEn: 'How does the platform handle the Arabic language?',
+    aAr: 'تم تصميم SBR AI مع دعم كامل للغة العربية من الألف إلى الياء. يشمل ذلك التعرف على الكلام الطبي باللغة العربية، وإنشاء التقارير السريرية بالعربية، وواجهة مستخدم متكيّفة مع اتجاه الكتابة من اليمين إلى اليسار.',
+    aEn: 'SBR AI was designed with full Arabic language support from the ground up. This includes Arabic medical speech recognition, clinical report generation in Arabic, and a UI fully adapted to right-to-left text direction.',
+  },
+  {
+    qAr: 'ما هي قنوات الدعم الفني المتاحة؟',
+    qEn: 'What technical support channels are available?',
+    aAr: 'نُقدِّم دعماً فنياً متكاملاً عبر البريد الإلكتروني على العنوان contact@sbr-ai.com، إضافةً إلى قاعدة معرفية شاملة ووثائق تقنية مفصَّلة. تحظى عملاء باقة المنظمة بمدير حساب مخصص وخط دعم ذو أولوية.',
+    aEn: 'We provide comprehensive technical support via email at contact@sbr-ai.com, along with an extensive knowledge base and detailed technical documentation. Organization plan customers receive a dedicated account manager and a priority support line.',
+  },
+];
+
 export default function Landing({ setActivePage }) {
   const { t, lang, setLang, isArabic } = useLanguage();
   const [pricingTab, setPricingTab] = useState('doctor');
+  const [openFaq, setOpenFaq] = useState(null);
   return (
     <div className="bg-bg-canvas text-on-surface antialiased min-h-screen flex flex-col font-body-md">
       {/* TopNavBar */}
@@ -24,6 +77,12 @@ export default function Landing({ setActivePage }) {
               </a>
               <a className="text-on-surface-variant hover:text-primary-hover transition-colors" href="#pricing">
                 {isArabic ? 'الأسعار' : 'Pricing'}
+              </a>
+              <a className="text-on-surface-variant hover:text-primary-hover transition-colors" href="#faq">
+                {isArabic ? 'الأسئلة الشائعة' : 'FAQ'}
+              </a>
+              <a className="text-on-surface-variant hover:text-primary-hover transition-colors" href="#contact">
+                {isArabic ? 'تواصل معنا' : 'Contact'}
               </a>
             </div>
           </div>
@@ -386,22 +445,273 @@ export default function Landing({ setActivePage }) {
 
           </div>
         </section>
+
+        {/* ── FAQ Section ────────────────────────────────────────────── */}
+        <section className="py-24 px-margin-desktop bg-bg-canvas" id="faq">
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-14">
+              <span className="inline-flex items-center gap-2 bg-primary-light text-primary px-4 py-1.5 rounded-full text-xs font-bold mb-4">
+                <span className="material-symbols-outlined text-[15px]">help</span>
+                {isArabic ? 'الأسئلة الشائعة' : 'Frequently Asked Questions'}
+              </span>
+              <h2 className="font-headline-lg text-headline-lg text-on-surface font-bold mb-4">
+                {isArabic ? 'إجابات على أبرز تساؤلاتكم' : 'Answers to Your Most Common Questions'}
+              </h2>
+              <p className="text-on-surface-variant text-body-lg leading-relaxed max-w-xl mx-auto">
+                {isArabic
+                  ? 'وجدنا أن هذه الأسئلة تُطرح بشكل متكرر من قِبَل الأطباء والمؤسسات الصحية. إذا لم تجد إجابتك هنا، تواصل معنا مباشرةً.'
+                  : 'These are the questions most frequently asked by clinicians and healthcare organizations. If you cannot find your answer here, contact us directly.'}
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {FAQ_ITEMS.map((item, idx) => {
+                const isOpen = openFaq === idx;
+                return (
+                  <div
+                    key={idx}
+                    className={`rounded-2xl border transition-all duration-300 overflow-hidden ${
+                      isOpen
+                        ? 'border-primary/30 bg-white shadow-md'
+                        : 'border-border-subtle bg-white hover:border-primary/20 hover:shadow-sm'
+                    }`}
+                  >
+                    <button
+                      onClick={() => setOpenFaq(isOpen ? null : idx)}
+                      className={`w-full flex items-center justify-between px-6 py-5 text-start gap-4 cursor-pointer group`}
+                    >
+                      <span className={`font-semibold text-sm leading-snug transition-colors ${
+                        isOpen ? 'text-primary' : 'text-on-surface group-hover:text-primary'
+                      }`}>
+                        {isArabic ? item.qAr : item.qEn}
+                      </span>
+                      <span className={`material-symbols-outlined text-[22px] shrink-0 transition-all duration-300 ${
+                        isOpen ? 'text-primary rotate-180' : 'text-secondary'
+                      }`}>
+                        expand_more
+                      </span>
+                    </button>
+                    {isOpen && (
+                      <div className={`px-6 pb-6 text-sm text-on-surface-variant leading-relaxed border-t border-border-subtle pt-4 ${
+                        isArabic ? 'text-right' : 'text-left'
+                      }`}>
+                        {isArabic ? item.aAr : item.aEn}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-10 text-center">
+              <p className="text-sm text-on-surface-variant">
+                {isArabic ? 'لم تجد إجابتك؟ ' : "Didn't find your answer? "}
+                <a href="#contact" className="text-primary font-bold hover:underline">
+                  {isArabic ? 'تواصل معنا مباشرةً' : 'Contact us directly'}
+                </a>
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Contact Section ─────────────────────────────────────────── */}
+        <section className="py-24 px-margin-desktop bg-white border-t border-border-subtle" id="contact">
+          <div className="max-w-container-max mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+
+              {/* Left: Message */}
+              <div className={isArabic ? 'text-right' : 'text-left'}>
+                <span className="inline-flex items-center gap-2 bg-primary-light text-primary px-4 py-1.5 rounded-full text-xs font-bold mb-5">
+                  <span className="material-symbols-outlined text-[15px]">mail</span>
+                  {isArabic ? 'تواصل معنا' : 'Get in Touch'}
+                </span>
+                <h2 className="font-headline-lg text-headline-lg text-on-surface font-bold mb-5 leading-tight">
+                  {isArabic
+                    ? 'هل أنت مستعد للارتقاء بعيادتك إلى مستوى آخر؟'
+                    : 'Ready to elevate your practice to the next level?'}
+                </h2>
+                <p className="text-on-surface-variant text-body-lg leading-relaxed mb-8">
+                  {isArabic
+                    ? 'فريقنا من خبراء الرعاية الصحية والتكنولوجيا مستعد للإجابة على جميع استفساراتك، ومساعدتك في اختيار الباقة المناسبة لاحتياجاتك، وإرشادك خلال مراحل التطبيق والتدريب.'
+                    : 'Our team of healthcare and technology experts is ready to answer all your inquiries, help you select the right plan for your needs, and guide you through implementation and training.'}
+                </p>
+
+                {/* Contact Details */}
+                <div className="space-y-4">
+                  <a
+                    href="mailto:contact@sbr-ai.com"
+                    className={`flex items-center gap-4 p-4 rounded-xl border border-border-subtle bg-bg-canvas hover:border-primary/30 hover:shadow-sm transition-all group ${
+                      isArabic ? 'flex-row-reverse text-right' : ''
+                    }`}
+                  >
+                    <div className="w-11 h-11 rounded-full bg-primary-light text-primary flex items-center justify-center shrink-0">
+                      <span className="material-symbols-outlined text-xl">mail</span>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-on-surface-variant font-semibold uppercase tracking-wider mb-0.5">
+                        {isArabic ? 'البريد الإلكتروني' : 'Email'}
+                      </p>
+                      <p className="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">
+                        contact@sbr-ai.com
+                      </p>
+                    </div>
+                  </a>
+
+                  <div className={`flex items-center gap-4 p-4 rounded-xl border border-border-subtle bg-bg-canvas ${
+                    isArabic ? 'flex-row-reverse text-right' : ''
+                  }`}>
+                    <div className="w-11 h-11 rounded-full bg-tertiary-fixed text-tertiary flex items-center justify-center shrink-0">
+                      <span className="material-symbols-outlined text-xl">schedule</span>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-on-surface-variant font-semibold uppercase tracking-wider mb-0.5">
+                        {isArabic ? 'ساعات الدعم' : 'Support Hours'}
+                      </p>
+                      <p className="text-sm font-bold text-on-surface">
+                        {isArabic ? 'الأحد – الخميس، 9 ص – 6 م' : 'Sun – Thu, 9 AM – 6 PM GST'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className={`flex items-center gap-4 p-4 rounded-xl border border-border-subtle bg-bg-canvas ${
+                    isArabic ? 'flex-row-reverse text-right' : ''
+                  }`}>
+                    <div className="w-11 h-11 rounded-full bg-success/10 text-success flex items-center justify-center shrink-0">
+                      <span className="material-symbols-outlined text-xl">verified_user</span>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-on-surface-variant font-semibold uppercase tracking-wider mb-0.5">
+                        {isArabic ? 'الأمان والخصوصية' : 'Security & Privacy'}
+                      </p>
+                      <p className="text-sm font-bold text-on-surface">
+                        {isArabic ? 'متوافق مع HIPAA وSOC2' : 'HIPAA & SOC2 Compliant'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: CTA Card */}
+              <div className="bg-gradient-to-br from-primary to-primary/80 rounded-3xl p-10 text-on-primary shadow-xl relative overflow-hidden">
+                <div className="absolute -top-16 -right-16 w-48 h-48 bg-white/5 rounded-full" />
+                <div className="absolute -bottom-10 -left-10 w-36 h-36 bg-white/5 rounded-full" />
+                <div className="relative z-10">
+                  <span className="material-symbols-outlined text-5xl mb-5 block opacity-80">stethoscope</span>
+                  <h3 className="text-2xl font-bold mb-3 leading-snug">
+                    {isArabic ? 'ابدأ تجربتك المجانية اليوم' : 'Start Your Free Trial Today'}
+                  </h3>
+                  <p className="text-on-primary/80 text-sm leading-relaxed mb-8">
+                    {isArabic
+                      ? 'لا حاجة لبطاقة ائتمانية. ابدأ في دقائق واكتشف كيف يُحوِّل SBR AI ممارستك الطبية.'
+                      : 'No credit card required. Get started in minutes and discover how SBR AI transforms your medical practice.'}
+                  </p>
+                  <button
+                    onClick={() => setActivePage('register')}
+                    className="w-full bg-white text-primary font-bold py-3.5 rounded-xl hover:bg-primary-light transition-all duration-200 active:scale-95 text-sm shadow-sm mb-3"
+                  >
+                    {isArabic ? 'إنشاء حساب مجاني' : 'Create Free Account'}
+                  </button>
+                  <button
+                    onClick={() => setActivePage('login')}
+                    className="w-full border border-white/30 text-on-primary font-bold py-3 rounded-xl hover:bg-white/10 transition-all duration-200 text-sm"
+                  >
+                    {isArabic ? 'تسجيل الدخول' : 'Sign In'}
+                  </button>
+                  <p className="text-center text-xs text-on-primary/60 mt-4">
+                    {isArabic ? 'يثق به أكثر من 10,000 طبيب حول العالم' : 'Trusted by 10,000+ clinicians worldwide'}
+                  </p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-border-subtle mt-auto">
-        <div className="max-w-container-max mx-auto px-margin-desktop py-stack-lg flex flex-col md:flex-row justify-between items-center gap-stack-md">
-          <div className="flex flex-col items-center md:items-start gap-stack-sm">
-            <div className="flex items-center gap-2">
-              <SbrLogo size={30} color="#24564C" showText={true} textClass="text-on-surface" />
+      <footer className="bg-primary text-white border-t border-primary-container/10">
+        <div className="max-w-container-max mx-auto px-margin-desktop pt-16 pb-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
+
+            {/* Brand */}
+            <div className="md:col-span-1">
+              <SbrLogo size={32} color="#fff" showText={true} textClass="text-white" />
+              <p className="text-white/80 text-xs leading-relaxed mt-4">
+                {isArabic
+                  ? 'منصة الذكاء الاصطناعي السريري المتكاملة. نُساعد الأطباء على تقديم رعاية أفضل بوقت أقل.'
+                  : 'The integrated clinical AI platform. We help physicians deliver better care in less time.'}
+              </p>
+              <a
+                href="mailto:contact@sbr-ai.com"
+                className="inline-flex items-center gap-2 mt-4 text-white/90 hover:text-white text-xs font-semibold transition-colors"
+              >
+                <span className="material-symbols-outlined text-[15px]">mail</span>
+                contact@sbr-ai.com
+              </a>
             </div>
-            <p class="font-body-sm text-xs text-on-surface-variant">© 2026 SBR AI Systems. HIPAA Compliant & SOC2 Certified.</p>
+
+            {/* Platform */}
+            <div>
+              <h4 className="text-white text-xs font-bold uppercase tracking-wider mb-4">
+                {isArabic ? 'المنصة' : 'Platform'}
+              </h4>
+              <ul className="space-y-3 text-white/80 text-xs">
+                {[
+                  { ar: 'الإملاء الصوتي المحيطي', en: 'Ambient Voice Dictation' },
+                  { ar: 'ملاحظات SOAP التلقائية', en: 'Automated SOAP Notes' },
+                  { ar: 'إدارة المواعيد', en: 'Appointment Management' },
+                  { ar: 'التحليلات التنبؤية', en: 'Predictive Analytics' },
+                ].map((l, i) => (
+                  <li key={i}><a href="#platform" className="hover:text-white transition-colors">{isArabic ? l.ar : l.en}</a></li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Company */}
+            <div>
+              <h4 className="text-white text-xs font-bold uppercase tracking-wider mb-4">
+                {isArabic ? 'الشركة' : 'Company'}
+              </h4>
+              <ul className="space-y-3 text-white/80 text-xs">
+                {[
+                  { ar: 'الأسعار', en: 'Pricing', href: '#pricing' },
+                  { ar: 'الأسئلة الشائعة', en: 'FAQ', href: '#faq' },
+                  { ar: 'تواصل معنا', en: 'Contact Us', href: '#contact' },
+                  { ar: 'سياسة الخصوصية', en: 'Privacy Policy', href: '#' },
+                ].map((l, i) => (
+                  <li key={i}><a href={l.href} className="hover:text-white transition-colors">{isArabic ? l.ar : l.en}</a></li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="text-white text-xs font-bold uppercase tracking-wider mb-4">
+                {isArabic ? 'الأمان والامتثال' : 'Security & Compliance'}
+              </h4>
+              <div className="space-y-3">
+                {[
+                  { icon: 'shield_locked', label: 'HIPAA Compliant' },
+                  { icon: 'verified_user', label: 'SOC2 Certified' },
+                  { icon: 'lock', label: 'End-to-End Encryption' },
+                ].map((b, i) => (
+                  <div key={i} className="flex items-center gap-2 text-white/80 text-xs">
+                    <span className="material-symbols-outlined text-[14px] text-primary-container">{b.icon}</span>
+                    {b.label}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-          <div class="flex flex-wrap justify-center gap-stack-md font-body-sm text-xs text-on-surface-variant">
-            <a class="hover:text-primary transition-colors" href="#">Privacy Policy</a>
-            <a class="hover:text-primary transition-colors" href="#">Terms of Service</a>
-            <a class="hover:text-primary transition-colors" href="#">Security</a>
-            <a class="hover:text-primary transition-colors" href="#">Status</a>
+
+          <div className="border-t border-white/10 pt-6 flex flex-col md:flex-row justify-between items-center gap-3 text-white/60 text-xs">
+            <p>© 2026 SBR AI Systems. {isArabic ? 'جميع الحقوق محفوظة.' : 'All rights reserved.'}</p>
+            <div className="flex gap-6">
+              <a href="#" className="hover:text-white transition-colors">{isArabic ? 'الشروط والأحكام' : 'Terms of Service'}</a>
+              <a href="#" className="hover:text-white transition-colors">{isArabic ? 'سياسة الخصوصية' : 'Privacy Policy'}</a>
+              <a href="#" className="hover:text-white transition-colors">{isArabic ? 'الأمان' : 'Security'}</a>
+            </div>
           </div>
         </div>
       </footer>

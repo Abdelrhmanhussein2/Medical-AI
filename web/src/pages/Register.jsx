@@ -17,10 +17,19 @@ export default function Register({ setActivePage }) {
   const [file, setFile] = useState(null);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [agreePrivacy, setAgreePrivacy] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!agreePrivacy) {
+      setError(isArabic 
+        ? 'يجب الموافقة على سياسة الخصوصية وشروط الاستخدام للمتابعة' 
+        : 'You must agree to the Privacy Policy and Terms of Service to proceed');
+      return;
+    }
 
     if (role === 'doctor') {
       if (!file) {
@@ -320,9 +329,49 @@ export default function Register({ setActivePage }) {
                 </div>
               )}
 
+              {/* Privacy Policy Agreement Checkbox */}
+              <div className="flex items-start gap-2.5 mt-5" dir={isArabic ? 'rtl' : 'ltr'}>
+                <input
+                  type="checkbox"
+                  id="privacy-agree"
+                  checked={agreePrivacy}
+                  onChange={(e) => setAgreePrivacy(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-border-subtle text-primary focus:ring-primary focus:ring-2 cursor-pointer accent-primary shrink-0"
+                  required
+                />
+                <label htmlFor="privacy-agree" className={`text-xs text-on-surface-variant leading-relaxed select-none ${isArabic ? 'text-right' : 'text-left'}`}>
+                  {isArabic ? (
+                    <>
+                      أوافق على{' '}
+                      <button
+                        type="button"
+                        onClick={() => setShowPrivacyModal(true)}
+                        className="text-primary hover:underline font-bold inline-block p-0 m-0 bg-transparent border-none align-baseline"
+                      >
+                        سياسة الخصوصية وسرية البيانات الطبية
+                      </button>{' '}
+                      وشروط الاستخدام الخاصة بـ SBR AI.
+                    </>
+                  ) : (
+                    <>
+                      I agree to the{' '}
+                      <button
+                        type="button"
+                        onClick={() => setShowPrivacyModal(true)}
+                        className="text-primary hover:underline font-bold inline-block p-0 m-0 bg-transparent border-none align-baseline"
+                      >
+                        Privacy Policy &amp; Medical Data Agreement
+                      </button>{' '}
+                      and Terms of Service.
+                    </>
+                  )}
+                </label>
+              </div>
+
               <button
                 type="submit"
-                className="w-full bg-primary hover:bg-primary-hover text-on-primary font-button py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm font-semibold mt-6 text-sm"
+                className={`w-full bg-primary hover:bg-primary-hover text-on-primary font-button py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm font-semibold mt-6 text-sm ${!agreePrivacy ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
+                disabled={!agreePrivacy}
               >
                 {isArabic ? 'إرسال طلب التسجيل' : 'Submit Registration'}
               </button>
@@ -344,6 +393,97 @@ export default function Register({ setActivePage }) {
         </div>
       </div>
     </div>
+
+    {/* Privacy Policy Modal */}
+    {showPrivacyModal && (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in" dir={isArabic ? 'rtl' : 'ltr'}>
+        <div className="bg-white rounded-2xl border border-border-subtle shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] animate-scale-up text-start">
+          {/* Header */}
+          <div className="p-5 border-b border-border-subtle bg-bg-canvas flex justify-between items-center shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-2xl">shield_locked</span>
+              <h3 className="font-headline-md text-base text-primary font-bold">
+                {isArabic ? 'سياسة الخصوصية وسرية البيانات الطبية' : 'Privacy Policy & Medical Data'}
+              </h3>
+            </div>
+            <button 
+              onClick={() => setShowPrivacyModal(false)}
+              className="text-secondary hover:text-primary transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="p-6 overflow-y-auto space-y-5 text-start font-body-md text-sm text-on-surface-variant leading-relaxed">
+            <p className="font-semibold text-on-surface">
+              {isArabic 
+                ? 'يرجى قراءة سياسة الخصوصية وسرية البيانات بعناية قبل إكمال التسجيل:'
+                : 'Please read our Privacy Policy and Data Agreement carefully before completing registration:'}
+            </p>
+
+            <div className="space-y-4">
+              <div className="p-4 bg-primary-light/40 border border-primary/10 rounded-xl space-y-1">
+                <h4 className="font-bold text-primary flex items-center gap-1.5 text-xs">
+                  <span className="material-symbols-outlined text-[16px]">mic</span>
+                  {isArabic ? '1. معالجة التسجيلات الصوتية' : '1. Audio Processing & Privacy'}
+                </h4>
+                <p className="text-xs text-on-surface-variant leading-relaxed">
+                  {isArabic 
+                    ? 'يتم تشفير جميع المحادثات الطبية المرفوعة لحظياً. نستخدم معالجة صوتية مشفرة بالكامل ولا يتم تخزين الملفات الصوتية الخام بعد استخراج الملاحظات السريرية SOAP لحماية خصوصية المريض.'
+                    : 'All uploaded audio consultations are encrypted. We utilize fully encrypted voice processing, and raw audio files are automatically purged after the clinical SOAP summary is generated.'}
+                </p>
+              </div>
+
+              <div className="p-4 bg-tertiary-fixed/30 border border-tertiary/10 rounded-xl space-y-1">
+                <h4 className="font-bold text-secondary flex items-center gap-1.5 text-xs">
+                  <span className="material-symbols-outlined text-[16px]">verified_user</span>
+                  {isArabic ? '2. التزام حماية PHI' : '2. PHI Protection & Non-Disclosure'}
+                </h4>
+                <p className="text-xs text-on-surface-variant leading-relaxed">
+                  {isArabic 
+                    ? 'نحن لا نشارك أو نبيع أي معلومات صحية محمية (PHI). تظل مساحتك السريرية معزولة تماماً ولا يحق لأي جهة خارجية الوصول إلى بيانات المرضى الخاصة بك.'
+                    : 'We never share or sell Protected Health Information (PHI). Your clinical workspace remains fully isolated, and no third parties have access to your patient records under any circumstances.'}
+                </p>
+              </div>
+
+              <div className="p-4 bg-surface-container-low border border-border-subtle rounded-xl space-y-1">
+                <h4 className="font-bold text-on-surface flex items-center gap-1.5 text-xs">
+                  <span className="material-symbols-outlined text-[16px]">lock</span>
+                  {isArabic ? '3. معايير الأمان والامتثال' : '3. Security Audits & Compliance'}
+                </h4>
+                <p className="text-xs text-on-surface-variant leading-relaxed">
+                  {isArabic 
+                    ? 'تلتزم المنصة بمعايير HIPAA و SOC2 و GDPR. يتم تشفير قاعدة البيانات بالكامل باستخدام بروتوكول AES-256 لحماية خصوصيتك وخصوصية مرضاك.'
+                    : 'Our platform is strictly compliant with HIPAA, SOC2, and GDPR standards. All database records are fully encrypted using AES-256 protocols to safeguard you and your patients.'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="p-5 border-t border-border-subtle bg-bg-canvas flex gap-3 justify-end shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowPrivacyModal(false)}
+              className="px-4 py-2 border border-border-subtle rounded-lg text-xs font-semibold text-secondary hover:text-primary transition-colors cursor-pointer bg-white"
+            >
+              {isArabic ? 'إغلاق' : 'Close'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAgreePrivacy(true);
+                setShowPrivacyModal(false);
+              }}
+              className="px-4 py-2 bg-primary hover:bg-primary-hover text-on-primary rounded-lg text-xs font-semibold shadow transition-colors cursor-pointer"
+            >
+              {isArabic ? 'أوافق على الشروط والسياسة' : 'I Agree to Policy & Terms'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
   </div>
 );
 }

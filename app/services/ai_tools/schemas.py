@@ -390,3 +390,68 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
             }
         }
     ]
+
+
+def get_admin_tool_definitions() -> List[Dict[str, Any]]:
+    """
+    Returns the list of JSON schemas defining all tools available to the Admin AI.
+    """
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_system_stats",
+                "description": "استرجع إحصائيات عامة للنظام (إجمالي عدد الأطباء، المرضى، المواعيد، الاشتراكات الفعالة).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {}
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_doctor_performance",
+                "description": "استرجع إحصائيات الأداء لطبيب معين (عدد مواعيده، الزيارات المكتملة، وعدد مرضاه) بالبحث عن اسمه.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "doctor_name": {
+                            "type": "string",
+                            "description": "اسم الطبيب للبحث عنه وجلب إحصائياته"
+                        }
+                    },
+                    "required": ["doctor_name"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_revenue_report",
+                "description": "استرجع ملخص إيرادات الاشتراكات النشطة.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {}
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "send_report_to_admin",
+                "description": "أرسل تقريراً أو إحصائيات معينة مباشرة إلى رقم هاتف الأدمن المسجل عبر الواتساب.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "report_text": {
+                            "type": "string",
+                            "description": "نص التقرير أو الإحصائيات التي سيتم إرسالها على الواتساب."
+                        }
+                    },
+                    "required": ["report_text"]
+                }
+            }
+        }
+    ]
+

@@ -58,3 +58,18 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="User not found",
     )
+
+
+def require_role(allowed_role: str):
+    """
+    Dependency factory to check if the current user has the required role.
+    """
+    async def dependency(current_user: dict = Depends(get_current_user)) -> dict:
+        if current_user.get("role") != allowed_role:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="غير مصرح لك بالوصول إلى هذا الجزء"
+            )
+        return current_user
+    return dependency
+

@@ -10,6 +10,7 @@ from app.controllers.subscription_controller import router as subscription_route
 from app.controllers.session_controller import router as session_router
 from app.controllers.chat_controller import router as chat_router
 from app.controllers.whatsapp_controller import router as whatsapp_router
+from app.controllers.template_controller import router as template_router
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(patient_router)
@@ -23,4 +24,6 @@ api_router.include_router(subscription_router)
 api_router.include_router(session_router)
 api_router.include_router(chat_router)
 api_router.include_router(whatsapp_router)
+api_router.include_router(template_router)
+
 

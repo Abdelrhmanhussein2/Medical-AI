@@ -29,7 +29,28 @@ class AppointmentService:
                     data.description,
                     data.patient_phone,
                 )
-                return dict(row) if row else None
+                if row:
+                    row_dict = dict(row)
+                    try:
+                        from datetime import datetime, timedelta
+                        from app.services.whatsapp.reminder_repository import ReminderRepository
+                        
+                        appt_dt = datetime.combine(data.appointment_date, data.appointment_time)
+                        now = datetime.now()
+                        reminder_repo = ReminderRepository(db_pool=db.pool)
+                        
+                        time_24h = appt_dt - timedelta(hours=24)
+                        if time_24h > now:
+                            await reminder_repo.enqueue_reminder(str(row_dict["id"]), "24h", time_24h.timestamp())
+                        
+                        time_4h = appt_dt - timedelta(hours=4)
+                        if time_4h > now:
+                            await reminder_repo.enqueue_reminder(str(row_dict["id"]), "4h", time_4h.timestamp())
+                    except Exception as err:
+                        import logging
+                        logging.getLogger("appointment_service").error(f"Failed to enqueue reminders: {err}")
+                    return row_dict
+                return None
             except Exception as e:
                 # Handle unique constraint (same doctor, date, time)
                 if "unique" in str(e).lower():

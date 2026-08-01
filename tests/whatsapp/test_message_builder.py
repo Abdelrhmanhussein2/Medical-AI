@@ -41,3 +41,23 @@ def test_build_fine_response():
     msg = build_fine_response()
     assert "سعداء جداً" in msg
     assert "الصحة والعافية" in msg
+
+
+def test_build_appointment_reminder_24h():
+    from app.services.whatsapp.message_builder import build_appointment_reminder_24h
+    msg = build_appointment_reminder_24h("محمد", "علي", "2026-08-02", "14:00")
+    assert "محمد" in msg
+    assert "علي" in msg
+    assert "2026-08-02" in msg
+    assert "14:00" in msg
+    assert "تذكير بموعدك" in msg or "تذكيرك بموعدك" in msg
+
+
+def test_build_appointment_reminder_4h():
+    from app.services.whatsapp.message_builder import build_appointment_reminder_4h
+    msg = build_appointment_reminder_4h("سارة", "خالد", "18:30")
+    assert "سارة" in msg
+    assert "خالد" in msg
+    assert "18:30" in msg
+    assert "4 ساعات" in msg
+

@@ -41,6 +41,7 @@ export default function Layout({ children, activePage, setActivePage }) {
       { id: 'patients', name: t('patients'), icon: 'group' },
       { id: 'appointments', name: t('appointments'), icon: 'calendar_month' },
       { id: 'visits', name: t('visits'), icon: 'medical_information' },
+      { id: 'templates', name: isArabic ? 'القوالب الطبية' : 'Note Templates', icon: 'assignment' },
       { id: 'aichat', name: t('aichat'), icon: 'smart_toy' },
       { id: 'subscription', name: t('subscription'), icon: 'card_membership' }
     ];

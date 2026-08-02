@@ -197,6 +197,12 @@ async def update_my_profile(body: DoctorUpdate, current_user: dict = Depends(get
     """
     Update logged-in doctor's name, email, and specialization.
     """
+    if body.email != current_user["email"]:
+        raise HTTPException(
+            status_code=400,
+            detail="تغيير البريد الإلكتروني يجب أن يتم عبر تأكيد رمز التحقق (OTP) من خلال الإعدادات."
+        )
+
     try:
         doctor_id = UUID(current_user["id"]) if isinstance(current_user["id"], str) else current_user["id"]
         updated = await doctor_service.update_doctor(doctor_id, body.name, body.email, body.specialization)
@@ -219,5 +225,123 @@ async def delete_my_account(current_user: dict = Depends(get_current_user)):
         return None
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# ──────────── OTP & Password Change Security Routes ────────────
+
+class ForceChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+@router.post("/me/change-password")
+async def change_my_password(body: ForceChangePasswordRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Force change password endpoint (used for first-time login welcome flow).
+    """
+    doctor_id = UUID(current_user["id"]) if isinstance(current_user["id"], str) else current_user["id"]
+    
+    async with db.pool.acquire() as conn:
+        row = await conn.fetchrow("SELECT password_hash FROM doctors WHERE id = $1", doctor_id)
+        if not row:
+            raise HTTPException(status_code=404, detail="Doctor not found")
+            
+        from app.core.security import verify_password, get_password_hash
+        if not verify_password(body.current_password, row["password_hash"]):
+            raise HTTPException(status_code=400, detail="كلمة المرور الحالية غير صحيحة.")
+            
+        new_hash = get_password_hash(body.new_password)
+        await conn.execute(
+            "UPDATE doctors SET password_hash = $1, must_change_password = false, updated_at = now() WHERE id = $2",
+            new_hash, doctor_id
+        )
+        
+    return {"message": "تم تغيير كلمة المرور بنجاح."}
+
+class OTPRequest(BaseModel):
+    action: str  # 'change_password' | 'change_email'
+    new_email: Optional[EmailStr] = None
+
+@router.post("/me/request-otp")
+async def request_otp_for_action(body: OTPRequest, current_user: dict = Depends(get_current_user)):
+    from app.services.otp_service import otp_service
+    from app.services.email_service import email_service
+    from app.core.redis import redis_client
+    
+    otp = otp_service.generate_otp()
+    email = current_user["email"]
+    redis_key = f"otp:{body.action}:{email}"
+    
+    await redis_client.redis.set(redis_key, otp, ex=300) # 5 minutes expiry
+    
+    action_text = "تغيير كلمة المرور" if body.action == "change_password" else "تغيير البريد الإلكتروني"
+    
+    import asyncio
+    asyncio.create_task(email_service.send_otp_email(email, otp, action_text))
+    
+    return {
+        "message": "تم إرسال رمز التحقق إلى بريدك الإلكتروني.",
+        "otp": otp  # Returned for API testing
+    }
+
+class VerifyOTPChangePasswordRequest(BaseModel):
+    otp: str
+    new_password: str
+
+@router.post("/me/verify-otp-change-password")
+async def verify_otp_change_password(body: VerifyOTPChangePasswordRequest, current_user: dict = Depends(get_current_user)):
+    from app.core.redis import redis_client
+    from app.core.security import get_password_hash
+    
+    email = current_user["email"]
+    redis_key = f"otp:change_password:{email}"
+    
+    stored_otp = await redis_client.redis.get(redis_key)
+    if not stored_otp or stored_otp != body.otp:
+        raise HTTPException(status_code=400, detail="رمز التحقق غير صحيح أو انتهت صلاحيته.")
+        
+    await redis_client.redis.delete(redis_key)
+    
+    doctor_id = UUID(current_user["id"]) if isinstance(current_user["id"], str) else current_user["id"]
+    new_hash = get_password_hash(body.new_password)
+    
+    async with db.pool.acquire() as conn:
+        await conn.execute("UPDATE doctors SET password_hash = $1, updated_at = now() WHERE id = $2", new_hash, doctor_id)
+        
+    return {"message": "تم تغيير كلمة المرور بنجاح."}
+
+class VerifyOTPChangeEmailRequest(BaseModel):
+    otp: str
+    new_email: EmailStr
+
+@router.post("/me/verify-otp-change-email")
+async def verify_otp_change_email(body: VerifyOTPChangeEmailRequest, current_user: dict = Depends(get_current_user)):
+    from app.core.redis import redis_client
+    
+    email = current_user["email"]
+    redis_key = f"otp:change_email:{email}"
+    
+    stored_otp = await redis_client.redis.get(redis_key)
+    if not stored_otp or stored_otp != body.otp:
+        raise HTTPException(status_code=400, detail="رمز التحقق غير صحيح أو انتهت صلاحيته.")
+        
+    await redis_client.redis.delete(redis_key)
+    
+    doctor_id = UUID(current_user["id"]) if isinstance(current_user["id"], str) else current_user["id"]
+    
+    async with db.pool.acquire() as conn:
+        taken = await conn.fetchrow("SELECT id FROM doctors WHERE email = $1 AND id != $2", body.new_email, doctor_id)
+        if taken:
+            raise HTTPException(status_code=400, detail="البريد الإلكتروني الجديد مستخدم بالفعل.")
+            
+        await conn.execute("UPDATE doctors SET email = $1, updated_at = now() WHERE id = $2", body.new_email, doctor_id)
+        updated_doc = await conn.fetchrow("SELECT * FROM doctors WHERE id = $1", doctor_id)
+        
+    from app.services.auth_service import auth_service
+    token_response = auth_service.create_token(dict(updated_doc), "doctor")
+    
+    return {
+        "message": "تم تغيير البريد الإلكتروني بنجاح.",
+        "access_token": token_response.access_token,
+        "user": token_response.user
+    }
 
 

@@ -14,7 +14,6 @@ export default function Register({ setActivePage }) {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [specialty, setSpecialty] = useState('Cardiology');
-  const [file, setFile] = useState(null);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [agreePrivacy, setAgreePrivacy] = useState(false);
@@ -32,14 +31,8 @@ export default function Register({ setActivePage }) {
     }
 
     if (role === 'doctor') {
-      if (!file) {
-        setError(isArabic
-          ? 'يرجى تحميل مستند إثبات المهنة أو الشهادة الطبية'
-          : 'Please upload your medical certificate or professional ID');
-        return;
-      }
       try {
-        const newDoc = await registerDoctor(name, email, phone, password, specialty, null, 'pending', file);
+        const newDoc = await registerDoctor(name, email, phone, password, specialty, null, 'pending', null);
         if (paidPlan) {
           const planMap = {
             'free': 'Free Trial',
@@ -192,7 +185,7 @@ export default function Register({ setActivePage }) {
               ].map(({ key, ar, en }) => (
                 <button
                   key={key}
-                  onClick={() => { setRole(key); setName(''); setEmail(''); setPhone(''); setFile(null); setError(''); }}
+                  onClick={() => { setRole(key); setName(''); setEmail(''); setPhone(''); setError(''); }}
                   type="button"
                   className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${
                     role === key ? 'bg-white text-primary shadow-sm' : 'text-secondary hover:text-primary'
@@ -303,31 +296,7 @@ export default function Register({ setActivePage }) {
                 />
               </div>
 
-              {role === 'doctor' && (
-                <div>
-                  <label className={`block text-xs font-semibold text-on-surface-variant mb-1 ${isArabic ? 'text-right' : 'text-left'}`}>
-                    {isArabic ? 'الشهادة الطبية / الهوية المهنية (PDF أو صورة)' : 'Medical Certificate / ID (PDF or Image)'}
-                  </label>
-                  <div className="mt-1 flex justify-center px-4 pt-4 pb-4 border-2 border-border-subtle border-dashed rounded-lg">
-                    <div className="space-y-1 text-center">
-                      <span className="material-symbols-outlined text-[36px] text-outline-variant">upload_file</span>
-                      <div className="flex text-xs text-secondary justify-center">
-                        <label className="relative cursor-pointer bg-white rounded-md font-semibold text-primary hover:text-primary-hover focus-within:outline-none">
-                          <span>{isArabic ? 'تحميل ملف' : 'Upload a file'}</span>
-                          <input
-                            type="file" accept="image/*,application/pdf"
-                            className="sr-only"
-                            onChange={(e) => setFile(e.target.files[0])}
-                          />
-                        </label>
-                      </div>
-                      <p className="text-[10px] text-secondary-fixed-dim">
-                        {file ? file.name : (isArabic ? 'PDF أو PNG أو JPG حتى 10MB' : 'PDF, PNG, JPG up to 10MB')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
+
 
               {/* Privacy Policy Agreement Checkbox */}
               <div className="flex items-start gap-2.5 mt-5" dir={isArabic ? 'rtl' : 'ltr'}>

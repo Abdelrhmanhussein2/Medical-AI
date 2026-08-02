@@ -464,20 +464,7 @@ export default function Appointments({ setActivePage }) {
             </div>
           </div>
 
-          {/* AI Insights Widget */}
-          <div class="bg-primary/5 rounded-2xl border border-primary/10 shadow-sm p-6 relative overflow-hidden">
-            <div class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-full -z-10"></div>
-            <div class="flex items-center gap-2 mb-4">
-              <span class="material-symbols-outlined text-primary text-[20px]">auto_awesome</span>
-              <h3 class="text-xs font-black tracking-widest uppercase text-primary">AI Schedule Insights</h3>
-            </div>
-            <p class="text-sm text-on-surface-variant leading-relaxed">
-              Your afternoon schedule is heavily loaded. AI suggests prioritizing the 2:00 PM pre-op review due to recent lab anomalies detected for patient E. Carter.
-            </p>
-            <button class="mt-4 text-sm font-bold text-primary flex items-center gap-1 hover:underline">
-              Review Details <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </button>
-          </div>
+
           
         </div>
 

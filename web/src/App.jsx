@@ -16,6 +16,7 @@ import AiChat from './pages/AiChat';
 import Checkout from './pages/Checkout';
 import Settings from './pages/Settings';
 import Templates from './pages/Templates';
+import ForceChangePassword from './pages/ForceChangePassword';
 
 // Admin pages
 import AdminOverview from './pages/admin/AdminOverview';
@@ -35,6 +36,11 @@ function ProtectedRoute({ children, role }) {
 
   if (!currentUser) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Force password change on first-time login
+  if (currentUser.must_change_password && window.location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace />;
   }
 
   if (role && currentUser.role !== role) {
@@ -117,6 +123,12 @@ function AppContent() {
         } />
 
         <Route path="/checkout" element={<Checkout />} />
+
+        <Route path="/change-password" element={
+          <ProtectedRoute>
+            <ForceChangePassword setActivePage={handleNavigation} />
+          </ProtectedRoute>
+        } />
 
         {/* Private layout-wrapped routes */}
         <Route path="/dashboard" element={

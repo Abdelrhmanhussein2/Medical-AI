@@ -324,34 +324,7 @@ export default function Dashboard({ setActivePage }) {
         {/* Right Column: AI Assistant (LIGHT MODE ONLY) & Activity */}
         <div className="col-span-12 md:col-span-5 space-y-gutter">
           
-          {/* AI Assistant Card - Swapped to a premium light teal/mint styled container */}
-          <div className="bg-primary-light border-2 border-primary/20 rounded-xl p-stack-lg shadow-sm relative overflow-hidden">
-            <div className="absolute -top-12 -right-12 w-32 h-32 bg-primary/10 rounded-full blur-2xl"></div>
-            <div className="flex items-start gap-4 relative z-10">
-              <div className="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-md">
-                <span className="material-symbols-outlined fill">psychology</span>
-              </div>
-              <div>
-                <h3 className="font-headline-md text-base text-primary font-bold mb-2">SBR AI Assistant</h3>
-                <p className="font-body-sm text-sm text-secondary mb-4 leading-relaxed">
-                  {isArabic 
-                    ? 'لقد قمت بتحليل نتائج التحاليل الأخيرة الخاصة بمرضاك، ويوجد بعض التنبيهات التي قد تحتاج لمراجعتها.' 
-                    : 'I have analyzed the recent lab results of your patients. There are some alerts that you might want to review.'}
-                </p>
-                <div className="flex gap-3">
-                  <button 
-                    onClick={() => setActivePage('visits')}
-                    className="bg-primary hover:bg-primary-hover text-on-primary font-button text-xs py-1.5 px-4 rounded-full transition-colors border border-primary shadow-sm font-bold"
-                  >
-                    {isArabic ? 'عرض التحليل' : 'View Analysis'}
-                  </button>
-                  <button className="bg-white hover:bg-surface-container-low text-secondary font-button text-xs py-1.5 px-4 rounded-full transition-colors border border-border-subtle shadow-sm font-bold">
-                    {isArabic ? 'تجاهل' : 'Dismiss'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+
 
           {/* Recent Activity */}
           <div className="bg-bg-card rounded-xl border border-border-subtle p-stack-lg shadow-sm">

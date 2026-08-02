@@ -413,6 +413,7 @@ export const AppProvider = ({ children }) => {
   return (
     <AppContext.Provider value={{
       currentUser,
+      setCurrentUser,
       patients,
       doctors,
       organizations,
@@ -421,6 +422,7 @@ export const AppProvider = ({ children }) => {
       visits,
       login,
       logout,
+      apiFetch,
       registerDoctor,
       registerOrg,
       toggleDoctorStatus,

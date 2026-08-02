@@ -44,7 +44,12 @@ Return ONLY valid JSON with this exact structure:
   ],
   "extracted_diseases": "Any chronic diseases mentioned by the patient or doctor in this session (e.g., 'السكري'، 'الضغط') or null if none mentioned",
   "extracted_habits": "Any lifestyle habits mentioned in this session (e.g., 'التدخين'، 'الرياضة') or null if none mentioned"
-}"""
+}
+
+PRESCRIPTIONS GUIDELINE:
+- If the doctor prescribes specific medications in the transcript, list them accurately in the "prescriptions" array.
+- If the doctor does NOT prescribe any specific medications, you MUST suggest 1-3 general therapeutic recommendations/options suitable for the case (e.g., medication: 'مسكن ألم عام عند الحاجة / General painkiller', dose: 'توصية مقترحة / Suggested option', frequency: 'عند اللزوم / As needed', duration: '-'). Avoid writing specific brand names or strict dosages unless mentioned in the text.
+"""
 
                 user_prompt = f"""Patient Name: {patient_name}
 
@@ -127,7 +132,12 @@ Return ONLY valid JSON with this exact structure:
   ],
   "extracted_diseases": "Any chronic diseases mentioned by the patient or doctor in this session (e.g., 'السكري'، 'الضغط') or null if none mentioned",
   "extracted_habits": "Any lifestyle habits mentioned in this session (e.g., 'التدخين'، 'الرياضة') or null if none mentioned"
-}"""
+}
+
+PRESCRIPTIONS GUIDELINE:
+- If the doctor prescribes specific medications in the transcript, list them accurately in the "prescriptions" array.
+- If the doctor does NOT prescribe any specific medications, you MUST suggest 1-3 general therapeutic recommendations/options suitable for the case (e.g., medication: 'مسكن ألم عام عند الحاجة / General painkiller', dose: 'توصية مقترحة / Suggested option', frequency: 'عند اللزوم / As needed', duration: '-'). Avoid writing specific brand names or strict dosages unless mentioned in the text.
+"""
 
         user_prompt = f"""Patient Name: {patient_name}
 

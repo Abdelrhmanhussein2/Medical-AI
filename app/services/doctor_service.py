@@ -1,11 +1,13 @@
 import os
 import aiofiles
+import asyncio
 from fastapi import UploadFile
 from typing import Optional
 from uuid import UUID
 from app.core.database import db
 from app.core.security import get_password_hash
 from app.schemes.doctor_schema import DoctorCreate
+from app.services.email_service import email_service
 
 UPLOAD_DIR = "app/uploads/certificates"
 
@@ -52,12 +54,14 @@ class DoctorService:
                 if dept_active is False:
                     raise ValueError("القسم المطلوب معطل حالياً من قبل الإدارة.")
                 
+            must_change = True if doctor_data.department_id else False
+
             query = """
             INSERT INTO doctors (
                 name, email, phone, password_hash, specialization, department_id,
-                certificate_url, profile_image_url, calendar_provider, calendar_id, status
+                certificate_url, profile_image_url, calendar_provider, calendar_id, status, must_change_password
             ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
             ) RETURNING *
             """
             
@@ -73,7 +77,8 @@ class DoctorService:
                 doctor_data.profile_image_url,
                 doctor_data.calendar_provider,
                 doctor_data.calendar_id,
-                doctor_data.status if doctor_data.status else 'pending'
+                doctor_data.status if doctor_data.status else 'pending',
+                must_change
             )
 
             # Auto-assign Free Trial for independent doctors (not org members)
@@ -98,6 +103,14 @@ class DoctorService:
                         "UPDATE doctors SET status = 'approved' WHERE id = $1 RETURNING *",
                         row["id"]
                     )
+
+            if row and row["must_change_password"]:
+                # Trigger welcome email asynchronously
+                asyncio.create_task(email_service.send_welcome_email(
+                    to_email=row["email"],
+                    doctor_name=row["name"],
+                    temp_password=doctor_data.password
+                ))
 
             return dict(row) if row else None
 

@@ -113,6 +113,13 @@ export default function OrgSubscriptions() {
       return;
     }
 
+    // Validate card inputs
+    const cleanCardNumber = cardNumber.replace(/\s/g, '');
+    if (cleanCardNumber.length < 16 || cardExpiry.length < 5 || cardCvv.length < 3 || !cardName.trim()) {
+      setRenewError(isArabic ? 'الرجاء إدخال بيانات بطاقة دفع صالحة وكاملة.' : 'Please enter valid and complete card payment details.');
+      return;
+    }
+
     setRenewLoading(true);
     setRenewError('');
     try {
@@ -602,7 +609,79 @@ export default function OrgSubscriptions() {
                 )}
               </div>
 
+              {/* Payment Card Form */}
+              <div className="border-t border-border-subtle pt-4 space-y-4">
+                <h4 className="text-xs font-bold text-primary uppercase tracking-wider">
+                  {isArabic ? 'بيانات الدفع الإلكتروني' : 'Payment Details'}
+                </h4>
+                
+                <div>
+                  <label className="block text-[11px] font-semibold text-on-surface-variant mb-1">
+                    {isArabic ? 'اسم حامل البطاقة' : 'Cardholder Name'}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={cardName}
+                    onChange={(e) => setCardName(e.target.value)}
+                    placeholder={isArabic ? 'اسم المنظمة / المستشفى' : 'Organization / Hospital Name'}
+                    className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary text-on-surface uppercase font-medium"
+                  />
+                </div>
 
+                <div>
+                  <label className="block text-[11px] font-semibold text-on-surface-variant mb-1">
+                    {isArabic ? 'رقم البطاقة' : 'Card Number'}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      required
+                      value={cardNumber}
+                      onChange={handleCardNumberChange}
+                      placeholder="4000 1234 5678 9010"
+                      className={`w-full py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary text-on-surface font-medium ${
+                        isArabic ? 'pl-10 pr-3 text-right' : 'pl-3 pr-10 text-left'
+                      }`}
+                    />
+                    <span className={`material-symbols-outlined absolute top-1/2 transform -translate-y-1/2 text-secondary text-[18px] ${
+                      isArabic ? 'left-3' : 'right-3'
+                    }`}>
+                      credit_card
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-on-surface-variant mb-1">
+                      {isArabic ? 'تاريخ الانتهاء' : 'Expiry Date'}
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={cardExpiry}
+                      onChange={handleExpiryChange}
+                      placeholder="MM/YY"
+                      className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary text-on-surface text-center font-medium"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-on-surface-variant mb-1">
+                      {isArabic ? 'رمز التحقق (CVV)' : 'CVV'}
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={cardCvv}
+                      onChange={handleCvvChange}
+                      placeholder="•••"
+                      className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary text-on-surface text-center font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
 
               <div className={`flex gap-3 mt-6 pt-4 border-t border-border-subtle ${isArabic ? 'flex-row-reverse' : ''}`}>
                 <button

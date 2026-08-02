@@ -59,10 +59,14 @@ export default function Checkout() {
 
   // Handle Form Submission
   const handleSubmit = (e) => {
-    e.preventDefault();
-    if (cardNumber.replace(/\s/g, '').length < 16 || cardExpiry.length < 5 || cardCvv.length < 3) {
-      alert(isArabic ? 'الرجاء إدخال بيانات بطاقة صحيحة وكاملة.' : 'Please enter valid and complete card details.');
-      return;
+    if (e) e.preventDefault();
+    
+    const isFree = selectedPlan.id === 'free';
+    if (!isFree) {
+      if (cardNumber.replace(/\s/g, '').length < 16 || cardExpiry.length < 5 || cardCvv.length < 3) {
+        alert(isArabic ? 'الرجاء إدخال بيانات بطاقة صحيحة وكاملة.' : 'Please enter valid and complete card details.');
+        return;
+      }
     }
 
     setIsProcessing(true);
@@ -148,118 +152,182 @@ export default function Checkout() {
         
         {/* Left Column: Form details */}
         <section className={`w-full md:w-3/5 p-8 border-b md:border-b-0 border-border-subtle ${isArabic ? 'md:border-l' : 'md:border-r'}`}>
-          <div className="mb-6">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary-light text-primary text-[10px] font-bold rounded-full uppercase tracking-wider mb-2">
-              <span className="material-symbols-outlined text-[12px] fill">shield</span>
-              {isArabic ? 'اتصال آمن ومحمي 256 بت SSL' : 'Secure 256-bit SSL Connection'}
-            </span>
-            <h1 className="text-2xl font-bold text-primary font-headline-md">
-              {isArabic ? 'تفاصيل الدفع' : 'Payment Details'}
-            </h1>
-            <p className="text-xs text-secondary mt-1">
-              {isArabic ? 'أكمل معاملتك باستخدام بطاقة الائتمان الخاصة بك.' : 'Complete your transaction using a credit card.'}
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-xs font-semibold text-on-surface-variant mb-1">
-                {isArabic ? 'اسم حامل البطاقة' : 'Cardholder Name'}
-              </label>
-              <input
-                type="text"
-                required
-                disabled={isProcessing}
-                value={cardName}
-                onChange={(e) => setCardName(e.target.value)}
-                placeholder={isArabic ? 'د. أحمد حسن' : 'Dr. Ahmed Hassan'}
-                className="w-full px-3 py-2.5 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface uppercase"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-on-surface-variant mb-1">
-                {isArabic ? 'رقم البطاقة' : 'Card Number'}
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  required
-                  disabled={isProcessing}
-                  value={cardNumber}
-                  onChange={handleCardNumberChange}
-                  placeholder="4000 1234 5678 9010"
-                  className={`w-full py-2.5 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${
-                    isArabic ? 'pl-10 pr-3' : 'pl-3 pr-10'
-                  }`}
-                />
-                <span className={`material-symbols-outlined absolute top-1/2 transform -translate-y-1/2 text-secondary text-[20px] ${
-                  isArabic ? 'left-3' : 'right-3'
-                }`}>
-                  credit_card
+          {selectedPlan.id === 'free' ? (
+            <div className="flex flex-col justify-between h-full space-y-6 text-start">
+              <div>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary-light text-primary text-[10px] font-bold rounded-full uppercase tracking-wider mb-2">
+                  <span className="material-symbols-outlined text-[12px] fill">event_available</span>
+                  {isArabic ? 'باقة مجانية بالكامل' : '100% Free Plan'}
                 </span>
-              </div>
-            </div>
+                <h1 className="text-2xl font-bold text-primary font-headline-md">
+                  {isArabic ? 'تفعيل التجربة المجانية' : 'Activate Free Trial'}
+                </h1>
+                <p className="text-xs text-secondary mt-1">
+                  {isArabic ? 'ابدأ تجربتك فوراً دون الحاجة لإدخال أي بطاقة ائتمانية.' : 'Start your trial immediately without entering any credit card details.'}
+                </p>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-on-surface-variant mb-1">
-                  {isArabic ? 'تاريخ الانتهاء' : 'Expiry Date'}
-                </label>
-                <input
-                  type="text"
-                  required
+                <div className="mt-8 p-5 bg-primary-light/30 border border-primary/10 rounded-2xl flex items-start gap-4">
+                  <span className="material-symbols-outlined text-primary text-3xl shrink-0 mt-0.5">verified_user</span>
+                  <div className="space-y-1.5">
+                    <h4 className="font-bold text-primary text-sm">
+                      {isArabic ? 'لا توجد التزامات مالية' : 'Zero Financial Commitment'}
+                    </h4>
+                    <p className="text-xs text-on-surface-variant leading-relaxed">
+                      {isArabic 
+                        ? 'لن يتم محاسبتك أو طلب أي وسيلة دفع طوال فترة التجربة المجانية. ستحصل على 60 دقيقة من الذكاء الاصطناعي السريري لتجربة النظام بالكامل.'
+                        : 'You will not be billed or asked for any payment method during the free trial. You will receive 60 minutes of clinical AI credit to fully explore the system.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 space-y-3">
+                  <div className="flex items-center gap-2.5 text-xs text-secondary">
+                    <span className="material-symbols-outlined text-primary text-[16px]">check_circle</span>
+                    <span>{isArabic ? 'تفعيل فوري للحساب الطيبي' : 'Instant medical account activation'}</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs text-secondary">
+                    <span className="material-symbols-outlined text-primary text-[16px]">check_circle</span>
+                    <span>{isArabic ? 'كافة المزايا والخصائص متضمنة' : 'All standard features included'}</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs text-secondary">
+                    <span className="material-symbols-outlined text-primary text-[16px]">check_circle</span>
+                    <span>{isArabic ? 'إلغاء أو ترقية في أي وقت' : 'Upgrade or cancel anytime'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6">
+                <button
+                  onClick={() => handleSubmit()}
                   disabled={isProcessing}
-                  value={cardExpiry}
-                  onChange={handleExpiryChange}
-                  placeholder="MM/YY"
-                  className="w-full px-3 py-2.5 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface text-center"
-                />
+                  className="w-full bg-primary hover:bg-primary-hover disabled:bg-primary/50 text-on-primary font-semibold py-3 px-4 rounded-lg shadow-sm transition-all duration-300 flex items-center justify-center gap-2 text-sm cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">rocket_launch</span>
+                  {isArabic ? 'تفعيل الفترة التجريبية والبدء (مجاناً)' : 'Activate Free Trial & Start (Free)'}
+                </button>
+
+                <div className="mt-6 pt-6 border-t border-border-subtle flex items-center justify-center gap-2 text-[10px] text-secondary font-semibold uppercase tracking-wider">
+                  <span className="material-symbols-outlined text-[16px] text-green-600">security</span>
+                  {isArabic ? 'نظام آمن ومتوافق بالكامل مع HIPAA' : 'Fully secure & HIPAA compliant environment'}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="mb-6">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary-light text-primary text-[10px] font-bold rounded-full uppercase tracking-wider mb-2">
+                  <span className="material-symbols-outlined text-[12px] fill">shield</span>
+                  {isArabic ? 'اتصال آمن ومحمي 256 بت SSL' : 'Secure 256-bit SSL Connection'}
+                </span>
+                <h1 className="text-2xl font-bold text-primary font-headline-md">
+                  {isArabic ? 'تفاصيل الدفع' : 'Payment Details'}
+                </h1>
+                <p className="text-xs text-secondary mt-1">
+                  {isArabic ? 'أكمل معاملتك باستخدام بطاقة الائتمان الخاصة بك.' : 'Complete your transaction using a credit card.'}
+                </p>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-on-surface-variant mb-1">
-                  {isArabic ? 'رمز التحقق (CVV / CVC)' : 'CVV / CVC'}
-                </label>
-                <input
-                  type="password"
-                  required
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    {isArabic ? 'اسم حامل البطاقة' : 'Cardholder Name'}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    disabled={isProcessing}
+                    value={cardName}
+                    onChange={(e) => setCardName(e.target.value)}
+                    placeholder={isArabic ? 'د. أحمد حسن' : 'Dr. Ahmed Hassan'}
+                    className="w-full px-3 py-2.5 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface uppercase"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    {isArabic ? 'رقم البطاقة' : 'Card Number'}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      required
+                      disabled={isProcessing}
+                      value={cardNumber}
+                      onChange={handleCardNumberChange}
+                      placeholder="4000 1234 5678 9010"
+                      className={`w-full py-2.5 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${
+                        isArabic ? 'pl-10 pr-3' : 'pl-3 pr-10'
+                      }`}
+                    />
+                    <span className={`material-symbols-outlined absolute top-1/2 transform -translate-y-1/2 text-secondary text-[20px] ${
+                      isArabic ? 'left-3' : 'right-3'
+                    }`}>
+                      credit_card
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                      {isArabic ? 'تاريخ الانتهاء' : 'Expiry Date'}
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      disabled={isProcessing}
+                      value={cardExpiry}
+                      onChange={handleExpiryChange}
+                      placeholder="MM/YY"
+                      className="w-full px-3 py-2.5 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface text-center"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                      {isArabic ? 'رمز التحقق (CVV / CVC)' : 'CVV / CVC'}
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      disabled={isProcessing}
+                      value={cardCvv}
+                      onChange={handleCvvChange}
+                      onFocus={() => setIsFlipped(true)}
+                      onBlur={() => setIsFlipped(false)}
+                      placeholder="•••"
+                      className="w-full px-3 py-2.5 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface text-center font-bold"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
                   disabled={isProcessing}
-                  value={cardCvv}
-                  onChange={handleCvvChange}
-                  onFocus={() => setIsFlipped(true)}
-                  onBlur={() => setIsFlipped(false)}
-                  placeholder="•••"
-                  className="w-full px-3 py-2.5 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface text-center font-bold"
-                />
+                  className="w-full bg-primary hover:bg-primary-hover disabled:bg-primary/50 text-on-primary font-semibold py-3 px-4 rounded-lg shadow-sm transition-all duration-300 flex items-center justify-center gap-2 mt-8 text-sm cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">lock</span>
+                  {isArabic ? `تفويض الدفع (${planPrice})` : `Authorize Payment (${planPrice})`}
+                </button>
+              </form>
+
+              {/* PCI Compliance / Security Badges */}
+              <div className="mt-8 pt-6 border-t border-border-subtle flex flex-wrap gap-4 items-center justify-between text-[10px] text-secondary font-semibold uppercase tracking-wider">
+                <div className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px] text-green-600">lock_open</span>
+                  {isArabic ? 'متوافق مع PCI-DSS' : 'PCI-DSS Compliant'}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px] text-green-600">verified_user</span>
+                  {isArabic ? 'نظام الأمان ثلاثي الأبعاد نشط' : '3D Secure Active'}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px] text-green-600">encrypted</span>
+                  {isArabic ? 'تشفير AES-256' : 'AES-256 Encrypted'}
+                </div>
               </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isProcessing}
-              className="w-full bg-primary hover:bg-primary-hover disabled:bg-primary/50 text-on-primary font-semibold py-3 px-4 rounded-lg shadow-sm transition-all duration-300 flex items-center justify-center gap-2 mt-8 text-sm cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[18px]">lock</span>
-              {isArabic ? `تفويض الدفع (${planPrice})` : `Authorize Payment (${planPrice})`}
-            </button>
-          </form>
-
-          {/* PCI Compliance / Security Badges */}
-          <div className="mt-8 pt-6 border-t border-border-subtle flex flex-wrap gap-4 items-center justify-between text-[10px] text-secondary font-semibold uppercase tracking-wider">
-            <div className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[16px] text-green-600">lock_open</span>
-              {isArabic ? 'متوافق مع PCI-DSS' : 'PCI-DSS Compliant'}
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[16px] text-green-600">verified_user</span>
-              {isArabic ? 'نظام الأمان ثلاثي الأبعاد نشط' : '3D Secure Active'}
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[16px] text-green-600">encrypted</span>
-              {isArabic ? 'تشفير AES-256' : 'AES-256 Encrypted'}
-            </div>
-          </div>
+            </>
+          )}
         </section>
 
         {/* Right Column: Interactive card and Plan summary */}
@@ -451,12 +519,16 @@ export default function Checkout() {
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                 </div>
                 <h3 className="text-md font-bold text-primary">
-                  {isArabic ? 'جاري الاتصال ببوابة الدفع...' : 'Contacting Payment Gateway...'}
+                  {selectedPlan.id === 'free'
+                    ? (isArabic ? 'جاري تهيئة الفترة التجريبية...' : 'Initializing free trial...')
+                    : (isArabic ? 'جاري الاتصال ببوابة الدفع...' : 'Contacting Payment Gateway...')
+                  }
                 </h3>
                 <p className="text-xs text-secondary">
-                  {isArabic 
-                    ? 'جاري الاتصال الآمن مع البنك الخاص بك للتحقق من بيانات البطاقة.' 
-                    : 'Connecting securely with your bank to verify card details.'}
+                  {selectedPlan.id === 'free'
+                    ? (isArabic ? 'جاري إنشاء مساحة عمل تجريبية آمنة.' : 'Creating a secure trial workspace.')
+                    : (isArabic ? 'جاري الاتصال الآمن مع البنك الخاص بك للتحقق من بيانات البطاقة.' : 'Connecting securely with your bank to verify card details.')
+                  }
                 </p>
               </div>
             )}
@@ -467,12 +539,16 @@ export default function Checkout() {
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary border-t-2"></div>
                 </div>
                 <h3 className="text-md font-bold text-primary">
-                  {isArabic ? 'تأمين المعاملة...' : 'Securing Transaction...'}
+                  {selectedPlan.id === 'free'
+                    ? (isArabic ? 'تأمين الحساب الطبي...' : 'Securing clinical account...')
+                    : (isArabic ? 'تأمين المعاملة...' : 'Securing Transaction...')
+                  }
                 </h3>
                 <p className="text-xs text-secondary">
-                  {isArabic 
-                    ? 'جاري تشفير بيانات الدفع والتحقق من جلسة SSL الآمنة.' 
-                    : 'Tokenizing payment tokens and verifying secure SSL session.'}
+                  {selectedPlan.id === 'free'
+                    ? (isArabic ? 'جاري إعداد صلاحيات الأمان والامتثال لـ HIPAA.' : 'Setting up security permissions and HIPAA compliance.')
+                    : (isArabic ? 'جاري تشفير بيانات الدفع والتحقق من جلسة SSL الآمنة.' : 'Tokenizing payment tokens and verifying secure SSL session.')
+                  }
                 </p>
               </div>
             )}
@@ -485,12 +561,16 @@ export default function Checkout() {
                   </div>
                 </div>
                 <h3 className="text-md font-bold text-primary">
-                  {isArabic ? 'تم تفويض عملية الدفع بنجاح!' : 'Payment Authorized!'}
+                  {selectedPlan.id === 'free'
+                    ? (isArabic ? 'تم تفعيل التجربة بنجاح!' : 'Trial Activated Successfully!')
+                    : (isArabic ? 'تم تفويض عملية الدفع بنجاح!' : 'Payment Authorized!')
+                  }
                 </h3>
                 <p className="text-xs text-secondary">
-                  {isArabic 
-                    ? `عملية دفع ${planPrice} تمت بنجاح. يتم تحويلك الآن لإتمام التسجيل...` 
-                    : `Your payment of ${planPrice} was successful. Redirecting to workspace registration...`}
+                  {selectedPlan.id === 'free'
+                    ? (isArabic ? 'تم إعداد خطة التجربة المجانية بنجاح. يتم تحويلك الآن للتسجيل...' : 'Your free trial has been set up. Redirecting to registration...')
+                    : (isArabic ? `عملية دفع ${planPrice} تمت بنجاح. يتم تحويلك الآن لإتمام التسجيل...` : `Your payment of ${planPrice} was successful. Redirecting to workspace registration...`)
+                  }
                 </p>
               </div>
             )}

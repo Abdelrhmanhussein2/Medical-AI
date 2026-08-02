@@ -20,6 +20,7 @@ class DoctorBase(BaseModel):
     calendar_provider: Optional[str] = None
     calendar_id: Optional[str] = None
     is_active: bool = True
+    must_change_password: bool = False
 
 class DoctorCreate(DoctorBase):
     password: str

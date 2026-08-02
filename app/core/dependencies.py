@@ -28,7 +28,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     # Search for user across tables (since email is unique globally in this schema)
     async with db.pool.acquire() as connection:
         # Check doctors
-        doc = await connection.fetchrow("SELECT id, email, name, 'doctor' as role, department_id, is_active FROM doctors WHERE email = $1", email)
+        doc = await connection.fetchrow("SELECT id, email, name, 'doctor' as role, department_id, is_active, must_change_password FROM doctors WHERE email = $1", email)
         if doc:
             if not doc["is_active"]:
                 raise HTTPException(

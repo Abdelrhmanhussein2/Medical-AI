@@ -42,6 +42,7 @@ export default function OrgSubscriptions() {
   const [expiryDate, setExpiryDate] = useState('');
   const [subLoading, setSubLoading] = useState(false);
   const [subError, setSubError] = useState('');
+  const [toastAlert, setToastAlert] = useState(null);
 
   // Doctor custom limits input states
   const [customMinutes, setCustomMinutes] = useState('');
@@ -136,14 +137,20 @@ export default function OrgSubscriptions() {
         const newSub = await res.json();
         setOrgSubscription(newSub);
         setShowOrgRenewModal(false);
-        alert(isArabic ? 'تم تجديد الاشتراك وتفعيل الباقة بنجاح!' : 'Subscription renewed and plan activated successfully!');
-        window.location.reload();
+        setToastAlert({
+          type: 'success',
+          message: isArabic ? 'تم تجديد الاشتراك وتفعيل الباقة بنجاح!' : 'Subscription renewed and plan activated successfully!'
+        });
       } else {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.detail || (isArabic ? 'فشل تجديد الاشتراك' : 'Failed to renew subscription'));
       }
     } catch (err) {
       setRenewError(err.message);
+      setToastAlert({
+        type: 'error',
+        message: err.message || (isArabic ? 'فشل تجديد الاشتراك' : 'Failed to renew subscription')
+      });
     } finally {
       setRenewLoading(false);
     }
@@ -158,7 +165,9 @@ export default function OrgSubscriptions() {
     let licenseStatus = doc.status === 'pending' ? 'pending' : 'active';
     let daysRemaining = null;
 
-    if (expiryDateVal) {
+    if (doc.is_active === false) {
+      licenseStatus = 'disabled';
+    } else if (expiryDateVal) {
       const today = new Date();
       const expiry = new Date(expiryDateVal);
       daysRemaining = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
@@ -192,6 +201,7 @@ export default function OrgSubscriptions() {
     if (filterStatus === 'active') return license.status === 'active';
     if (filterStatus === 'expiring') return license.status === 'expiring';
     if (filterStatus === 'expired') return license.status === 'expired';
+    if (filterStatus === 'disabled') return license.status === 'disabled';
     return true;
   });
 
@@ -208,7 +218,7 @@ export default function OrgSubscriptions() {
     }
   }
 
-  const seatsUtilized = deptDocs.filter(d => d.status === 'approved').length;
+  const seatsUtilized = deptDocs.filter(d => d.is_active !== false && d.status === 'approved').length;
   const totalSeats = maxAllowedSeats;
   const capacityPct = totalSeats > 0 ? Math.round((seatsUtilized / totalSeats) * 100) : 0;
   const pendingCount = docLicenses.filter(l => l.status === 'pending').length;
@@ -240,10 +250,16 @@ export default function OrgSubscriptions() {
         customTokens ? parseInt(customTokens, 10) : null
       );
       setShowSubModal(false);
-      alert(isArabic ? 'تم تفعيل حساب الطبيب وتعيين صلاحيات الاستهلاك المخصصة بنجاح!' : 'Doctor activated and custom consumption limits set successfully!');
-      window.location.reload();
+      setToastAlert({
+        type: 'success',
+        message: isArabic ? 'تم تفعيل حساب الطبيب وتعيين صلاحيات الاستهلاك المخصصة بنجاح!' : 'Doctor activated and custom consumption limits set successfully!'
+      });
     } catch (err) {
       setSubError(err.message || (isArabic ? 'فشل تفعيل الاشتراك' : 'Failed to activate subscription'));
+      setToastAlert({
+        type: 'error',
+        message: err.message || (isArabic ? 'فشل تفعيل الاشتراك' : 'Failed to activate subscription')
+      });
     } finally {
       setSubLoading(false);
     }
@@ -255,6 +271,7 @@ export default function OrgSubscriptions() {
       expiring: 'bg-status-warning/10 text-status-warning',
       expired: 'bg-error-container text-error',
       pending: 'bg-surface-container-high text-secondary',
+      disabled: 'bg-error-container text-error',
     };
     
     let label = status;
@@ -264,6 +281,7 @@ export default function OrgSubscriptions() {
         expiring: `ينتهي قريباً (${daysRemaining} يوم)`,
         expired: 'منتهي',
         pending: 'في انتظار التفعيل',
+        disabled: 'معطل',
       };
       label = labelsAr[status] || status;
     } else {
@@ -272,6 +290,7 @@ export default function OrgSubscriptions() {
         expiring: `Expiring Soon (${daysRemaining}d)`,
         expired: 'Expired',
         pending: 'Pending Activation',
+        disabled: 'Disabled',
       };
       label = labelsEn[status] || status;
     }
@@ -375,6 +394,7 @@ export default function OrgSubscriptions() {
           <option value="active">{isArabic ? 'نشط' : 'Active'}</option>
           <option value="expiring">{isArabic ? 'ينتهي قريباً' : 'Expiring Soon'}</option>
           <option value="expired">{isArabic ? 'منتهي' : 'Expired'}</option>
+          <option value="disabled">{isArabic ? 'معطل' : 'Disabled'}</option>
         </select>
       </div>
 
@@ -705,6 +725,45 @@ export default function OrgSubscriptions() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Popup Modal for Success & Error Alerts */}
+      {toastAlert && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in text-center">
+          <div className={`bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-border-subtle transform transition-all scale-100 duration-300 ${isArabic ? 'text-right' : 'text-left'}`}>
+            <div className="flex flex-col items-center text-center">
+              {toastAlert.type === 'success' ? (
+                <div className="w-12 h-12 rounded-full bg-primary-light flex items-center justify-center mb-4 text-primary animate-bounce">
+                  <span className="material-symbols-outlined text-[28px] font-bold">check</span>
+                </div>
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-error-container/20 flex items-center justify-center mb-4 text-error animate-pulse">
+                  <span className="material-symbols-outlined text-[28px] font-bold">warning</span>
+                </div>
+              )}
+              <h3 className="text-base font-bold text-on-surface mb-2">
+                {toastAlert.type === 'success' 
+                  ? (isArabic ? 'تم بنجاح' : 'Success') 
+                  : (isArabic ? 'فشل تنفيذ الإجراء' : 'Action Failed')}
+              </h3>
+              <p className={`text-xs font-bold leading-relaxed mb-6 ${toastAlert.type === 'success' ? 'text-primary' : 'text-error'}`}>
+                {toastAlert.message}
+              </p>
+              <button
+                onClick={() => {
+                  const isSuccess = toastAlert.type === 'success';
+                  setToastAlert(null);
+                  if (isSuccess) {
+                    window.location.reload();
+                  }
+                }}
+                className="w-full py-2.5 px-4 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary-hover active:scale-[0.98] transition-all shadow-sm focus:outline-none cursor-pointer"
+              >
+                {isArabic ? 'موافق' : 'OK'}
+              </button>
+            </div>
           </div>
         </div>
       )}

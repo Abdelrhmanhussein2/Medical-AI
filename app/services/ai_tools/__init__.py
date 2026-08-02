@@ -29,6 +29,7 @@ class ToolExecutor:
         "get_doctor_performance":    admin_tools.tool_get_doctor_performance,
         "get_revenue_report":        admin_tools.tool_get_revenue_report,
         "send_report_to_admin":      admin_tools.tool_send_report_to_admin,
+        "query_database_readonly":   admin_tools.tool_query_database_readonly,
     }
 
     async def dispatch(self, fn_name: str, fn_args: dict, owner_id: str, conn) -> dict:

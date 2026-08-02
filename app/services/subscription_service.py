@@ -30,7 +30,8 @@ class SubscriptionService:
             if is_department:
                 query = """
                 SELECT s.*, b.name as bundle_name, b.name_ar as bundle_name_ar,
-                       b.allowed_minutes as allowed_minutes, b.max_doctors as max_doctors,
+                       COALESCE(s.allowed_minutes, b.allowed_minutes) as allowed_minutes,
+                       COALESCE(s.allowed_messages, b.allowed_messages) as allowed_messages,
                        (SELECT COUNT(*) FROM subscription_doctors WHERE subscription_id = s.id) as seats_used
                 FROM subscriptions s
                 JOIN subscription_bundles b ON s.bundle_id = b.id
@@ -42,7 +43,8 @@ class SubscriptionService:
             else:
                 query = """
                 SELECT s.*, b.name as bundle_name, b.name_ar as bundle_name_ar,
-                       b.allowed_minutes as allowed_minutes, b.max_doctors as max_doctors,
+                       COALESCE(s.allowed_minutes, b.allowed_minutes) as allowed_minutes,
+                       COALESCE(s.allowed_messages, b.allowed_messages) as allowed_messages,
                        (SELECT COUNT(*) FROM subscription_doctors WHERE subscription_id = s.id) as seats_used,
                        (s.department_id IS NOT NULL) as managed_by_org
                 FROM subscriptions s
@@ -122,11 +124,11 @@ class SubscriptionService:
                 elif "org_7" in name_clean_fb or "7_doctors" in name_clean_fb:
                     allowed_minutes_fb = 8000
                 elif "starter" in name_clean_fb:
-                    allowed_minutes_fb = 1000
+                    allowed_minutes_fb = 1500
                 elif "business" in name_clean_fb:
-                    allowed_minutes_fb = 3500
-                elif "enterprise" in name_clean_fb:
                     allowed_minutes_fb = 5000
+                elif "enterprise" in name_clean_fb:
+                    allowed_minutes_fb = 8000
                 sub_dict["allowed_minutes"] = allowed_minutes_fb
 
             return sub_dict
@@ -184,15 +186,24 @@ class SubscriptionService:
             total_seats = bundle_dict["max_doctors"] # Will be None for doctors
             
             insert_query = """
-            INSERT INTO subscriptions (department_id, doctor_id, bundle_id, end_date, total_seats, status)
-            VALUES ($1, $2, $3, now() + $4 * INTERVAL '1 day', $5, 'active')
+            INSERT INTO subscriptions (department_id, doctor_id, bundle_id, end_date, total_seats, status, allowed_minutes, allowed_messages)
+            VALUES ($1, $2, $3, now() + $4 * INTERVAL '1 day', $5, 'active', $6, $7)
             RETURNING *
             """
             
             dept_id = owner_id if is_department else None
             doc_id = None if is_department else owner_id
             
-            new_sub = await connection.fetchrow(insert_query, dept_id, doc_id, bundle_id, duration_days, total_seats)
+            new_sub = await connection.fetchrow(
+                insert_query, 
+                dept_id, 
+                doc_id, 
+                bundle_id, 
+                duration_days, 
+                total_seats,
+                bundle_dict.get("allowed_minutes"),
+                bundle_dict.get("allowed_messages")
+            )
             
             if not is_department:
                 await connection.execute(
@@ -241,17 +252,40 @@ class SubscriptionService:
             target_bundle_id = bundle_id or sub_dict["bundle_id"]
             extension_days = days_to_add if (days_to_add is not None and days_to_add > 0) else sub_dict["duration_days"]
             
-            # Update end_date and bundle_id
+            # Fetch target bundle properties to snapshot
+            target_bundle = await connection.fetchrow(
+                "SELECT max_doctors, allowed_minutes, allowed_messages FROM subscription_bundles WHERE id = $1",
+                target_bundle_id
+            )
+            tb_seats = target_bundle["max_doctors"] if target_bundle else None
+            tb_minutes = target_bundle["allowed_minutes"] if target_bundle else None
+            tb_messages = target_bundle["allowed_messages"] if target_bundle else None
+            
+            # Use requested allowed_minutes or fallback to bundle value
+            final_minutes = allowed_minutes if allowed_minutes is not None else tb_minutes
+            
+            # Update end_date, bundle_id, total_seats, allowed_minutes, allowed_messages
             update_query = """
             UPDATE subscriptions
             SET bundle_id = $1,
                 end_date = GREATEST(end_date, now()) + $2 * INTERVAL '1 day',
                 status = 'active',
+                total_seats = COALESCE($4, total_seats),
+                allowed_minutes = COALESCE($5, allowed_minutes),
+                allowed_messages = COALESCE($6, allowed_messages),
                 updated_at = now()
             WHERE id = $3
             RETURNING *
             """
-            updated_sub = await connection.fetchrow(update_query, target_bundle_id, extension_days, subscription_id)
+            updated_sub = await connection.fetchrow(
+                update_query, 
+                target_bundle_id, 
+                extension_days, 
+                subscription_id,
+                tb_seats,
+                final_minutes,
+                tb_messages
+            )
             updated_sub_dict = dict(updated_sub)
             
             # Update allowed minutes on bundle if provided

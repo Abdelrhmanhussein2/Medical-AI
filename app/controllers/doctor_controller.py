@@ -62,101 +62,183 @@ async def activate_doctor_subscription(doctor_id: UUID, body: SubscriptionActiva
     """
     try:
         async with db.pool.acquire() as conn:
-            # 1. Verify doctor exists and approve them
-            doctor_exists = await conn.fetchrow("SELECT id FROM doctors WHERE id = $1", doctor_id)
-            if not doctor_exists:
-                raise HTTPException(status_code=404, detail="Doctor not found")
-                
-            await conn.execute(
-                """
-                UPDATE doctors 
-                SET status = 'approved', 
-                    custom_minutes_limit = $2, 
-                    custom_tokens_limit = $3, 
-                    updated_at = now() 
-                WHERE id = $1
-                """,
-                doctor_id,
-                body.custom_minutes_limit,
-                body.custom_tokens_limit
-            )
-            
-            # 2. Map frontend plan name to DB bundle name
-            plan_name = body.subscription_plan
-            name_mapping = {
-                "Basic Access": "Basic Practitioner",
-                "Trial Access": "Basic Practitioner", 
-                "Clinical Pro": "Premium Clinical",
-                "Pro AI Suite": "Pro AI Suite",
-                "Enterprise AI": "Premium Clinical"
-            }
-            mapped_name = name_mapping.get(plan_name, plan_name)
-            
-            # 3. Find bundle
-            bundle = await conn.fetchrow(
-                "SELECT id FROM subscription_bundles WHERE name = $1 AND target_type = 'doctor'",
-                mapped_name
-            )
-            
-            if not bundle:
-                # Fallback: get first doctor bundle in DB
-                bundle = await conn.fetchrow(
-                    "SELECT id FROM subscription_bundles WHERE target_type = 'doctor' ORDER BY price ASC LIMIT 1"
-                )
-                
-            if not bundle:
-                raise HTTPException(status_code=400, detail="No suitable subscription bundle found in database.")
-                
-            bundle_id = bundle["id"]
-            
-            # Prevent doctor from taking Free Trial more than once
-            bundle_details = await conn.fetchrow("SELECT price, name FROM subscription_bundles WHERE id = $1", bundle_id)
-            if bundle_details and (bundle_details["price"] == 0 or bundle_details["name"] == "Free Trial"):
-                has_had_trial = await conn.fetchval(
-                    """
-                    SELECT EXISTS(
-                        SELECT 1 
-                        FROM subscriptions s
-                        JOIN subscription_bundles b ON s.bundle_id = b.id
-                        WHERE s.doctor_id = $1 AND (b.name = 'Free Trial' OR b.price = 0)
-                    )
-                    """,
-                    doctor_id
-                )
-                if has_had_trial:
-                    raise HTTPException(
-                        status_code=400, 
-                        detail="لقد قمت بالاشتراك في الفترة التجريبية المجانية بالفعل سابقاً. يمكنك الاختيار من بين باقات الدفع المتاحة."
-                    )
-
-            
-            # 4. Deactivate old active subscriptions for this doctor
-            await conn.execute(
-                "UPDATE subscriptions SET status = 'cancelled', updated_at = now() WHERE doctor_id = $1 AND status = 'active'",
+            # 1. Verify doctor exists and check if they belong to a department
+            doctor = await conn.fetchrow(
+                "SELECT id, department_id, is_active FROM doctors WHERE id = $1", 
                 doctor_id
             )
+            if not doctor:
+                raise HTTPException(status_code=404, detail="Doctor not found")
             
-            # 5. Insert new subscription
-            from datetime import datetime
-            try:
-                expiry_date = datetime.strptime(body.subscription_expiry, "%Y-%m-%d")
-            except ValueError:
+            dept_id = doctor["department_id"]
+            
+            if dept_id:
+                # Handle department-affiliated doctor
+                # Fetch active department subscription
+                dept_sub = await conn.fetchrow(
+                    """
+                    SELECT s.id, s.total_seats, s.allowed_minutes 
+                    FROM subscriptions s
+                    WHERE s.department_id = $1 AND s.status = 'active' AND s.end_date > now()
+                    LIMIT 1
+                    """,
+                    dept_id
+                )
+                if not dept_sub:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="لا يوجد اشتراك نشط للمنظمة التابع لها هذا الطبيب. يرجى تجديد أو ترقية اشتراك المنظمة أولاً."
+                    )
+                
+                sub_id = dept_sub["id"]
+                total_seats = dept_sub["total_seats"]
+                dept_allowed_minutes = dept_sub["allowed_minutes"]
+                
+                # Validate custom minutes limit
+                if body.custom_minutes_limit is not None and body.custom_minutes_limit > dept_allowed_minutes:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"لا يمكنك تعيين حد دقائق للطبيب ({body.custom_minutes_limit}) أكبر من الحد المسموح به لباقة المنظمة ({dept_allowed_minutes} دقيقة)."
+                    )
+                
+                # Check if doctor is already assigned to this subscription
+                already_assigned = await conn.fetchval(
+                    "SELECT EXISTS(SELECT 1 FROM subscription_doctors WHERE subscription_id = $1 AND doctor_id = $2)",
+                    sub_id, doctor_id
+                )
+                if not already_assigned:
+                    # Check seats limit
+                    seats_used = await conn.fetchval(
+                        "SELECT COUNT(*) FROM subscription_doctors WHERE subscription_id = $1",
+                        sub_id
+                    )
+                    if total_seats is not None and seats_used >= total_seats:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"تم استهلاك جميع المقاعد المتاحة في اشتراك القسم ({total_seats} مقاعد). لا يمكنك تفعيل المزيد من الأطباء."
+                        )
+                    
+                    # Clean up old seat assignments
+                    await conn.execute("DELETE FROM subscription_doctors WHERE doctor_id = $1", doctor_id)
+                    # Clean up any active independent subscriptions
+                    await conn.execute(
+                        "UPDATE subscriptions SET status = 'cancelled', updated_at = now() WHERE doctor_id = $1 AND status = 'active'",
+                        doctor_id
+                    )
+                    
+                    # Insert into subscription_doctors
+                    await conn.execute(
+                        "INSERT INTO subscription_doctors (subscription_id, doctor_id) VALUES ($1, $2)",
+                        sub_id, doctor_id
+                    )
+                
+                # Update doctor status and limits
+                await conn.execute(
+                    """
+                    UPDATE doctors 
+                    SET status = 'approved',
+                        is_active = true,
+                        custom_minutes_limit = $2, 
+                        custom_tokens_limit = $3, 
+                        updated_at = now() 
+                    WHERE id = $1
+                    """,
+                    doctor_id,
+                    body.custom_minutes_limit,
+                    body.custom_tokens_limit
+                )
+            else:
+                # Handle independent doctor
+                # Update doctor status and limits
+                await conn.execute(
+                    """
+                    UPDATE doctors 
+                    SET status = 'approved', 
+                        custom_minutes_limit = $2, 
+                        custom_tokens_limit = $3, 
+                        updated_at = now() 
+                    WHERE id = $1
+                    """,
+                    doctor_id,
+                    body.custom_minutes_limit,
+                    body.custom_tokens_limit
+                )
+                
+                # Map frontend plan name to DB bundle name
+                plan_name = body.subscription_plan
+                name_mapping = {
+                    "Basic Access": "Basic Practitioner",
+                    "Trial Access": "Basic Practitioner", 
+                    "Clinical Pro": "Premium Clinical",
+                    "Pro AI Suite": "Pro AI Suite",
+                    "Enterprise AI": "Premium Clinical"
+                }
+                mapped_name = name_mapping.get(plan_name, plan_name)
+                
+                # Find bundle
+                bundle = await conn.fetchrow(
+                    "SELECT id FROM subscription_bundles WHERE name = $1 AND target_type = 'doctor'",
+                    mapped_name
+                )
+                
+                if not bundle:
+                    # Fallback: get first doctor bundle in DB
+                    bundle = await conn.fetchrow(
+                        "SELECT id FROM subscription_bundles WHERE target_type = 'doctor' ORDER BY price ASC LIMIT 1"
+                    )
+                    
+                if not bundle:
+                    raise HTTPException(status_code=400, detail="No suitable subscription bundle found in database.")
+                    
+                bundle_id = bundle["id"]
+                
+                # Prevent doctor from taking Free Trial more than once
+                bundle_details = await conn.fetchrow("SELECT price, name FROM subscription_bundles WHERE id = $1", bundle_id)
+                if bundle_details and (bundle_details["price"] == 0 or bundle_details["name"] == "Free Trial"):
+                    has_had_trial = await conn.fetchval(
+                        """
+                        SELECT EXISTS(
+                            SELECT 1 
+                            FROM subscriptions s
+                            JOIN subscription_bundles b ON s.bundle_id = b.id
+                            WHERE s.doctor_id = $1 AND (b.name = 'Free Trial' OR b.price = 0)
+                        )
+                        """,
+                        doctor_id
+                    )
+                    if has_had_trial:
+                        raise HTTPException(
+                            status_code=400, 
+                            detail="لقد قمت بالاشتراك في الفترة التجريبية المجانية بالفعل سابقاً. يمكنك الاختيار من بين باقات الدفع المتاحة."
+                        )
+    
+                # Deactivate old active subscriptions for this doctor
+                await conn.execute(
+                    "UPDATE subscriptions SET status = 'cancelled', updated_at = now() WHERE doctor_id = $1 AND status = 'active'",
+                    doctor_id
+                )
+                
+                # Insert new subscription
+                from datetime import datetime
                 try:
-                    expiry_date = datetime.strptime(body.subscription_expiry, "%m/%d/%Y")
+                    expiry_date = datetime.strptime(body.subscription_expiry, "%Y-%m-%d")
                 except ValueError:
-                    raise HTTPException(status_code=400, detail="Invalid date format for subscription_expiry. Expected YYYY-MM-DD or MM/DD/YYYY.")
-
-            await conn.execute(
-                """
-                INSERT INTO subscriptions (doctor_id, bundle_id, end_date, status)
-                VALUES ($1, $2, $3, 'active')
-                """,
-                doctor_id,
-                bundle_id,
-                expiry_date
-            )
+                    try:
+                        expiry_date = datetime.strptime(body.subscription_expiry, "%m/%d/%Y")
+                    except ValueError:
+                        raise HTTPException(status_code=400, detail="Invalid date format for subscription_expiry. Expected YYYY-MM-DD or MM/DD/YYYY.")
+    
+                await conn.execute(
+                    """
+                    INSERT INTO subscriptions (doctor_id, bundle_id, end_date, status)
+                    VALUES ($1, $2, $3, 'active')
+                    """,
+                    doctor_id,
+                    bundle_id,
+                    expiry_date
+                )
             
-            # 6. Fetch doctor details matching DoctorResponse schema (which includes dyn plan info)
+            # Fetch doctor details matching DoctorResponse schema (which includes dyn plan info)
             query = """
             SELECT 
                 d.*,

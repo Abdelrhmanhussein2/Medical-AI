@@ -13,6 +13,7 @@ class BundleResponse(BaseModel):
     duration_days: int
     price: float
     is_active: bool
+    allowed_minutes: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 

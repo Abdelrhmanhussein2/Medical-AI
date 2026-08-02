@@ -29,6 +29,8 @@ async def seed_bundles():
             "max_doctors": None,
             "duration_days": 30,
             "price": 0.00,
+            "allowed_minutes": 60,
+            "allowed_messages": 100,
         },
         {
             "name": "SBR AI Starter",
@@ -37,6 +39,8 @@ async def seed_bundles():
             "max_doctors": None,
             "duration_days": 30,
             "price": 149.00,
+            "allowed_minutes": 1500,
+            "allowed_messages": 2650,
         },
         {
             "name": "SBR AI Pro",
@@ -45,6 +49,8 @@ async def seed_bundles():
             "max_doctors": None,
             "duration_days": 30,
             "price": 249.00,
+            "allowed_minutes": 3000,
+            "allowed_messages": 2350,
         },
         {
             "name": "SBR AI Business",
@@ -53,6 +59,8 @@ async def seed_bundles():
             "max_doctors": None,
             "duration_days": 30,
             "price": 449.00,
+            "allowed_minutes": 3500,
+            "allowed_messages": 5000,
         },
         {
             "name": "SBR AI Enterprise",
@@ -61,6 +69,8 @@ async def seed_bundles():
             "max_doctors": None,
             "duration_days": 30,
             "price": 599.00,
+            "allowed_minutes": 5000,
+            "allowed_messages": 8000,
         },
     ]
 
@@ -70,17 +80,21 @@ async def seed_bundles():
             "name": "SBR AI Business",
             "name_ar": "SBR AI Business",
             "target_type": "department",
-            "max_doctors": 15,
+            "max_doctors": 4,
             "duration_days": 30,
             "price": 449.00,
+            "allowed_minutes": 6000,
+            "allowed_messages": 9400,
         },
         {
             "name": "SBR AI Enterprise",
             "name_ar": "SBR AI Enterprise",
             "target_type": "department",
-            "max_doctors": 50,
+            "max_doctors": 7,
             "duration_days": 30,
             "price": 599.00,
+            "allowed_minutes": 8000,
+            "allowed_messages": 16450,
         },
     ]
 
@@ -110,9 +124,9 @@ async def seed_bundles():
                 row = await connection.fetchrow(
                     """
                     INSERT INTO subscription_bundles
-                        (name, name_ar, target_type, max_doctors, duration_days, price)
-                    VALUES ($1, $2, $3::bundle_target, $4, $5, $6)
-                    RETURNING id, name, name_ar, target_type, price
+                        (name, name_ar, target_type, max_doctors, duration_days, price, allowed_minutes, allowed_messages)
+                    VALUES ($1, $2, $3::bundle_target, $4, $5, $6, $7, $8)
+                    RETURNING id, name, name_ar, target_type, price, allowed_minutes, allowed_messages
                     """,
                     b["name"],
                     b["name_ar"],
@@ -120,6 +134,8 @@ async def seed_bundles():
                     b["max_doctors"],
                     b["duration_days"],
                     b["price"],
+                    b["allowed_minutes"],
+                    b["allowed_messages"],
                 )
                 print(f"SUCCESS: Bundle seeded: {dict(row)}")
             else:
@@ -127,10 +143,10 @@ async def seed_bundles():
                 await connection.execute(
                     """
                     UPDATE subscription_bundles 
-                    SET name_ar = $1, max_doctors = $2, duration_days = $3, price = $4
-                    WHERE name = $5 AND target_type = $6::bundle_target
+                    SET name_ar = $1, max_doctors = $2, duration_days = $3, price = $4, allowed_minutes = $5, allowed_messages = $6
+                    WHERE name = $7 AND target_type = $8::bundle_target
                     """,
-                    b["name_ar"], b["max_doctors"], b["duration_days"], b["price"], b["name"], b["target_type"]
+                    b["name_ar"], b["max_doctors"], b["duration_days"], b["price"], b["allowed_minutes"], b["allowed_messages"], b["name"], b["target_type"]
                 )
                 print(f"SUCCESS: Updated existing bundle: '{b['name']}' ({b['target_type']})")
 

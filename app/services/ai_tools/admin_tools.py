@@ -130,3 +130,61 @@ async def tool_send_report_to_admin(fn_args: dict, owner_id: str, conn) -> dict:
     except Exception as e:
         logger.error(f"Error in tool_send_report_to_admin: {e}")
         return {"status": "error", "message": f"Failed to send WhatsApp report: {str(e)}"}
+
+
+async def tool_query_database_readonly(fn_args: dict, owner_id: str, conn) -> dict:
+    """
+    Executes a SELECT query on the database. ONLY SELECT queries are permitted for safety.
+    """
+    from datetime import datetime, date
+    from decimal import Decimal
+    from uuid import UUID
+
+    sql_query = fn_args.get("sql_query")
+    if not sql_query:
+        return {"status": "error", "message": "الاستعلام SQL (sql_query) مطلوب."}
+
+    # Safety check: only allow SELECT queries (case-insensitive)
+    query_stripped = sql_query.strip().lower()
+    if not query_stripped.startswith("select"):
+        return {
+            "status": "error", 
+            "message": "غير مسموح إلا باستعلامات القراءة فقط (SELECT). يمنع التعديل أو الحذف."
+        }
+
+    # Block common modifications keywords
+    forbidden = ["insert", "update", "delete", "drop", "alter", "truncate", "create", "grant", "revoke"]
+    for keyword in forbidden:
+        if keyword in query_stripped:
+            return {
+                "status": "error", 
+                "message": f"غير مسموح باستخدام الكلمات الدلالية الخاصة بالتعديل أو الحذف ({keyword})."
+            }
+
+    try:
+        # Run query and fetch results
+        rows = await conn.fetch(sql_query)
+        # Convert rows to serializable dicts
+        data = []
+        for r in rows:
+            row_dict = {}
+            for k, v in r.items():
+                if isinstance(v, (datetime, date)):
+                    row_dict[k] = v.isoformat()
+                elif isinstance(v, Decimal):
+                    row_dict[k] = float(v)
+                elif isinstance(v, UUID):
+                    row_dict[k] = str(v)
+                else:
+                    row_dict[k] = v
+            data.append(row_dict)
+
+        return {
+            "status": "success",
+            "row_count": len(data),
+            "data": data[:100]  # Cap at 100 rows to prevent blowing up the context window
+        }
+    except Exception as e:
+        logger.error(f"Error in tool_query_database_readonly: {e}")
+        return {"status": "error", "message": f"Failed to execute SQL query: {str(e)}"}
+

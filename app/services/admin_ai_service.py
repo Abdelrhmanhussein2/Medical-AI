@@ -60,9 +60,15 @@ class AdminAIEngineService:
             )
 
         # Build System Prompt
+        try:
+            with open(PROMPT_FILE_PATH, "r", encoding="utf-8") as f:
+                prompt_template = f.read()
+        except Exception:
+            prompt_template = ADMIN_SYSTEM_PROMPT_TEMPLATE
+
         today_dt = datetime.now()
         today_formatted = today_dt.strftime('%Y-%m-%d %H:%M')
-        system_instruction = ADMIN_SYSTEM_PROMPT_TEMPLATE.replace("[TODAY_DATE]", today_formatted)
+        system_instruction = prompt_template.replace("[TODAY_DATE]", today_formatted)
 
         messages = [{"role": "system", "content": system_instruction}]
         for msg in history:

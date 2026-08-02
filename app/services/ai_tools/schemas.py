@@ -452,6 +452,23 @@ def get_admin_tool_definitions() -> List[Dict[str, Any]]:
                     "required": ["report_text"]
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "query_database_readonly",
+                "description": "نفذ استعلام SQL من نوع SELECT لقراءة أي بيانات أو إحصائيات دقيقة مباشرة من قاعدة البيانات. يمنع تعديل أو حذف البيانات.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "sql_query": {
+                            "type": "string",
+                            "description": "استعلام SQL المراد تنفيذه (مثال: SELECT * FROM doctors LIMIT 5). يجب أن يبدأ بـ SELECT."
+                        }
+                    },
+                    "required": ["sql_query"]
+                }
+            }
         }
     ]
 

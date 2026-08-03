@@ -35,7 +35,7 @@ function ProtectedRoute({ children, role }) {
   const { currentUser } = useApp();
 
   if (!currentUser) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={role === 'admin' ? '/portal-9x4m' : '/login'} replace />;
   }
 
   // Force password change on first-time login
@@ -109,6 +109,16 @@ function AppContent() {
             <Navigate to="/dashboard" replace />
           ) : (
             <Login setActivePage={handleNavigation} />
+          )
+        } />
+        
+        <Route path="/portal-9x4m" element={
+          currentUser ? (
+            currentUser.role === 'admin' ? <Navigate to="/admin-overview" replace /> :
+            currentUser.role === 'org' ? <Navigate to="/org-dashboard" replace /> :
+            <Navigate to="/dashboard" replace />
+          ) : (
+            <Login setActivePage={handleNavigation} isPortal={true} />
           )
         } />
         

@@ -3,10 +3,10 @@ import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 import SbrLogo from '../components/SbrLogo';
 
-export default function Login({ setActivePage }) {
+export default function Login({ setActivePage, isPortal = false }) {
   const { login } = useApp();
   const { lang, setLang, isArabic } = useLanguage();
-  const [role, setRole] = useState('doctor');
+  const [role, setRole] = useState(isPortal ? 'admin' : 'doctor');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -103,23 +103,25 @@ export default function Login({ setActivePage }) {
 
           <div className="bg-white border border-border-subtle rounded-xl p-6 shadow-sm">
             {/* Role Switcher */}
-            <div className="flex gap-1 mb-6 p-1 bg-surface-container-low rounded-lg">
-              {[
-                { key: 'doctor', ar: 'طبيب', en: 'Doctor' },
-                { key: 'org', ar: 'منظمة', en: 'Organization' },
-              ].map(({ key, ar, en }) => (
-                <button
-                  key={key}
-                  onClick={() => { setRole(key); setEmail(''); setPassword(''); }}
-                  type="button"
-                  className={`flex-1 py-2 text-xs font-bold rounded-md transition-colors ${
-                    role === key ? 'bg-white text-primary shadow-sm' : 'text-secondary hover:text-primary'
-                  }`}
-                >
-                  {isArabic ? ar : en}
-                </button>
-              ))}
-            </div>
+            {!isPortal && (
+              <div className="flex gap-1 mb-6 p-1 bg-surface-container-low rounded-lg">
+                {[
+                  { key: 'doctor', ar: 'طبيب', en: 'Doctor' },
+                  { key: 'org', ar: 'منظمة', en: 'Organization' },
+                ].map(({ key, ar, en }) => (
+                  <button
+                    key={key}
+                    onClick={() => { setRole(key); setEmail(''); setPassword(''); }}
+                    type="button"
+                    className={`flex-1 py-2 text-xs font-bold rounded-md transition-colors ${
+                      role === key ? 'bg-white text-primary shadow-sm' : 'text-secondary hover:text-primary'
+                    }`}
+                  >
+                    {isArabic ? ar : en}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {error && (
               <div className="mb-4 bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2">

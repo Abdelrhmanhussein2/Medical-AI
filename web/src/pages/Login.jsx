@@ -107,7 +107,6 @@ export default function Login({ setActivePage }) {
               {[
                 { key: 'doctor', ar: 'طبيب', en: 'Doctor' },
                 { key: 'org', ar: 'منظمة', en: 'Organization' },
-                { key: 'admin', ar: 'مشرف', en: 'Admin' },
               ].map(({ key, ar, en }) => (
                 <button
                   key={key}

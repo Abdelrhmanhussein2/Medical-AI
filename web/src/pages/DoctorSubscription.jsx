@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
-import { PLANS } from '../data/plans';
 
 export default function DoctorSubscription() {
   const navigate = useNavigate();
-  const { renewSubscription } = useApp();
+  const { renewSubscription, mergedPlans } = useApp();
   const { t, isArabic } = useLanguage();
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -49,11 +48,11 @@ export default function DoctorSubscription() {
   const handleRenew = () => {
     if (!subscription) return;
     const planNameLower = (subscription.bundle_name || '').toLowerCase();
-    const matchedPlan = PLANS.find(p => 
+    const matchedPlan = mergedPlans.find(p => 
       p.id === planNameLower || 
       p.nameEn.toLowerCase() === planNameLower || 
       (subscription.bundle_name_ar && p.nameAr === subscription.bundle_name_ar)
-    ) || PLANS[1];
+    ) || mergedPlans[1];
     
     navigate(`/checkout?plan=${matchedPlan.id}`);
   };
@@ -83,21 +82,27 @@ export default function DoctorSubscription() {
       )}
 
       {!subscription ? (
-        <div className="bg-white rounded-2xl border border-border-subtle p-8 text-center shadow-sm">
+        <div className="bg-white rounded-2xl border border-border-subtle p-8 text-center shadow-sm flex flex-col items-center">
           <span className="material-symbols-outlined text-[48px] text-outline-variant mb-4">card_membership</span>
           <h3 className="text-lg font-bold text-on-surface mb-2">{t('no_subscription')}</h3>
           <p className="text-secondary text-sm mb-6">
             {isArabic ? 'ليس لديك اشتراك نشط حالياً.' : 'You currently do not have an active subscription plan.'}
           </p>
+          <button
+            onClick={() => navigate('/checkout?plan=starter')}
+            className="bg-primary hover:bg-primary-hover text-on-primary font-semibold text-sm px-6 py-2.5 rounded-lg transition-colors cursor-pointer shadow-sm"
+          >
+            {isArabic ? 'اختر خطة لتفعيل الاشتراك' : 'Select a Plan to Activate Subscription'}
+          </button>
         </div>
       ) : (() => {
         // Find matching plan from PLANS configuration
         const planNameLower = (subscription.bundle_name || '').toLowerCase();
-        const matchedPlan = PLANS.find(p => 
+        const matchedPlan = mergedPlans.find(p => 
           p.id === planNameLower || 
           p.nameEn.toLowerCase() === planNameLower || 
           (subscription.bundle_name_ar && p.nameAr === subscription.bundle_name_ar)
-        ) || PLANS[1]; // Fallback to Starter if not found
+        ) || mergedPlans[1]; // Fallback to Starter if not found
 
         const planName = isArabic 
           ? (subscription.bundle_name_ar || matchedPlan.nameAr) 
@@ -116,10 +121,10 @@ export default function DoctorSubscription() {
         // For simplicity we use a flat approximation based on plan tier
         const messageLimitByPlan = {
           free:       350,
-          starter:   2631,
-          pro:       2350,
-          business:  9400,
-          enterprise: 16450,
+          starter:   1169,
+          pro:       2339,
+          business:  4678,
+          enterprise: 8187,
         };
         const totalMessages = matchedPlan.messagesApprox || messageLimitByPlan[matchedPlan.id] || 2631;
         const usedMessages = subscription.used_messages || 0;

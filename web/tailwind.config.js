@@ -78,14 +78,14 @@ export default {
         "gutter": "24px"
       },
       fontFamily: {
-        "body-md": ["Cairo", "Inter", "sans-serif"],
+        "body-md": ["Inter", "Cairo", "sans-serif"],
         "label-caps": ["JetBrains Mono", "monospace"],
-        "body-sm": ["Cairo", "Inter", "sans-serif"],
-        "body-lg": ["Cairo", "Inter", "sans-serif"],
-        "display-lg": ["Cairo", "Outfit", "sans-serif"],
-        "headline-lg": ["Cairo", "Outfit", "sans-serif"],
-        "button": ["Cairo", "Inter", "sans-serif"],
-        "headline-md": ["Cairo", "Outfit", "sans-serif"]
+        "body-sm": ["Inter", "Cairo", "sans-serif"],
+        "body-lg": ["Inter", "Cairo", "sans-serif"],
+        "display-lg": ["Outfit", "Cairo", "sans-serif"],
+        "headline-lg": ["Outfit", "Cairo", "sans-serif"],
+        "button": ["Inter", "Cairo", "sans-serif"],
+        "headline-md": ["Outfit", "Cairo", "sans-serif"]
       },
       boxShadow: {
         'ambient': '0px 12px 32px rgba(33, 53, 71, 0.04)', // Softened shadow

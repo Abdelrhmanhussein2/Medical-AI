@@ -136,7 +136,7 @@ export default function AdminOverview({ setActivePage }) {
                 </thead>
                 <tbody className="bg-white divide-y divide-border-subtle text-xs">
                   {filteredOrgs.map((org) => {
-                    const assignedCount = doctors.filter(d => d.org_id === org.id).length;
+                    const assignedCount = doctors.filter(d => d.department_id === org.id).length;
                     return (
                       <tr key={org.id} className="hover:bg-surface-container-low transition-colors">
                         <td className="px-4 py-3">

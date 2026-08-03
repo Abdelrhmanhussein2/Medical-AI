@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 import ReactMarkdown from 'react-markdown';
@@ -9,6 +10,10 @@ export default function AiChat({ initialPatientId }) {
   const { currentUser } = useApp();
   const { t, isArabic } = useLanguage();
   const messagesEndRef = useRef(null);
+  const navigate = useNavigate();
+
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [subscriptionErrorMsg, setSubscriptionErrorMsg] = useState('');
 
   const [threads, setThreads] = useState([]);
   const [activeThreadId, setActiveThreadId] = useState(null);
@@ -65,7 +70,7 @@ export default function AiChat({ initialPatientId }) {
             const createRes = await fetch('/api/v1/chat/threads', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-              body: JSON.stringify({ title: 'General', dept: null })
+              body: JSON.stringify({ title: isArabic ? 'محادثة عامة' : 'General Session', dept: null })
             });
             if (createRes.ok) {
               const newThread = await createRes.json();
@@ -159,7 +164,7 @@ export default function AiChat({ initialPatientId }) {
         const patientName = patients.find(p => p.id === newPatientId)?.name || 'Patient';
         finalTitle = `AI - ${patientName}`;
       } else {
-        finalTitle = 'General Session';
+        finalTitle = isArabic ? 'محادثة عامة' : 'General Session';
       }
     }
 
@@ -243,7 +248,13 @@ export default function AiChat({ initialPatientId }) {
             setMessages(prev => [...prev, aiMsg]);
           } else {
             const errData = await aiRes.json().catch(() => ({}));
-            alert(errData.detail || "حدث خطأ أثناء الاتصال بالذكاء الاصطناعي.");
+            const detail = errData.detail || (isArabic ? "حدث خطأ أثناء الاتصال بالذكاء الاصطناعي." : "An error occurred with the AI assistant.");
+            if (aiRes.status === 403 || detail.includes("اشتراك") || detail.includes("التجريبية") || detail.includes("تفعيل")) {
+              setSubscriptionErrorMsg(detail);
+              setShowSubscriptionModal(true);
+            } else {
+              alert(detail);
+            }
           }
         } catch (err) {
           console.error("Failed to generate AI reply", err);
@@ -353,7 +364,13 @@ export default function AiChat({ initialPatientId }) {
             setMessages(prev => [...prev, aiMsg]);
           } else {
             const errData = await aiRes.json().catch(() => ({}));
-            alert(errData.detail || "حدث خطأ أثناء الاتصال بالذكاء الاصطناعي.");
+            const detail = errData.detail || (isArabic ? "حدث خطأ أثناء الاتصال بالذكاء الاصطناعي." : "An error occurred with the AI assistant.");
+            if (aiRes.status === 403 || detail.includes("اشتراك") || detail.includes("التجريبية") || detail.includes("تفعيل")) {
+              setSubscriptionErrorMsg(detail);
+              setShowSubscriptionModal(true);
+            } else {
+              alert(detail);
+            }
           }
         } catch (err) {
           console.error("Failed to generate AI reply for audio", err);
@@ -452,6 +469,16 @@ export default function AiChat({ initialPatientId }) {
     }
   };
 
+  const displayTitle = (title) => {
+    if (!title) return '';
+    if (isArabic) {
+      if (title === 'General Session' || title === 'General') return 'محادثة عامة';
+    } else {
+      if (title === 'محادثة عامة') return 'General Session';
+    }
+    return title;
+  };
+
   const filteredThreads = threads.filter(t => 
     t.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -507,7 +534,7 @@ export default function AiChat({ initialPatientId }) {
                 >
                   <div className={`flex justify-between items-start mb-1 gap-2 ${isArabic ? 'pl-12' : 'pr-12'}`}>
                     <div className={`text-xs font-bold truncate ${isActive ? 'text-primary' : 'text-on-surface'}`}>
-                      {t.title}
+                      {displayTitle(t.title)}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-2">
@@ -561,7 +588,7 @@ export default function AiChat({ initialPatientId }) {
             </button>
             {activeThread ? (
               <div>
-                <h2 className="text-sm font-bold text-on-surface leading-tight">{activeThread.title}</h2>
+                <h2 className="text-sm font-bold text-on-surface leading-tight">{displayTitle(activeThread.title)}</h2>
                 <div className="flex items-center gap-1.5 mt-1">
                   <div className="w-1.5 h-1.5 rounded-full bg-tertiary-container animate-pulse"></div>
                   <span className="text-[11px] text-secondary font-medium">SBR AI Assistant Active</span>
@@ -595,7 +622,12 @@ export default function AiChat({ initialPatientId }) {
                 const isAi = message.sender_type === 'ai';
                 if (isAi) {
                   return (
-                    <div key={message.id} className="flex gap-4 max-w-[85%] animate-fade-in">
+                    <div 
+                      key={message.id} 
+                      className={`flex gap-4 max-w-[85%] animate-fade-in ${
+                        isArabic ? 'self-end flex-row-reverse' : 'self-start flex-row'
+                      }`}
+                    >
                       <div className="w-8 h-8 rounded-full bg-primary-container text-white flex items-center justify-center flex-shrink-0 shadow-sm relative overflow-hidden">
                         <span className="material-symbols-outlined text-[16px] relative z-10">smart_toy</span>
                       </div>
@@ -669,7 +701,12 @@ export default function AiChat({ initialPatientId }) {
                   );
                 } else {
                   return (
-                    <div key={message.id} className="flex gap-4 max-w-[75%] self-end flex-row-reverse animate-fade-in">
+                    <div 
+                      key={message.id} 
+                      className={`flex gap-4 max-w-[75%] animate-fade-in ${
+                        isArabic ? 'self-start flex-row' : 'self-end flex-row-reverse'
+                      }`}
+                    >
                       <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center flex-shrink-0 shadow-sm uppercase font-bold text-xs">
                         {currentUser.name ? currentUser.name.split(' ').map(n => n[0]).join('') : 'U'}
                       </div>
@@ -705,7 +742,11 @@ export default function AiChat({ initialPatientId }) {
           )}
 
           {isTyping && (
-            <div className="flex gap-4 max-w-[85%] animate-fade-in">
+            <div 
+              className={`flex gap-4 max-w-[85%] animate-fade-in ${
+                isArabic ? 'self-end flex-row-reverse' : 'self-start flex-row'
+              }`}
+            >
               <div className="w-8 h-8 rounded-full bg-primary-container text-white flex items-center justify-center flex-shrink-0 shadow-sm">
                 <span className="material-symbols-outlined text-[16px]">smart_toy</span>
               </div>
@@ -902,6 +943,39 @@ export default function AiChat({ initialPatientId }) {
         </div>
       )}
 
+      {/* Subscription Expired Modal */}
+      {showSubscriptionModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in" dir={isArabic ? 'rtl' : 'ltr'}>
+          <div className="bg-white rounded-2xl border border-border-subtle shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-scale-up text-start p-6">
+            <div className="flex items-center gap-3 text-error mb-4">
+              <span className="material-symbols-outlined text-[32px] text-red-500">warning</span>
+              <h3 className="text-lg font-bold text-on-surface">
+                {isArabic ? 'تنبيه الاشتراك' : 'Subscription Notice'}
+              </h3>
+            </div>
+            <p className="text-sm text-secondary leading-relaxed mb-6">
+              {subscriptionErrorMsg}
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowSubscriptionModal(false)}
+                className="px-4 py-2 border border-border-subtle rounded-lg text-xs font-semibold text-secondary hover:text-primary transition-colors cursor-pointer bg-white"
+              >
+                {isArabic ? 'إغلاق' : 'Close'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowSubscriptionModal(false);
+                  navigate('/subscription');
+                }}
+                className="px-4 py-2 bg-primary hover:bg-primary-hover text-on-primary rounded-lg text-xs font-semibold shadow transition-colors cursor-pointer"
+              >
+                {isArabic ? 'ذهاب لصفحة اشتراكي' : 'Go to My Subscription'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

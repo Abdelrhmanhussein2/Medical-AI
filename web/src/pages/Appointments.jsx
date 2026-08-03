@@ -159,7 +159,7 @@ export default function Appointments({ setActivePage }) {
                  className="px-5 py-2.5 bg-surface-container-low text-secondary/40 rounded-lg text-sm font-bold border border-border-subtle cursor-not-allowed flex items-center gap-2"
                  title="Passed"
               >
-                 {isArabic ? 'بدء الكول (انتهى)' : 'Join Call (Passed)'}
+                 {isArabic ? 'بدء الجلسة (انتهت)' : 'Join Call (Passed)'}
               </button>
             </div>
           );
@@ -173,7 +173,7 @@ export default function Appointments({ setActivePage }) {
                  className="px-5 py-2.5 bg-surface-container-low text-secondary/40 rounded-lg text-sm font-bold border border-border-subtle cursor-not-allowed flex items-center gap-2"
                  title="Upcoming"
               >
-                 {isArabic ? 'بدء الكول (قريباً)' : 'Join Call (Upcoming)'}
+                 {isArabic ? 'بدء الجلسة (قريباً)' : 'Join Call (Upcoming)'}
               </button>
             </div>
           );
@@ -187,7 +187,7 @@ export default function Appointments({ setActivePage }) {
              onClick={() => setActivePage(`live-session-${id}`)}
              className="px-5 py-2.5 bg-primary text-on-primary rounded-lg text-sm font-bold shadow-sm hover:bg-primary-hover transition-colors flex items-center gap-2 border border-primary/20"
           >
-             {isArabic ? 'بدء الكول 🎙️' : 'Join Call'}
+             {isArabic ? 'ابدأ الجلسة 🎙️' : 'Join Call 🎙️'}
           </button>
         </div>
       );
@@ -322,7 +322,7 @@ export default function Appointments({ setActivePage }) {
     : [];
 
   // --- Calendar Logic ---
-  const currentMonthName = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
+  const currentMonthName = currentMonth.toLocaleString(isArabic ? 'ar-EG' : 'default', { month: 'long', year: 'numeric' });
 
   const prevMonth = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
@@ -435,7 +435,10 @@ export default function Appointments({ setActivePage }) {
             </div>
             
             <div class="grid grid-cols-7 gap-y-4 gap-x-2 text-center text-xs font-bold text-secondary mb-2">
-              <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
+              {(isArabic
+                ? ['اث', 'ثل', 'أر', 'خم', 'جم', 'سب', 'أح']
+                : ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
+              ).map(d => <div key={d}>{d}</div>)}
             </div>
             
             <div class="grid grid-cols-7 gap-y-4 gap-x-2 text-center text-sm font-semibold">
@@ -474,10 +477,12 @@ export default function Appointments({ setActivePage }) {
           <div class="flex justify-between items-end mb-6">
             <div>
               <h2 class="text-xl font-bold text-on-surface inline-block">
-                {selectedDate.toDateString() === todayDate.toDateString() ? "Today's Schedule" : "Schedule"}
+                {selectedDate.toDateString() === todayDate.toDateString()
+                  ? (isArabic ? 'جدول اليوم' : "Today's Schedule")
+                  : (isArabic ? 'الجدول' : 'Schedule')}
               </h2>
               <span class="text-outline-variant mx-3">|</span>
-              <span class="text-secondary font-medium">{selectedDate.toLocaleString('default', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+              <span class="text-secondary font-medium">{selectedDate.toLocaleString(isArabic ? 'ar-EG' : 'default', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
             </div>
           </div>
 
@@ -485,7 +490,7 @@ export default function Appointments({ setActivePage }) {
             {displayAppts.length === 0 ? (
               <div class="bg-white border border-border-subtle rounded-2xl p-10 text-center shadow-sm">
                  <span class="material-symbols-outlined text-4xl text-outline-variant mb-3">event_available</span>
-                 <p class="text-secondary font-medium">لا توجد مواعيد مجدولة لليوم</p>
+                 <p class="text-secondary font-medium">{isArabic ? 'لا توجد مواعيد مجدولة لهذا اليوم' : 'No appointments scheduled for this day'}</p>
               </div>
             ) : (
               displayAppts.map((appt, idx) => {
@@ -531,7 +536,8 @@ export default function Appointments({ setActivePage }) {
                              </span>
                              <span class="text-outline-variant font-bold text-[10px] hidden sm:inline">•</span>
                              <span class="text-secondary text-xs font-semibold flex items-center gap-1 hidden sm:flex">
-                               <span class="material-symbols-outlined text-[14px]">videocam</span> Telehealth
+                               <span class="material-symbols-outlined text-[14px]">videocam</span>
+                               {isArabic ? 'مكالمة تليفزيونية' : 'Telehealth'}
                              </span>
                           </div>
                         </div>
@@ -561,7 +567,7 @@ export default function Appointments({ setActivePage }) {
         <div class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
           <div class="bg-white rounded-xl border border-border-subtle shadow-lg max-w-md w-full overflow-visible">
             <div class="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas">
-              <h3 class="font-headline-md text-base text-primary font-bold">Schedule Appointment</h3>
+              <h3 class="font-headline-md text-base text-primary font-bold">{isArabic ? 'تحديد موعد' : 'Schedule Appointment'}</h3>
               <button 
                 onClick={() => setShowAddModal(false)}
                 class="p-1 hover:bg-surface-container rounded-full text-secondary"
@@ -579,7 +585,7 @@ export default function Appointments({ setActivePage }) {
 
               {/* Patient Autocomplete Input */}
               <div class="relative">
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Select Patient *</label>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'اختر المريض *' : 'Select Patient *'}</label>
                 
                 {!isCreatingNewPatient ? (
                   <>
@@ -589,7 +595,7 @@ export default function Appointments({ setActivePage }) {
                         value={patientQuery}
                         onChange={(e) => handleQueryChange(e.target.value)}
                         onFocus={() => setShowDropdown(true)}
-                        placeholder="Type name or phone number..."
+                        placeholder={isArabic ? 'اكتب الاسم أو رقم الهاتف...' : 'Type name or phone number...'}
                         class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
                       />
                       {patientQuery && (
@@ -627,7 +633,7 @@ export default function Appointments({ setActivePage }) {
                           class="w-full px-4 py-2.5 text-left text-xs text-primary font-bold hover:bg-primary-light transition-colors flex items-center gap-1.5"
                         >
                           <span class="material-symbols-outlined text-[16px]">person_add</span>
-                          Add "{patientQuery}" as a New Patient & Book
+                          {isArabic ? `إضافة "و${patientQuery}" كمريض جديد وحجز موعد` : `Add "${patientQuery}" as a New Patient & Book`}
                         </button>
                       </div>
                     )}
@@ -637,7 +643,7 @@ export default function Appointments({ setActivePage }) {
                     <div class="flex justify-between items-center pb-2 border-b border-primary/10">
                       <span class="text-xs font-bold text-primary flex items-center gap-1">
                         <span class="material-symbols-outlined text-[16px]">person_add</span>
-                        New Patient Details
+                        {isArabic ? 'بيانات المريض الجديد' : 'New Patient Details'}
                       </span>
                       <button 
                         type="button"
@@ -647,13 +653,13 @@ export default function Appointments({ setActivePage }) {
                         }}
                         class="text-[10px] text-secondary hover:underline"
                       >
-                        Cancel new patient
+                        {isArabic ? 'إلغاء إضافة مريض' : 'Cancel new patient'}
                       </button>
                     </div>
                     
                     <div class="grid grid-cols-1 gap-2">
                       <div>
-                        <label class="block text-[10px] font-bold text-secondary mb-1">Patient Full Name *</label>
+                        <label class="block text-[10px] font-bold text-secondary mb-1">{isArabic ? 'اسم المريض كاملاً *' : 'Patient Full Name *'}</label>
                         <input
                           type="text"
                           required
@@ -664,7 +670,7 @@ export default function Appointments({ setActivePage }) {
                         />
                       </div>
                       <div>
-                        <label class="block text-[10px] font-bold text-secondary mb-1">Patient Phone Number *</label>
+                        <label class="block text-[10px] font-bold text-secondary mb-1">{isArabic ? 'رقم هاتف المريض *' : 'Patient Phone Number *'}</label>
                         <input
                           type="text"
                           required
@@ -681,7 +687,7 @@ export default function Appointments({ setActivePage }) {
 
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">Date *</label>
+                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'التاريخ *' : 'Date *'}</label>
                   <input
                     type="date"
                     required
@@ -691,7 +697,7 @@ export default function Appointments({ setActivePage }) {
                   />
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">Time *</label>
+                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'الوقت *' : 'Time *'}</label>
                   <input
                     type="time"
                     required
@@ -703,7 +709,7 @@ export default function Appointments({ setActivePage }) {
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Duration (minutes)</label>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'المدة (دقيقة)' : 'Duration (minutes)'}</label>
                 <input
                   type="number"
                   value={duration}
@@ -714,11 +720,11 @@ export default function Appointments({ setActivePage }) {
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Reason / Description</label>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'السبب / الوصف' : 'Reason / Description'}</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Follow-up consultation..."
+                  placeholder={isArabic ? 'متابعة...' : 'Follow-up consultation...'}
                   rows={3}
                   class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
                 />
@@ -730,13 +736,13 @@ export default function Appointments({ setActivePage }) {
                   onClick={() => setShowAddModal(false)}
                   class="flex-1 bg-white border border-border-subtle text-secondary font-button py-2 rounded-lg text-sm hover:bg-surface-container-low transition-colors"
                 >
-                  Cancel
+                  {isArabic ? 'إلغاء' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   class="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-button py-2 rounded-lg text-sm transition-colors shadow-sm"
                 >
-                  Book Appointment
+                  {isArabic ? 'حجز الموعد' : 'Book Appointment'}
                 </button>
               </div>
             </form>
@@ -750,7 +756,7 @@ export default function Appointments({ setActivePage }) {
             <div class="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas">
               <h3 class="text-base text-primary font-bold flex items-center gap-2">
                 <span class="material-symbols-outlined text-[20px]">edit_calendar</span>
-                Edit Appointment
+                {isArabic ? 'تعديل الموعد' : 'Edit Appointment'}
               </h3>
               <button onClick={() => setEditAppt(null)} class="p-1 hover:bg-surface-container rounded-full text-secondary">
                 <span class="material-symbols-outlined text-[20px]">close</span>
@@ -765,7 +771,7 @@ export default function Appointments({ setActivePage }) {
               )}
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">Date *</label>
+                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'التاريخ *' : 'Date *'}</label>
                   <input
                     type="date"
                     required
@@ -775,7 +781,7 @@ export default function Appointments({ setActivePage }) {
                   />
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">Time *</label>
+                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'الوقت *' : 'Time *'}</label>
                   <input
                     type="time"
                     required
@@ -786,7 +792,7 @@ export default function Appointments({ setActivePage }) {
                 </div>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Duration (minutes)</label>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'المدة (دقيقة)' : 'Duration (minutes)'}</label>
                 <input
                   type="number"
                   value={editDuration}
@@ -795,7 +801,7 @@ export default function Appointments({ setActivePage }) {
                 />
               </div>
               <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Reason / Description</label>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'السبب / الوصف' : 'Reason / Description'}</label>
                 <textarea
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
@@ -809,13 +815,13 @@ export default function Appointments({ setActivePage }) {
                   onClick={() => setEditAppt(null)}
                   class="flex-1 bg-white border border-border-subtle text-secondary py-2 rounded-lg text-sm hover:bg-surface-container-low transition-colors"
                 >
-                  Cancel
+                  {isArabic ? 'إلغاء' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   class="flex-1 bg-primary hover:bg-primary-hover text-on-primary py-2 rounded-lg text-sm font-bold transition-colors shadow-sm"
                 >
-                  Save Changes
+                  {isArabic ? 'حفظ التعديلات' : 'Save Changes'}
                 </button>
               </div>
             </form>

@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { getMergedPlans } from '../data/plans';
 
 const AppContext = createContext();
 
@@ -11,7 +12,9 @@ export const AppProvider = ({ children }) => {
   const [appointments, setAppointments] = useState([]);
   const [visits, setVisits] = useState([]);
 
-  // Load user from session storage on mount
+  const [bundles, setBundles] = useState([]);
+
+  // Load user and bundles on mount
   useEffect(() => {
     const userJson = sessionStorage.getItem("currentUser");
     if (userJson) {
@@ -21,7 +24,24 @@ export const AppProvider = ({ children }) => {
         console.error("Failed to parse user from session storage", e);
       }
     }
+
+    const loadBundles = async () => {
+      try {
+        const res = await fetch('/api/v1/subscriptions/bundles');
+        if (res.ok) {
+          const data = await res.json();
+          setBundles(data || []);
+        }
+      } catch (e) {
+        console.error("Failed to fetch subscription bundles", e);
+      }
+    };
+    loadBundles();
   }, []);
+
+  const mergedPlans = getMergedPlans(bundles);
+  const doctorPlans = mergedPlans;
+  const orgPlans = mergedPlans.filter(p => ['business', 'enterprise'].includes(p.id));
 
   // Generic API fetch helper
   const apiFetch = async (url, options = {}) => {
@@ -442,7 +462,11 @@ export const AppProvider = ({ children }) => {
       updateOrg,
       deleteDoctor,
       deleteOrg,
-      activateSubscription
+      activateSubscription,
+      bundles,
+      mergedPlans,
+      doctorPlans,
+      orgPlans
     }}>
       {children}
     </AppContext.Provider>

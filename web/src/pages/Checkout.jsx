@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-import { PLANS } from '../data/plans';
 import SbrLogo from '../components/SbrLogo';
 import { useApp } from '../context/AppContext';
 
 export default function Checkout() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { currentUser, activateSubscription } = useApp();
+  const { currentUser, activateSubscription, mergedPlans } = useApp();
   const { lang, setLang, t, isArabic } = useLanguage();
   let planId = searchParams.get('plan') || 'starter';
   if (currentUser && currentUser.role === 'doctor' && planId === 'free') {
@@ -25,7 +24,7 @@ export default function Checkout() {
   const [processStep, setProcessStep] = useState(0); // 0: input, 1: connecting, 2: securing, 3: success
 
   // Find the selected plan from plans.js
-  const selectedPlan = PLANS.find(p => p.id === planId) || PLANS[1]; // Fallback to starter
+  const selectedPlan = mergedPlans.find(p => p.id === planId) || mergedPlans[1]; // Fallback to starter
 
   // Format Card Number (adds spaces every 4 digits)
   const handleCardNumberChange = (e) => {
@@ -411,8 +410,8 @@ export default function Checkout() {
               <div className="space-y-2">
                 {(() => {
                   const plansToShow = currentUser && currentUser.role === 'doctor'
-                    ? PLANS.filter(p => p.id !== 'free')
-                    : PLANS;
+                    ? mergedPlans.filter(p => p.id !== 'free')
+                    : mergedPlans;
                   return plansToShow.map((plan) => {
                     const isSelected = plan.id === planId;
                     return (

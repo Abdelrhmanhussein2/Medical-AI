@@ -1,14 +1,39 @@
+import json
 from uuid import UUID
 from datetime import datetime, timedelta
 from typing import List, Optional
 from app.core.database import db
+from app.core.redis import redis_client
 
 class SubscriptionService:
     @staticmethod
+    async def clear_bundles_cache() -> None:
+        """
+        Invalidates the Redis cache for subscription bundles.
+        """
+        try:
+            if redis_client.redis:
+                await redis_client.redis.delete("subscription:bundles:all")
+                await redis_client.redis.delete("subscription:bundles:doctor")
+                await redis_client.redis.delete("subscription:bundles:department")
+                print("SUCCESS: Redis cache for subscription bundles cleared.")
+        except Exception as e:
+            print(f"ERROR: Failed to clear Redis cache: {e}")
+
+    @staticmethod
     async def get_bundles(target_type: Optional[str] = None) -> List[dict]:
         """
-        Get all active subscription bundles. Optionally filter by target_type.
+        Get all active subscription bundles. Optionally filter by target_type. Cached in Redis.
         """
+        cache_key = f"subscription:bundles:{target_type or 'all'}"
+        try:
+            if redis_client.redis:
+                cached = await redis_client.redis.get(cache_key)
+                if cached:
+                    return json.loads(cached)
+        except Exception as e:
+            print(f"WARNING: Redis read failed: {e}")
+
         async with db.pool.acquire() as connection:
             if target_type:
                 rows = await connection.fetch(
@@ -19,7 +44,23 @@ class SubscriptionService:
                 rows = await connection.fetch(
                     "SELECT * FROM subscription_bundles WHERE is_active = true ORDER BY price ASC"
                 )
-            return [dict(row) for row in rows]
+            
+            bundles = []
+            for row in rows:
+                d = dict(row)
+                d["id"] = str(d["id"])
+                d["created_at"] = d["created_at"].isoformat()
+                d["updated_at"] = d["updated_at"].isoformat()
+                d["price"] = float(d["price"])
+                bundles.append(d)
+
+            try:
+                if redis_client.redis:
+                    await redis_client.redis.set(cache_key, json.dumps(bundles), ex=3600)
+            except Exception as e:
+                print(f"WARNING: Redis write failed: {e}")
+
+            return bundles
 
     @staticmethod
     async def get_active_subscription(owner_id: UUID, is_department: bool) -> Optional[dict]:
@@ -294,6 +335,7 @@ class SubscriptionService:
                     "UPDATE subscription_bundles SET allowed_minutes = $1, updated_at = now() WHERE id = $2",
                     allowed_minutes, target_bundle_id
                 )
+                await SubscriptionService.clear_bundles_cache()
 
             # Update daily message limit for assigned doctors if provided
             if daily_message_limit is not None and daily_message_limit > 0:

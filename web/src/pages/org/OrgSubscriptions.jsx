@@ -3,8 +3,8 @@ import { useApp } from '../../context/AppContext';
 import { useLanguage } from '../../context/LanguageContext';
 
 const PLANS = [
-  { id: 'business', label: 'SBR AI Business', labelAr: 'SBR AI Business', price: 449, minutes: 3500 },
-  { id: 'enterprise', label: 'SBR AI Enterprise', labelAr: 'SBR AI Enterprise', price: 599, minutes: 5000 },
+  { id: 'business', label: 'SBR AI Business', labelAr: 'SBR AI Business', price: 549, minutes: 5140 },
+  { id: 'enterprise', label: 'SBR AI Enterprise', labelAr: 'SBR AI Enterprise', price: 799, minutes: 9000 },
 ];
 
 export default function OrgSubscriptions() {

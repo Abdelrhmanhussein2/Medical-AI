@@ -22,7 +22,9 @@ export default function Visits() {
     try {
       const updated = await generateGeneralSummary(selectedPatientId);
       setGeneralSummary(updated.general_summary || '');
-      setSuccessMsg('تم توليد وتحديث الملخص الطبي العام بالذكاء الاصطناعي بنجاح بناءً على سجل الزيارات!');
+      setSuccessMsg(isArabic
+        ? 'تم توليد وتحديث الملخص الطبي العام بالذكاء الاصطناعي بنجاح بناءً على سجل الزيارات!'
+        : 'AI general summary generated and updated successfully based on visit history!');
     } catch (err) {
       console.error(err);
       setErrorMsg(err.message || 'فشل توليد الملخص العام بالذكاء الاصطناعي.');
@@ -103,10 +105,10 @@ export default function Visits() {
       await updatePatient(selectedPatientId, {
         general_summary: generalSummary
       });
-      setSuccessMsg('تم حفظ وتحديث الملخص العام للمريض بنجاح.');
+      setSuccessMsg(isArabic ? 'تم حفظ وتحديث الملخص العام للمريض بنجاح.' : 'Patient general summary saved successfully.');
     } catch (err) {
       console.error("Failed to update general summary:", err);
-      setErrorMsg(err.message || 'حدث خطأ أثناء حفظ الملخص العام.');
+      setErrorMsg(err.message || (isArabic ? 'حدث خطأ أثناء حفظ الملخص العام.' : 'Error saving the general summary.'));
     } finally {
       setIsSavingSummary(false);
     }
@@ -227,7 +229,7 @@ export default function Visits() {
           <div class="bg-white rounded-xl border border-border-subtle p-6 shadow-sm min-h-[500px] flex flex-col">
             <h3 class="font-headline-md text-base text-primary font-bold mb-4 pb-2 border-b border-border-subtle flex items-center gap-2">
               <span class="material-symbols-outlined text-primary text-[20px]">history</span>
-              سجل جلسات الكشف والزيارات ({patientHistory.length})
+              {isArabic ? `سجل جلسات الكشف والزيارات (${patientHistory.length})` : `Clinical Session Records (${patientHistory.length})`}
             </h3>
 
             {!selectedPatientId ? (
@@ -235,30 +237,31 @@ export default function Visits() {
                 <span class="material-symbols-outlined text-[48px] mb-2 text-outline-variant">
                   history
                 </span>
-                <p>اختر مريضاً لعرض تاريخ زياراته الطبية وجلساته السابقة.</p>
+                <p>{isArabic ? 'اختر مريضاً لعرض تاريخ زياراته الطبية وجلساته السابقة.' : 'Select a patient to view their medical visit history.'}</p>
               </div>
             ) : loadingHistory ? (
               <div class="flex-1 flex flex-col items-center justify-center text-secondary text-sm">
                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
-                <p>جاري تحميل سجل الجلسات والزيارات...</p>
+                <p>{isArabic ? 'جاري تحميل سجل الجلسات والزيارات...' : 'Loading session history...'}</p>
               </div>
             ) : patientHistory.length === 0 ? (
               <div class="flex-1 flex flex-col items-center justify-center text-secondary text-sm border-2 border-dashed border-border-subtle/50 rounded-xl p-8 bg-surface-container-low/20">
                 <span class="material-symbols-outlined text-[48px] mb-2 text-outline-variant">
                   assignment_late
                 </span>
-                <p class="text-center">لا توجد زيارات مسجلة للمريض مسبقاً.</p>
+                <p class="text-center">{isArabic ? 'لا توجد زيارات مسجلة للمريض مسبقاً.' : 'No recorded visits for this patient yet.'}</p>
               </div>
             ) : (
               <div class="space-y-4 overflow-y-auto max-h-[550px] pr-1">
                 {patientHistory.map((visit) => {
                   const isExpanded = expandedVisitId === visit.id;
-                  const visitDate = new Date(visit.created_at).toLocaleDateString('ar-EG', {
+                  const locale = isArabic ? 'ar-EG' : 'en-US';
+                  const visitDate = new Date(visit.created_at).toLocaleDateString(locale, {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric'
                   });
-                  const visitTime = new Date(visit.created_at).toLocaleTimeString('ar-EG', {
+                  const visitTime = new Date(visit.created_at).toLocaleTimeString(locale, {
                     hour: 'numeric',
                     minute: '2-digit'
                   });
@@ -281,12 +284,14 @@ export default function Visits() {
                             {isExpanded ? 'expand_less' : 'expand_more'}
                           </span>
                           <span class="text-xs font-bold text-on-surface">
-                            زيارة يوم {visitDate} ({visitTime})
+                            {isArabic ? `زيارة يوم ${visitDate} (${visitTime})` : `Visit on ${visitDate} at ${visitTime}`}
                           </span>
                         </div>
                         <div class="flex items-center gap-2">
                           <span class="text-[9px] font-black text-secondary bg-surface-container-high px-2 py-0.5 rounded font-mono">
-                            المدة: {Math.floor((visit.duration_seconds || 0) / 60)}د و {(visit.duration_seconds || 0) % 60}ث
+                            {isArabic
+                              ? `المدة: ${Math.floor((visit.duration_seconds || 0) / 60)}د و ${(visit.duration_seconds || 0) % 60}ث`
+                              : `Duration: ${Math.floor((visit.duration_seconds || 0) / 60)}m ${(visit.duration_seconds || 0) % 60}s`}
                           </span>
                         </div>
                       </button>
@@ -297,7 +302,7 @@ export default function Visits() {
                           {/* Summary */}
                           {visit.summary_text && (
                             <div class="space-y-1">
-                              <span class="text-[10px] font-black text-secondary block">التلخيص الطبي للجلسة (خاص بالطبيب):</span>
+                              <span class="text-[10px] font-black text-secondary block">{isArabic ? 'التلخيص الطبي للجلسة (خاص بالطبيب):' : 'Session Medical Summary (Doctor Only):'}</span>
                               <p class="text-xs text-on-surface-variant leading-relaxed">{visit.summary_text}</p>
                             </div>
                           )}
@@ -305,7 +310,7 @@ export default function Visits() {
                           {/* Patient General Summary of the session */}
                           {visit.patient_summary && (
                             <div class="space-y-1">
-                              <span class="text-[10px] font-black text-primary block">الملخص العام للزيارة (الموجه للمريض):</span>
+                              <span class="text-[10px] font-black text-primary block">{isArabic ? 'الملخص العام للزيارة (الموجه للمريض):' : 'Visit Summary (Patient Friendly):'}</span>
                               <p class="text-xs text-on-surface-variant leading-relaxed bg-primary-light/10 p-3 rounded-lg border border-primary/10">{visit.patient_summary}</p>
                             </div>
                           )}
@@ -313,11 +318,16 @@ export default function Visits() {
                           {/* SOAP Note */}
                           {visit.soap_note && (
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                              {[['S', 'Subjective (الشكوى)'], ['O', 'Objective (الفحص)'], ['A', 'Assessment (التشخيص)'], ['P', 'Plan (الخطة)']].map(([key, label]) => (
+                              {[
+                                ['S', isArabic ? 'الشكوى (S)' : 'Subjective (S)'],
+                                ['O', isArabic ? 'الفحص (O)' : 'Objective (O)'],
+                                ['A', isArabic ? 'التشخيص (A)' : 'Assessment (A)'],
+                                ['P', isArabic ? 'الخطة (P)' : 'Plan (P)']
+                              ].map(([key, label]) => (
                                 <div key={key} class="bg-surface-container-low p-3 rounded-lg border border-border-subtle/50 space-y-1">
                                   <span class="text-[9px] font-black text-primary block">{label}</span>
                                   <p class="text-[11px] text-on-surface-variant leading-relaxed min-h-[18px]">
-                                    {visit.soap_note[key] || 'لا يوجد'}
+                                    {visit.soap_note[key] || (isArabic ? 'لا يوجد' : 'N/A')}
                                   </p>
                                 </div>
                               ))}
@@ -327,7 +337,7 @@ export default function Visits() {
                           {/* Prescriptions */}
                           {visit.prescriptions && visit.prescriptions.length > 0 && (
                             <div class="space-y-2 pt-2 border-t border-border-subtle/40">
-                              <span class="text-[10px] font-black text-secondary block">الروشتة العلاجية:</span>
+                              <span class="text-[10px] font-black text-secondary block">{isArabic ? 'الروشتة العلاجية:' : 'Prescriptions:'}</span>
                               <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {visit.prescriptions.map((rx, idx) => (
                                   <div key={idx} class="bg-surface-container-low px-3 py-2 rounded-lg border border-border-subtle/50 text-[11px]">
@@ -344,7 +354,7 @@ export default function Visits() {
                           {/* Tasks */}
                           {visit.tasks && visit.tasks.length > 0 && (
                             <div class="space-y-1 pt-2 border-t border-border-subtle/40">
-                              <span class="text-[10px] font-black text-secondary block">مهام المتابعة المطلوبة:</span>
+                              <span class="text-[10px] font-black text-secondary block">{isArabic ? 'مهام المتابعة المطلوبة:' : 'Follow-up Tasks:'}</span>
                               <ul class="list-disc list-inside text-[11px] text-on-surface-variant space-y-1 pr-2">
                                 {visit.tasks.map((task, idx) => (
                                   <li key={idx}>{task}</li>

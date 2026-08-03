@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import SbrLogo from '../components/SbrLogo';
 import { useLanguage } from '../context/LanguageContext';
-import { DOCTOR_PLANS, ORG_PLANS } from '../data/plans';
+import { useApp } from '../context/AppContext';
 
 // ── FAQ Data ──────────────────────────────────────────────────────────────────
 const FAQ_ITEMS = [
@@ -57,6 +57,7 @@ const FAQ_ITEMS = [
 
 export default function Landing({ setActivePage }) {
   const { t, lang, setLang, isArabic } = useLanguage();
+  const { doctorPlans, orgPlans } = useApp();
   const [pricingTab, setPricingTab] = useState('doctor');
   const [openFaq, setOpenFaq] = useState(null);
   return (
@@ -86,25 +87,26 @@ export default function Landing({ setActivePage }) {
               </a>
             </div>
           </div>
-          <div className="flex items-center gap-stack-md font-button text-button">
+          <div className="flex items-center gap-1.5 md:gap-stack-md font-button text-button">
             <button
               onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-border-subtle bg-white text-secondary hover:text-primary rounded-lg text-xs font-bold shadow-sm transition-all duration-300 active:scale-95 cursor-pointer"
+              className="flex items-center gap-1 px-2 py-1 md:px-3 md:py-1.5 border border-border-subtle bg-white text-secondary hover:text-primary rounded-lg text-xs font-bold shadow-sm transition-all duration-300 active:scale-95 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">language</span>
-              <span>{lang === 'ar' ? 'English' : 'العربية'}</span>
+              <span className="hidden sm:inline">{lang === 'ar' ? 'English' : 'العربية'}</span>
+              <span className="sm:hidden">{lang === 'ar' ? 'EN' : 'AR'}</span>
             </button>
             <button 
               onClick={() => setActivePage('login')}
-              className="text-primary hover:text-primary-hover transition-colors px-stack-md py-stack-sm rounded-lg hover:bg-primary-light font-semibold cursor-pointer"
+              className="text-primary hover:text-primary-hover transition-colors px-2 py-1 md:px-stack-md md:py-stack-sm rounded-lg hover:bg-primary-light text-xs md:text-sm font-semibold cursor-pointer"
             >
-              {isArabic ? 'تسجيل الدخول' : 'Log In'}
+              {isArabic ? 'دخول' : 'Login'}
             </button>
             <button 
               onClick={() => setActivePage('register')}
-              className="bg-primary hover:bg-primary-hover text-on-primary px-stack-md py-stack-sm rounded-lg transition-all duration-300 shadow-sm active:scale-95 font-semibold cursor-pointer"
+              className="bg-primary hover:bg-primary-hover text-on-primary px-2.5 py-1.5 md:px-stack-md md:py-stack-sm rounded-lg transition-all duration-300 shadow-sm active:scale-95 text-xs md:text-sm font-semibold cursor-pointer"
             >
-              {isArabic ? 'ابدأ الآن' : 'Get Started'}
+              {isArabic ? 'سجل' : 'Register'}
             </button>
           </div>
         </div>
@@ -112,7 +114,7 @@ export default function Landing({ setActivePage }) {
 
       <main className="flex-grow pt-16">
         {/* Hero Section */}
-        <section className="relative overflow-hidden bg-gradient-to-b from-white to-bg-canvas pt-stack-lg pb-24 lg:pt-24 lg:pb-32 px-margin-desktop">
+        <section className="relative overflow-hidden bg-gradient-to-b from-white to-bg-canvas pt-6 pb-12 lg:pt-24 lg:pb-32 px-4 md:px-margin-desktop">
           <div className="max-w-container-max mx-auto grid grid-cols-1 lg:grid-cols-2 gap-gutter items-center">
             <div className="flex flex-col gap-stack-lg z-10">
               <div className="inline-flex items-center gap-stack-sm bg-primary-light text-primary px-stack-md py-stack-sm rounded-full font-label-caps text-xs self-start border border-border-subtle">
@@ -122,13 +124,13 @@ export default function Landing({ setActivePage }) {
                 </span>
                 {isArabic ? 'نقدم لكم مساعد SBR AI 2.0' : 'Introducing SBR AI Assistant 2.0'}
               </div>
-              <h1 className="font-display-lg text-display-lg text-on-surface font-bold max-w-2xl leading-tight">
-                {isArabic ? 'الذكاء الاصطناعي يصبح مساعد الطبيب 🩺' : "AI becomes the doctor's assistant"}
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:font-display-lg lg:text-display-lg text-on-surface font-bold max-w-2xl leading-tight">
+                {isArabic ? 'الذكاء الاصطناعي يصبح مساعد الطبيب 🩺' : "AI becomes the doctor's assistant 🩺"}
               </h1>
-              <p className="font-body-lg text-body-lg text-on-surface-variant max-w-xl leading-relaxed">
+              <p className="text-sm md:font-body-lg md:text-body-lg text-on-surface-variant max-w-xl leading-relaxed">
                 {isArabic 
-                  ? 'سهّل سير عملك السريري باستخدام الذكاء الاصطناعي عالي الثقة. من الإملاء الصوتي المحيطي إلى تحليلات المرضى التنبؤية، استعد الوقت الذي تحتاجه للتركيز على الأهم - مرضاك.'
-                  : 'Streamline your clinical workflow with our high-trust AI. From ambient voice dictation to predictive patient analytics, regain the time you need to focus on what matters most—your patients.'}
+                  ? 'سهّل سير عملك السريري باستخدام الذكاء الاصطناعي. من الإملاء الصوتي إلى تحليلات المرضى، استعد الوقت للتركيز على مرضاك.'
+                  : 'Streamline your clinical workflow with high-trust AI. From ambient voice dictation to predictive analytics, regain time to focus on what matters most—your patients.'}
               </p>
               <div className="flex flex-col sm:flex-row gap-stack-md pt-stack-sm">
                 <button 
@@ -159,7 +161,7 @@ export default function Landing({ setActivePage }) {
               </div>
             </div>
 
-            <div class="relative mt-12 lg:mt-0 z-0 flex justify-center">
+            <div class="relative mt-8 lg:mt-0 z-0 hidden lg:flex justify-center">
               {/* Abstract Medical Tech Illustration */}
               <div class="relative w-full max-w-lg aspect-square">
                 <div class="absolute inset-0 bg-primary-light rounded-full blur-3xl opacity-50 mix-blend-multiply"></div>
@@ -372,50 +374,50 @@ export default function Landing({ setActivePage }) {
 
             {/* Plans Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-              {(pricingTab === 'doctor' ? DOCTOR_PLANS : ORG_PLANS).map((plan) => {
+              {(pricingTab === 'doctor' ? doctorPlans : orgPlans).map((plan) => {
                 const name     = isArabic ? plan.nameAr     : plan.nameEn;
                 const features = isArabic ? plan.featuresAr : plan.featuresEn;
                 const badge    = isArabic ? plan.badgeAr    : plan.badgeEn;
                 return (
                   <div
                     key={plan.id}
-                    className={`rounded-2xl p-7 border flex flex-col relative transition-all duration-300 hover:shadow-lg ${
+                    className={`rounded-2xl p-5 md:p-7 border flex flex-col relative transition-all duration-300 hover:shadow-lg ${
                       plan.highlight
                         ? 'bg-white border-2 border-primary ring-4 ring-primary-light/50 shadow-md -translate-y-1'
                         : 'bg-bg-canvas border-border-subtle shadow-sm'
                     }`}
                   >
                     {badge && (
-                      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-primary text-on-primary font-label-caps text-[9px] px-4 py-1 rounded-full uppercase tracking-wider font-bold shadow whitespace-nowrap">
+                      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-primary text-on-primary font-label-caps text-[9px] px-3.5 py-0.5 rounded-full uppercase tracking-wider font-bold shadow whitespace-nowrap">
                         {badge}
                       </div>
                     )}
 
-                    <h3 className="font-headline-md text-lg text-on-surface font-bold mb-1">{name}</h3>
+                    <h3 className="font-headline-md text-base md:text-lg text-on-surface font-bold mb-1">{name}</h3>
 
-                    <div className="mb-5 flex items-baseline gap-1">
-                      <span className="text-4xl font-black text-primary">$</span>
-                      <span className="text-4xl font-black text-primary">{plan.priceEn}</span>
+                    <div className="mb-4 flex items-baseline gap-1">
+                      <span className="text-2xl md:text-4xl font-black text-primary">$</span>
+                      <span className="text-2xl md:text-4xl font-black text-primary">{plan.priceEn}</span>
                       <span className="text-on-surface-variant text-xs ml-1">USD / {isArabic ? 'شهر' : 'mo'}</span>
                     </div>
 
-                    <div className="flex gap-2 mb-5 flex-wrap">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-primary-light text-primary px-2.5 py-1 rounded-lg">
+                    <div className="flex gap-2 mb-4 flex-wrap">
+                      <span className="inline-flex items-center gap-1 text-[10px] md:text-[11px] font-bold bg-primary-light text-primary px-2.5 py-1 rounded-lg">
                         <span className="material-symbols-outlined text-[13px]">mic</span>
                         {plan.minutes.toLocaleString()} {isArabic ? 'د' : 'min'}
                       </span>
                       {plan.doctorsIncluded && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-surface-container text-secondary px-2.5 py-1 rounded-lg">
+                        <span className="inline-flex items-center gap-1 text-[10px] md:text-[11px] font-bold bg-surface-container text-secondary px-2.5 py-1 rounded-lg">
                           <span className="material-symbols-outlined text-[13px]">group</span>
                           {plan.doctorsIncluded} {isArabic ? 'أطباء' : 'doctors'}
                         </span>
                       )}
                     </div>
 
-                    <ul className="space-y-2.5 mb-7 text-[12px] text-on-surface-variant flex-grow text-start">
+                    <ul className="space-y-1.5 md:space-y-2.5 mb-5 md:mb-7 text-[11px] md:text-[12px] text-on-surface-variant flex-grow text-start">
                       {features.map((f, i) => (
                         <li key={i} className="flex items-start gap-2">
-                          <span className="material-symbols-outlined text-primary text-[15px] shrink-0 mt-0.5">check_circle</span>
+                          <span className="material-symbols-outlined text-primary text-[14px] md:text-[15px] shrink-0 mt-0.5">check_circle</span>
                           <span>{f}</span>
                         </li>
                       ))}
@@ -426,7 +428,7 @@ export default function Landing({ setActivePage }) {
                         sessionStorage.setItem('selectedPlan', plan.id);
                         setActivePage(`/checkout?plan=${plan.id}`);
                       }}
-                      className={`w-full font-button py-3 rounded-xl transition-all duration-200 font-bold text-sm cursor-pointer active:scale-95 ${
+                      className={`w-full font-button py-2.5 md:py-3 rounded-xl transition-all duration-200 font-bold text-sm cursor-pointer active:scale-95 ${
                         plan.highlight
                           ? 'bg-primary hover:bg-primary-hover text-on-primary shadow-sm'
                           : 'bg-white hover:bg-surface-container text-primary border-2 border-primary/20 hover:border-primary'

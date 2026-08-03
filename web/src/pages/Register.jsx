@@ -147,7 +147,7 @@ export default function Register({ setActivePage }) {
         </div>
 
         {/* Form Panel */}
-        <div className="w-full lg:w-1/2 flex flex-col justify-center py-12 px-6 sm:px-12 lg:px-24 bg-white overflow-y-auto relative">
+        <div className="w-full lg:w-1/2 flex flex-col justify-center py-6 md:py-12 px-6 sm:px-12 lg:px-24 bg-white overflow-y-auto relative">
           {/* Floating Language Switcher */}
           <div className={`absolute top-6 ${isArabic ? 'left-6' : 'right-6'} z-10`}>
             <button
@@ -164,12 +164,12 @@ export default function Register({ setActivePage }) {
               <div className="mb-4 lg:hidden">
                 <SbrLogo size={44} color="#24564C" showText={true} textClass="text-primary" />
               </div>
-              <h2 className="font-display-lg text-headline-lg text-primary font-bold">
+              <h2 className="font-display-lg text-2xl md:text-3xl text-primary font-bold">
                 {role === 'doctor'
                   ? (isArabic ? 'تسجيل طبيب' : 'Register Doctor')
                   : (isArabic ? 'تسجيل منظمة' : 'Register Organization')}
               </h2>
-            <p className="mt-2 text-sm text-secondary text-center">
+            <p className="mt-1 text-sm md:text-base text-secondary text-center">
               {role === 'doctor'
                 ? (isArabic ? 'انضم للفريق الطبي لـ SBR AI' : 'Join SBR AI Clinical Team')
                 : (isArabic ? 'إنشاء مساحة عمل إدارية للعيادة' : 'Create administrative clinic workspace')}
@@ -187,7 +187,7 @@ export default function Register({ setActivePage }) {
                   key={key}
                   onClick={() => { setRole(key); setName(''); setEmail(''); setPhone(''); setError(''); }}
                   type="button"
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${
+                  className={`flex-1 py-2 text-xs font-bold rounded-md transition-colors ${
                     role === key ? 'bg-white text-primary shadow-sm' : 'text-secondary hover:text-primary'
                   }`}
                 >
@@ -225,7 +225,7 @@ export default function Register({ setActivePage }) {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className={`block text-xs font-semibold text-on-surface-variant mb-1 ${isArabic ? 'text-right' : 'text-left'}`}>
+                <label className={`block text-sm font-semibold text-on-surface-variant mb-1.5 ${isArabic ? 'text-right' : 'text-left'}`}>
                   {role === 'doctor'
                     ? (isArabic ? 'الاسم الكامل' : 'Full Name')
                     : (isArabic ? 'اسم المنظمة' : 'Organization Name')}
@@ -233,41 +233,41 @@ export default function Register({ setActivePage }) {
                 <input
                   type="text" required value={name} onChange={(e) => setName(e.target.value)}
                   placeholder={role === 'doctor' ? (isArabic ? 'د. أحمد حسن' : 'Dr. Ahmed Hassan') : 'Cairo Medical Group'}
-                  className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                  className={`w-full px-4 py-2.5 bg-white border border-border-subtle rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
                 />
               </div>
 
               <div>
-                <label className={`block text-xs font-semibold text-on-surface-variant mb-1 ${isArabic ? 'text-right' : 'text-left'}`}>
+                <label className={`block text-sm font-semibold text-on-surface-variant mb-1.5 ${isArabic ? 'text-right' : 'text-left'}`}>
                   {isArabic ? 'البريد الإلكتروني' : (role === 'doctor' ? 'Email Address' : 'Organization Email')}
                 </label>
                 <input
                   type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
                   placeholder={role === 'doctor' ? 'doctor@example.com' : 'org@cairomed.com'}
-                  className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                  className={`w-full px-4 py-2.5 bg-white border border-border-subtle rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary text-on-surface`}
                 />
               </div>
 
               <div>
-                <label className={`block text-xs font-semibold text-on-surface-variant mb-1 ${isArabic ? 'text-right' : 'text-left'}`}>
+                <label className={`block text-sm font-semibold text-on-surface-variant mb-1.5 ${isArabic ? 'text-right' : 'text-left'}`}>
                   {isArabic ? 'رقم الهاتف' : 'Phone Number'}
                 </label>
                 <input
                   type="text" required value={phone} onChange={(e) => setPhone(e.target.value)}
                   placeholder="01012345678"
-                  className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                  className={`w-full px-4 py-2.5 bg-white border border-border-subtle rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary text-on-surface`}
                 />
               </div>
 
               <div>
-                <label className={`block text-xs font-semibold text-on-surface-variant mb-1 ${isArabic ? 'text-right' : 'text-left'}`}>
+                <label className={`block text-sm font-semibold text-on-surface-variant mb-1.5 ${isArabic ? 'text-right' : 'text-left'}`}>
                   {role === 'doctor'
                     ? (isArabic ? 'التخصص الطبي' : 'Specialization')
                     : (isArabic ? 'التخصص / القسم السريري' : 'Specialty / Clinical Department')}
                 </label>
                 <select
                   value={specialty} onChange={(e) => setSpecialty(e.target.value)}
-                  className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                  className={`w-full px-4 py-2.5 bg-white border border-border-subtle rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
                 >
                   {[
                     { val: 'Cardiology', ar: 'أمراض القلب' },
@@ -286,13 +286,13 @@ export default function Register({ setActivePage }) {
               </div>
 
               <div>
-                <label className={`block text-xs font-semibold text-on-surface-variant mb-1 ${isArabic ? 'text-right' : 'text-left'}`}>
+                <label className={`block text-sm font-semibold text-on-surface-variant mb-1.5 ${isArabic ? 'text-right' : 'text-left'}`}>
                   {isArabic ? 'كلمة المرور' : 'Password'}
                 </label>
                 <input
                   type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                  className={`w-full px-4 py-2.5 bg-white border border-border-subtle rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary text-on-surface`}
                 />
               </div>
 
@@ -339,7 +339,7 @@ export default function Register({ setActivePage }) {
 
               <button
                 type="submit"
-                className={`w-full bg-primary hover:bg-primary-hover text-on-primary font-button py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm font-semibold mt-6 text-sm ${!agreePrivacy ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
+                className={`w-full bg-primary hover:bg-primary-hover text-on-primary font-button py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm font-semibold mt-6 text-base ${!agreePrivacy ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
                 disabled={!agreePrivacy}
               >
                 {isArabic ? 'إرسال طلب التسجيل' : 'Submit Registration'}
@@ -347,7 +347,7 @@ export default function Register({ setActivePage }) {
             </form>
 
             <div className="mt-6 text-center">
-              <p className="text-xs text-secondary">
+              <p className="text-sm text-secondary">
                 {isArabic ? 'مسجّل بالفعل؟ ' : 'Already registered? '}
                 <button
                   onClick={() => setActivePage('login')}

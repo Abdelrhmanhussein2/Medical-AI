@@ -39,8 +39,8 @@ async def seed_bundles():
             "max_doctors": None,
             "duration_days": 30,
             "price": 149.00,
-            "allowed_minutes": 1500,
-            "allowed_messages": 2650,
+            "allowed_minutes": 1285,
+            "allowed_messages": 1169,
         },
         {
             "name": "SBR AI Pro",
@@ -48,29 +48,9 @@ async def seed_bundles():
             "target_type": "doctor",
             "max_doctors": None,
             "duration_days": 30,
-            "price": 249.00,
-            "allowed_minutes": 3000,
-            "allowed_messages": 2350,
-        },
-        {
-            "name": "SBR AI Business",
-            "name_ar": "SBR AI Business",
-            "target_type": "doctor",
-            "max_doctors": None,
-            "duration_days": 30,
-            "price": 449.00,
-            "allowed_minutes": 3500,
-            "allowed_messages": 5000,
-        },
-        {
-            "name": "SBR AI Enterprise",
-            "name_ar": "SBR AI Enterprise",
-            "target_type": "doctor",
-            "max_doctors": None,
-            "duration_days": 30,
-            "price": 599.00,
-            "allowed_minutes": 5000,
-            "allowed_messages": 8000,
+            "price": 279.00,
+            "allowed_minutes": 2570,
+            "allowed_messages": 2339,
         },
     ]
 
@@ -82,9 +62,9 @@ async def seed_bundles():
             "target_type": "department",
             "max_doctors": 4,
             "duration_days": 30,
-            "price": 449.00,
-            "allowed_minutes": 6000,
-            "allowed_messages": 9400,
+            "price": 549.00,
+            "allowed_minutes": 5140,
+            "allowed_messages": 4678,
         },
         {
             "name": "SBR AI Enterprise",
@@ -92,9 +72,9 @@ async def seed_bundles():
             "target_type": "department",
             "max_doctors": 7,
             "duration_days": 30,
-            "price": 599.00,
-            "allowed_minutes": 8000,
-            "allowed_messages": 16450,
+            "price": 799.00,
+            "allowed_minutes": 9000,
+            "allowed_messages": 8187,
         },
     ]
 
@@ -107,12 +87,29 @@ async def seed_bundles():
             ADD COLUMN IF NOT EXISTS name_ar VARCHAR(150);
         """)
 
-        # Clean up old active bundles that are no longer in our list
-        names_to_keep = [b["name"] for b in all_bundles]
-        await connection.execute(
-            "DELETE FROM subscription_bundles WHERE name NOT IN (SELECT unnest($1::text[]))",
-            names_to_keep
-        )
+        # Clean up old active bundles that are no longer in our list (matching name and target_type)
+        existing_bundles = await connection.fetch("SELECT id, name, target_type FROM subscription_bundles")
+        for eb in existing_bundles:
+            match_found = False
+            for b in all_bundles:
+                if b["name"] == eb["name"] and b["target_type"] == eb["target_type"]:
+                    match_found = True
+                    break
+            if not match_found:
+                print(f"CLEANUP: Deleting obsolete bundle '{eb['name']}' ({eb['target_type']})")
+                # Cascade deletions manually to prevent FK constraint failures
+                await connection.execute(
+                    "DELETE FROM subscription_doctors WHERE subscription_id IN (SELECT id FROM subscriptions WHERE bundle_id = $1)",
+                    eb["id"]
+                )
+                await connection.execute(
+                    "DELETE FROM subscriptions WHERE bundle_id = $1",
+                    eb["id"]
+                )
+                await connection.execute(
+                    "DELETE FROM subscription_bundles WHERE id = $1",
+                    eb["id"]
+                )
 
         for b in all_bundles:
             # Check if bundle already exists by name + target_type

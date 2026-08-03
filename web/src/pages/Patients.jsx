@@ -304,18 +304,18 @@ export default function Patients({ setActivePage }) {
                         ? 'bg-primary-light text-primary' 
                         : 'bg-surface-container-high text-secondary'
                     }`}>
-                      {patient.gender}
+                      {patient.gender === 'male' ? (isArabic ? 'ذكر' : 'Male') : (isArabic ? 'أنثى' : 'Female')}
                     </span>
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-secondary font-mono">
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-secondary font-mono ${isArabic ? 'text-right' : 'text-left'}`}>
                     {patient.file_id || '—'}
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button 
                       onClick={() => handleSelectPatient(patient)}
-                      class="text-primary hover:text-primary-hover font-semibold"
+                      className="text-primary hover:text-primary-hover font-semibold"
                     >
-                      Details
+                      {isArabic ? 'التفاصيل' : 'Details'}
                     </button>
                   </td>
                 </tr>
@@ -330,7 +330,7 @@ export default function Patients({ setActivePage }) {
         <div class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div class="bg-white rounded-xl border border-border-subtle shadow-lg max-w-md w-full overflow-hidden">
             <div class="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas">
-              <h3 class="font-headline-md text-base text-primary font-bold">Add New Patient</h3>
+              <h3 class="font-headline-md text-base text-primary font-bold">{isArabic ? 'إضافة مريض جديد' : 'Add New Patient'}</h3>
               <button 
                 onClick={() => setShowAddModal(false)}
                 class="p-1 hover:bg-surface-container rounded-full text-secondary"
@@ -347,7 +347,7 @@ export default function Patients({ setActivePage }) {
               )}
 
               <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Full Name *</label>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'الاسم الكامل *' : 'Full Name *'}</label>
                 <input
                   type="text"
                   required
@@ -359,7 +359,7 @@ export default function Patients({ setActivePage }) {
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Phone Number *</label>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'رقم الهاتف *' : 'Phone Number *'}</label>
                 <input
                   type="text"
                   required
@@ -371,7 +371,7 @@ export default function Patients({ setActivePage }) {
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Email Address</label>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'البريد الإلكتروني' : 'Email Address'}</label>
                 <input
                   type="email"
                   value={email}
@@ -383,18 +383,18 @@ export default function Patients({ setActivePage }) {
 
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">Gender</label>
+                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'الجنس' : 'Gender'}</label>
                   <select
                     value={gender}
                     onChange={(e) => setGender(e.target.value)}
                     class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
+                    <option value="male">{isArabic ? 'ذكر' : 'Male'}</option>
+                    <option value="female">{isArabic ? 'أنثى' : 'Female'}</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">File ID (رقم الملف)</label>
+                  <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'رقم الملف' : 'File ID'}</label>
                   <input
                     type="text"
                     value={fileId}
@@ -406,7 +406,7 @@ export default function Patients({ setActivePage }) {
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Date of Birth</label>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'تاريخ الميلاد' : 'Date of Birth'}</label>
                 <input
                   type="date"
                   value={dob}
@@ -416,7 +416,7 @@ export default function Patients({ setActivePage }) {
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Chronic Diseases (الأمراض المزمنة)</label>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'الأمراض المزمنة' : 'Chronic Diseases'}</label>
                 <textarea
                   value={diseases}
                   onChange={(e) => setDiseases(e.target.value)}
@@ -427,7 +427,7 @@ export default function Patients({ setActivePage }) {
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">Lifestyle Habits (العادات)</label>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'العادات اليومية' : 'Lifestyle Habits'}</label>
                 <input
                   type="text"
                   value={habits}
@@ -443,13 +443,13 @@ export default function Patients({ setActivePage }) {
                   onClick={() => setShowAddModal(false)}
                   class="flex-1 bg-white border border-border-subtle text-secondary font-button py-2 rounded-lg text-sm hover:bg-surface-container-low transition-colors"
                 >
-                  Cancel
+                  {isArabic ? 'إلغاء' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   class="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-button py-2 rounded-lg text-sm transition-colors shadow-sm"
                 >
-                  Save Patient
+                  {isArabic ? 'حفظ المريض' : 'Save Patient'}
                 </button>
               </div>
             </form>
@@ -463,7 +463,7 @@ export default function Patients({ setActivePage }) {
           <div class="bg-white rounded-xl border border-border-subtle shadow-lg max-w-3xl w-full overflow-hidden">
             <div class="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas">
               <h3 class="font-headline-md text-base text-primary font-bold">
-                {isEditMode ? 'Edit Patient Profile' : 'Patient Medical Profile'}
+                {isEditMode ? (isArabic ? 'تعديل بيانات المريض' : 'Edit Patient Profile') : (isArabic ? 'الملف الطبي للمريض' : 'Patient Medical Profile')}
               </h3>
               <button 
                 onClick={() => setSelectedPatient(null)}
@@ -584,7 +584,7 @@ export default function Patients({ setActivePage }) {
                     )}
 
                     <div>
-                      <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">Full Name *</label>
+                      <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">{isArabic ? 'الاسم الكامل *' : 'Full Name *'}</label>
                       <input
                         type="text"
                         required
@@ -595,7 +595,7 @@ export default function Patients({ setActivePage }) {
                     </div>
 
                     <div>
-                      <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">Phone Number *</label>
+                      <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">{isArabic ? 'رقم الهاتف *' : 'Phone Number *'}</label>
                       <input
                         type="text"
                         required
@@ -606,7 +606,7 @@ export default function Patients({ setActivePage }) {
                     </div>
 
                     <div>
-                      <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">Email Address</label>
+                      <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">{isArabic ? 'البريد الإلكتروني' : 'Email Address'}</label>
                       <input
                         type="email"
                         value={editEmail}
@@ -617,18 +617,18 @@ export default function Patients({ setActivePage }) {
 
                     <div class="grid grid-cols-2 gap-3">
                       <div>
-                        <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">Gender</label>
+                        <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">{isArabic ? 'الجنس' : 'Gender'}</label>
                         <select
                           value={editGender}
                           onChange={(e) => setEditGender(e.target.value)}
                           class="w-full px-3 py-1.5 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary"
                         >
-                          <option value="male">Male</option>
-                          <option value="female">Female</option>
+                          <option value="male">{isArabic ? 'ذكر' : 'Male'}</option>
+                          <option value="female">{isArabic ? 'أنثى' : 'Female'}</option>
                         </select>
                       </div>
                       <div>
-                        <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">File ID</label>
+                        <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">{isArabic ? 'رقم الملف' : 'File ID'}</label>
                         <input
                           type="text"
                           value={editFileId}
@@ -639,7 +639,7 @@ export default function Patients({ setActivePage }) {
                     </div>
 
                     <div>
-                      <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">Date of Birth</label>
+                      <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">{isArabic ? 'تاريخ الميلاد' : 'Date of Birth'}</label>
                       <input
                         type="date"
                         value={editDob}
@@ -649,7 +649,7 @@ export default function Patients({ setActivePage }) {
                     </div>
 
                     <div>
-                      <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">Chronic Diseases</label>
+                      <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">{isArabic ? 'الأمراض المزمنة' : 'Chronic Diseases'}</label>
                       <textarea
                         value={editDiseases}
                         onChange={(e) => setEditDiseases(e.target.value)}
@@ -659,7 +659,7 @@ export default function Patients({ setActivePage }) {
                     </div>
 
                     <div>
-                      <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">Lifestyle Habits</label>
+                      <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">{isArabic ? 'العادات اليومية' : 'Lifestyle Habits'}</label>
                       <input
                         type="text"
                         value={editHabits}
@@ -669,7 +669,7 @@ export default function Patients({ setActivePage }) {
                     </div>
 
                     <div>
-                      <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">الملخص العام للمريض</label>
+                      <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">{isArabic ? 'الملخص العام للمريض' : 'General Patient Summary'}</label>
                       <textarea
                         value={editGeneralSummary}
                         onChange={(e) => setEditGeneralSummary(e.target.value)}
@@ -684,13 +684,13 @@ export default function Patients({ setActivePage }) {
                         onClick={() => setIsEditMode(false)}
                         class="flex-1 bg-white border border-border-subtle text-secondary py-1.5 rounded-lg text-xs hover:bg-surface-container"
                       >
-                        Cancel
+                        {isArabic ? 'إلغاء' : 'Cancel'}
                       </button>
                       <button
                         type="submit"
                         class="flex-1 bg-primary hover:bg-primary-hover text-on-primary py-1.5 rounded-lg text-xs transition-colors font-bold shadow-sm"
                       >
-                        Save
+                        {isArabic ? 'حفظ' : 'Save'}
                       </button>
                     </div>
                   </form>
@@ -699,28 +699,29 @@ export default function Patients({ setActivePage }) {
 
               {/* Medical Visits History */}
               <div class="md:col-span-7 space-y-4">
-                <h4 class="font-button text-sm text-on-surface font-bold">Consultation History ({patientVisits.length})</h4>
+                <h4 class="font-button text-sm text-on-surface font-bold">{isArabic ? `سجل الجلسات الطبية (${patientVisits.length})` : `Consultation History (${patientVisits.length})`}</h4>
                 
                 {loadingVisits ? (
                   <div class="text-center py-12 text-secondary text-xs">
                     <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
-                    Loading consultation history...
+                    {isArabic ? 'جاري تحميل السجل الطبي...' : 'Loading consultation history...'}
                   </div>
                 ) : patientVisits.length === 0 ? (
                   <div class="text-center py-12 bg-bg-canvas border border-border-subtle rounded-lg text-xs text-secondary">
                     <span class="material-symbols-outlined text-[32px] text-outline-variant block mb-1">history</span>
-                    No recorded medical visits for this patient yet.
+                    {isArabic ? 'لا توجد زيارات طبية مسجلة لهذا المريض.' : 'No recorded medical visits for this patient yet.'}
                   </div>
                 ) : (
                   <div class="space-y-4 max-h-[45vh] overflow-y-auto pr-1">
                     {patientVisits.map(visit => {
                       const isExpanded = expandedVisitId === visit.id;
-                      const visitDate = new Date(visit.created_at).toLocaleDateString('ar-EG', {
+                      const locale = isArabic ? 'ar-EG' : 'en-US';
+                      const visitDate = new Date(visit.created_at).toLocaleDateString(locale, {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric'
                       });
-                      const visitTime = new Date(visit.created_at).toLocaleTimeString('ar-EG', {
+                      const visitTime = new Date(visit.created_at).toLocaleTimeString(locale, {
                         hour: 'numeric',
                         minute: '2-digit'
                       });
@@ -744,11 +745,11 @@ export default function Patients({ setActivePage }) {
                                 {isExpanded ? 'expand_less' : 'expand_more'}
                               </span>
                               <span class="text-xs font-bold text-on-surface">
-                                زيارة يوم {visitDate} ({visitTime})
+                                {isArabic ? `زيارة يوم ${visitDate} (${visitTime})` : `Visit on ${visitDate} at ${visitTime}`}
                               </span>
                             </div>
                             <span class="text-[9px] font-black text-secondary bg-surface-container-high px-2 py-0.5 rounded font-mono">
-                              المدة: {Math.floor((visit.duration_seconds || 0) / 60)}د و {(visit.duration_seconds || 0) % 60}ث
+                              {isArabic ? `المدة: ${Math.floor((visit.duration_seconds || 0) / 60)}د و ${(visit.duration_seconds || 0) % 60}ث` : `Duration: ${Math.floor((visit.duration_seconds || 0) / 60)}m ${(visit.duration_seconds || 0) % 60}s`}
                             </span>
                           </button>
 
@@ -758,7 +759,7 @@ export default function Patients({ setActivePage }) {
                               {/* Summary */}
                               {visit.summary_text && (
                                 <div class="space-y-1">
-                                  <span class="text-[10px] font-bold text-secondary block">التلخيص الطبي للجلسة (خاص بالطبيب):</span>
+                                  <span class="text-[10px] font-bold text-secondary block">{isArabic ? 'التلخيص الطبي للجلسة (خاص بالطبيب):' : 'Session Medical Summary (Doctor Only):'}</span>
                                   <p class="text-xs text-on-surface leading-relaxed">{visit.summary_text}</p>
                                 </div>
                               )}
@@ -766,7 +767,7 @@ export default function Patients({ setActivePage }) {
                               {/* Patient-friendly sessional summary */}
                               {visit.patient_summary && (
                                 <div class="space-y-1">
-                                  <span class="text-[10px] font-bold text-primary block">الملخص العام للزيارة (الموجه للمريض):</span>
+                                  <span class="text-[10px] font-bold text-primary block">{isArabic ? 'الملخص العام للزيارة (الموجه للمريض):' : 'Visit Summary (Patient Friendly):'}</span>
                                   <p class="text-xs text-on-surface leading-relaxed bg-primary-light/10 p-3 rounded-lg border border-primary/10">{visit.patient_summary}</p>
                                 </div>
                               )}
@@ -774,11 +775,16 @@ export default function Patients({ setActivePage }) {
                               {/* SOAP Note details */}
                               {visit.soap_note && (
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                                  {[['S', 'Subjective (الشكوى)'], ['O', 'Objective (الفحص)'], ['A', 'Assessment (التشخيص)'], ['P', 'Plan (الخطة)']].map(([key, label]) => (
+                                  {[
+                                    ['S', isArabic ? 'الشكوى (S)' : 'Subjective (S)'],
+                                    ['O', isArabic ? 'الفحص (O)' : 'Objective (O)'],
+                                    ['A', isArabic ? 'التشخيص (A)' : 'Assessment (A)'],
+                                    ['P', isArabic ? 'الخطة (P)' : 'Plan (P)']
+                                  ].map(([key, label]) => (
                                     <div key={key} class="bg-surface-container-low p-2.5 rounded-lg border border-border-subtle/50 space-y-1">
                                       <span class="text-[9px] font-black text-primary block">{label}</span>
                                       <p class="text-[11px] text-on-surface-variant leading-relaxed min-h-[18px]">
-                                        {visit.soap_note[key] || 'لا يوجد'}
+                                        {visit.soap_note[key] || (isArabic ? 'لا يوجد' : 'N/A')}
                                       </p>
                                     </div>
                                   ))}
@@ -788,7 +794,7 @@ export default function Patients({ setActivePage }) {
                               {/* Prescriptions */}
                               {visit.prescriptions && visit.prescriptions.length > 0 && (
                                 <div class="space-y-2 pt-2 border-t border-border-subtle/40">
-                                  <span class="text-[10px] font-black text-secondary block">الروشتة العلاجية:</span>
+                                  <span class="text-[10px] font-black text-secondary block">{isArabic ? 'الروشتة العلاجية:' : 'Prescriptions:'}</span>
                                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     {visit.prescriptions.map((rx, idx) => (
                                       <div key={idx} class="bg-surface-container-low px-3 py-2 rounded-lg border border-border-subtle/50 text-[11px]">
@@ -805,7 +811,7 @@ export default function Patients({ setActivePage }) {
                               {/* Tasks */}
                               {visit.tasks && visit.tasks.length > 0 && (
                                 <div class="space-y-1 pt-2 border-t border-border-subtle/40">
-                                  <span class="text-[10px] font-black text-secondary block">مهام المتابعة المطلوبة:</span>
+                                  <span class="text-[10px] font-black text-secondary block">{isArabic ? 'مهام المتابعة المطلوبة:' : 'Follow-up Tasks:'}</span>
                                   <ul class="list-disc list-inside text-[11px] text-on-surface-variant space-y-1 pr-2">
                                     {visit.tasks.map((task, idx) => (
                                       <li key={idx}>{task}</li>
@@ -831,7 +837,7 @@ export default function Patients({ setActivePage }) {
                   class="flex items-center gap-2 bg-primary hover:bg-primary-hover text-on-primary font-button py-2 px-4 rounded-lg text-xs transition-colors shadow-sm"
                 >
                   <span class="material-symbols-outlined text-[16px]">smart_toy</span>
-                  Chat with AI
+                  {isArabic ? 'محادثة مع الذكاء الاصطناعي' : 'Chat with AI'}
                 </button>
                 {!isEditMode && (
                   <button
@@ -840,7 +846,7 @@ export default function Patients({ setActivePage }) {
                     class="flex items-center gap-2 border border-border-subtle text-secondary hover:bg-surface-container py-2 px-4 rounded-lg text-xs transition-colors"
                   >
                     <span class="material-symbols-outlined text-[16px]">edit</span>
-                    Edit Profile
+                    {isArabic ? 'تعديل الملف' : 'Edit Profile'}
                   </button>
                 )}
               </div>
@@ -849,7 +855,7 @@ export default function Patients({ setActivePage }) {
                 onClick={() => setSelectedPatient(null)}
                 class="border border-border-subtle text-secondary hover:bg-surface-container py-2 px-4 rounded-lg text-xs transition-colors"
               >
-                Close Profile
+                {isArabic ? 'إغلاق الملف' : 'Close Profile'}
               </button>
             </div>
           </div>

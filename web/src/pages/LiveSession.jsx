@@ -227,21 +227,26 @@ export default function LiveSession({ appointmentId, setActivePage }) {
       {/* Top Header */}
       <header class="bg-white border-b border-border-subtle h-16 flex items-center justify-between px-6 shrink-0 shadow-sm z-10">
         <div class="flex items-center gap-4">
-          <div class={`flex items-center gap-2 font-bold text-sm tracking-widest uppercase ${isRecording ? 'text-error animate-pulse' : 'text-secondary'}`}>
-            <span class={`w-3 h-3 rounded-full ${isRecording ? 'bg-error' : 'bg-secondary/40'}`}></span>
-            {isSummarizing ? 'AI SUMMARIZING...' : isRecording ? 'LIVE RECORDING' : summaryDone ? 'SESSION COMPLETE' : 'READY'}
+          <div className={`flex items-center gap-2 font-bold text-sm tracking-widest uppercase ${isRecording ? 'text-error animate-pulse' : 'text-secondary'}`}>
+            <span className={`w-3 h-3 rounded-full ${isRecording ? 'bg-error' : 'bg-secondary/40'}`}></span>
+            {isArabic 
+              ? (isSummarizing ? 'جاري التحليل بالذكاء الاصطناعي...' : isRecording ? 'تسجيل مباشر' : summaryDone ? 'اكتملت الجلسة' : 'جاهز')
+              : (isSummarizing ? 'AI SUMMARIZING...' : isRecording ? 'LIVE RECORDING' : summaryDone ? 'SESSION COMPLETE' : 'READY')
+            }
           </div>
-          <span class="text-outline-variant">|</span>
-          <div class="text-secondary font-medium text-sm font-mono">Session Duration: {formatTime(duration)}</div>
+          <span className="text-outline-variant">|</span>
+          <div className="text-secondary font-medium text-sm font-mono">{isArabic ? 'مدة الجلسة' : 'Session Duration'}: {formatTime(duration)}</div>
           {isRecording && (
             <>
-              <span class="text-outline-variant">|</span>
-              <div class="flex items-center gap-1.5 text-xs text-secondary">
-                <span class={`w-2 h-2 rounded-full ${
+              <span className="text-outline-variant">|</span>
+              <div className="flex items-center gap-1.5 text-xs text-secondary">
+                <span className={`w-2 h-2 rounded-full ${
                   syncStatus === 'synced' ? 'bg-success' : syncStatus === 'syncing' ? 'bg-primary animate-spin' : 'bg-warning'
                 }`}></span>
                 <span>{
-                  syncStatus === 'synced' ? 'Saved to cloud' : syncStatus === 'syncing' ? 'Syncing...' : 'Pending offline sync'
+                  isArabic 
+                    ? (syncStatus === 'synced' ? 'تم الحفظ سحابياً' : syncStatus === 'syncing' ? 'جاري المزامنة...' : 'انتظار المزامنة دون اتصال')
+                    : (syncStatus === 'synced' ? 'Saved to cloud' : syncStatus === 'syncing' ? 'Syncing...' : 'Pending offline sync')
                 }</span>
               </div>
             </>
@@ -250,20 +255,20 @@ export default function LiveSession({ appointmentId, setActivePage }) {
 
         <div class="flex items-center gap-3">
           {summaryDone && (
-            <button onClick={handleClose} class="px-5 py-2 bg-surface-container-high text-secondary rounded-lg font-bold text-sm hover:bg-surface-container-highest transition-colors">
-              Back to Appointments
+            <button onClick={handleClose} className="px-5 py-2 bg-surface-container-high text-secondary rounded-lg font-bold text-sm hover:bg-surface-container-highest transition-colors">
+              {isArabic ? 'العودة للمواعيد' : 'Back to Appointments'}
             </button>
           )}
           {!summaryDone && (
             <button
               onClick={endSessionAndSummarize}
               disabled={isSummarizing || duration < 3}
-              class="bg-error text-white px-5 py-2 rounded-lg font-bold text-sm shadow-sm hover:bg-error-hover transition-colors flex items-center gap-2 disabled:opacity-50"
+              className="bg-error text-white px-5 py-2 rounded-lg font-bold text-sm shadow-sm hover:bg-error-hover transition-colors flex items-center gap-2 disabled:opacity-50"
             >
               {isSummarizing ? (
-                <><span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Summarizing...</>
+                <><span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> {isArabic ? 'جاري التلخيص...' : 'Summarizing...'}</>
               ) : (
-                <><span class="material-symbols-outlined text-[18px]">stop_circle</span> End Session</>
+                <><span className="material-symbols-outlined text-[18px]">stop_circle</span> {isArabic ? 'إنهاء الجلسة' : 'End Session'}</>
               )}
             </button>
           )}
@@ -278,11 +283,11 @@ export default function LiveSession({ appointmentId, setActivePage }) {
           <div class="lg:col-span-3 space-y-6">
             <div class="bg-white rounded-2xl p-6 shadow-sm border border-border-subtle text-center flex flex-col items-center gap-3">
               <div class="w-full">
-                <h2 class="text-xl font-bold text-on-surface">{patient ? patient.name : 'Unknown Patient'}</h2>
-                <p class="text-xs text-secondary mt-1 font-mono">{patient?.phone || 'No phone'}</p>
+                <h2 className="text-xl font-bold text-on-surface">{patient ? patient.name : (isArabic ? 'مريض غير معروف' : 'Unknown Patient')}</h2>
+                <p className="text-xs text-secondary mt-1 font-mono">{patient?.phone || (isArabic ? 'بدون هاتف' : 'No phone')}</p>
                 {patient?.file_id && (
-                  <p class="mt-2 text-xs bg-primary-light text-primary font-bold px-2.5 py-0.5 rounded-full inline-block font-mono">
-                    File: {patient.file_id}
+                  <p className="mt-2 text-xs bg-primary-light text-primary font-bold px-2.5 py-0.5 rounded-full inline-block font-mono">
+                    {isArabic ? 'ملف' : 'File'}: {patient.file_id}
                   </p>
                 )}
               </div>
@@ -418,10 +423,9 @@ export default function LiveSession({ appointmentId, setActivePage }) {
               )}
             </div>
 
-            {/* Recordings Log */}
-            <div class="bg-white rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
-              <div class="p-5 border-b border-border-subtle">
-                <h3 class="text-xs font-black tracking-widest text-secondary uppercase">Recordings Log</h3>
+            <div className="bg-white rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
+              <div className="p-5 border-b border-border-subtle">
+                <h3 className="text-xs font-black tracking-widest text-secondary uppercase">{isArabic ? 'سجل التسجيلات' : 'Recordings Log'}</h3>
               </div>
               <div class="p-4 space-y-3 max-h-[250px] overflow-y-auto pr-1">
                 {pastSessions.length === 0 ? (
@@ -441,9 +445,9 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                         dir="rtl"
                       >
                         <div>
-                          <h4 class="text-xs font-bold text-on-surface">{sessionDate}</h4>
-                          <p class="text-[9px] text-secondary mt-0.5 font-mono">
-                            Duration: {formatTime(session.duration_seconds || 0)}
+                          <h4 className="text-xs font-bold text-on-surface">{sessionDate}</h4>
+                          <p className="text-[9px] text-secondary mt-0.5 font-mono">
+                            {isArabic ? 'المدة' : 'Duration'}: {formatTime(session.duration_seconds || 0)}
                           </p>
                         </div>
                         <span class="bg-success/15 text-success text-[10px] font-bold px-2 py-1 rounded">
@@ -506,7 +510,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                 <h3 className="text-xs font-black tracking-widest text-secondary uppercase">
                   {isArabic ? 'النص الطبي الفوري' : 'Session Transcript'}
                 </h3>
-                <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded">AUTOMATIC LANG</span>
+                <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded">{isArabic ? 'لغة تلقائية' : 'AUTOMATIC LANG'}</span>
               </div>
 
               <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-surface-container-low">
@@ -547,24 +551,28 @@ export default function LiveSession({ appointmentId, setActivePage }) {
             <div class={`rounded-2xl p-6 shadow-sm border transition-all duration-500 ${
               summaryDone ? 'bg-success/5 border-success/20' : showSummaryError ? 'bg-error/5 border-error/20' : 'bg-primary/5 border-primary/10'
             }`}>
-              <div class="flex items-start gap-3 mb-5">
-                <span class={`material-symbols-outlined text-[24px] ${
+              <div className="flex items-start gap-3 mb-5">
+                <span className={`material-symbols-outlined text-[24px] ${
                   summaryDone ? 'text-success' : showSummaryError ? 'text-error' : 'text-primary'
                 }`}>
                   {isSummarizing ? 'progress_activity' : summaryDone ? 'check_circle' : showSummaryError ? 'error' : 'auto_awesome'}
                 </span>
-                <h3 class={`text-xs font-black tracking-widest uppercase leading-tight pt-1 ${
+                <h3 className={`text-xs font-black tracking-widest uppercase leading-tight pt-1 ${
                   summaryDone ? 'text-success' : showSummaryError ? 'text-error' : 'text-primary'
                 }`}>
-                  Session Summary {summaryDone ? '✓' : showSummaryError ? 'Failed' : '& Tasks'}
+                  {isArabic ? 'ملخص الجلسة' : 'Session Summary'} {summaryDone ? '✓' : showSummaryError ? (isArabic ? 'فشل' : 'Failed') : (isArabic ? 'والمهام' : '& Tasks')}
                 </h3>
               </div>
 
               <div class="bg-white rounded-xl p-5 shadow-sm">
                 {isSummarizing ? (
-                  <div class="flex flex-col items-center gap-3 py-4">
-                    <div class="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                    <p class="text-xs text-secondary text-center">AI is reading the session...<br/>This takes ~10 seconds.</p>
+                  <div className="flex flex-col items-center gap-3 py-4">
+                    <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                    <p className="text-xs text-secondary text-center">
+                      {isArabic ? 'الذكاء الاصطناعي يحلل الجلسة...' : 'AI is reading the session...'}
+                      <br/>
+                      {isArabic ? 'يستغرق هذا حوالي 10 ثوانٍ.' : 'This takes ~10 seconds.'}
+                    </p>
                   </div>
                 ) : showSummaryError ? (
                   <div class="space-y-3 py-2">
@@ -582,14 +590,14 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                   </div>
                 ) : summaryDone && summaryText ? (
                   <>
-                    <div class="flex items-center gap-2 text-success mb-3">
-                      <span class="material-symbols-outlined text-[16px]">task_alt</span>
-                      <span class="text-xs font-bold uppercase tracking-wider">Summary Complete</span>
+                    <div className="flex items-center gap-2 text-success mb-3">
+                      <span className="material-symbols-outlined text-[16px]">task_alt</span>
+                      <span className="text-xs font-bold uppercase tracking-wider">{isArabic ? 'اكتمل الملخص' : 'Summary Complete'}</span>
                     </div>
                     <p class="text-sm text-on-surface leading-relaxed">{summaryText}</p>
                     {tasks.length > 0 && (
-                      <div class="mt-4 pt-4 border-t border-border-subtle space-y-2">
-                        <p class="text-xs font-bold text-secondary uppercase tracking-wider">Follow-up Tasks</p>
+                      <div className="mt-4 pt-4 border-t border-border-subtle space-y-2">
+                        <p className="text-xs font-bold text-secondary uppercase tracking-wider">{isArabic ? 'مهام المتابعة' : 'Follow-up Tasks'}</p>
                         {tasks.map((task, i) => (
                           <div key={i} class="flex items-start gap-2 text-xs text-on-surface-variant">
                             <span class="material-symbols-outlined text-[14px] text-primary shrink-0 mt-0.5">check_box_outline_blank</span>
@@ -601,16 +609,22 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                   </>
                 ) : (
                   <>
-                    <div class="flex items-center gap-2 text-secondary mb-3">
-                      <span class="material-symbols-outlined text-[16px]">article</span>
-                      <span class="text-xs font-bold uppercase tracking-wider">
-                        {isRecording ? 'Recording in progress...' : 'Waiting for session to start'}
+                    <div className="flex items-center gap-2 text-secondary mb-3">
+                      <span className="material-symbols-outlined text-[16px]">article</span>
+                      <span className="text-xs font-bold uppercase tracking-wider">
+                        {isRecording 
+                          ? (isArabic ? 'جاري التسجيل...' : 'Recording in progress...') 
+                          : (isArabic ? 'في انتظار بدء الجلسة' : 'Waiting for session to start')}
                       </span>
                     </div>
-                    <p class="text-sm text-on-surface-variant leading-relaxed">
+                    <p className="text-sm text-on-surface-variant leading-relaxed">
                       {isRecording
-                        ? 'The AI summary will appear here once you end the session.'
-                        : 'Start recording then click "End Session" to generate an AI summary.'}
+                        ? (isArabic 
+                          ? 'سيظهر ملخص الذكاء الاصطناعي هنا بمجرد إنهاء الجلسة.' 
+                          : 'The AI summary will appear here once you end the session.')
+                        : (isArabic 
+                          ? 'ابدأ التسجيل ثم اضغط على "إنهاء الجلسة" لتوليد الملخص الطبي.' 
+                          : 'Start recording then click "End Session" to generate an AI summary.')}
                     </p>
                   </>
                 )}
@@ -618,52 +632,54 @@ export default function LiveSession({ appointmentId, setActivePage }) {
             </div>
 
             {/* Auto-Drafted Documents */}
-            <div class="bg-white rounded-2xl shadow-sm border border-border-subtle p-6">
-              <h3 class="text-xs font-black tracking-widest text-secondary uppercase mb-5">Auto-Drafted Documents</h3>
+            <div className="bg-white rounded-2xl shadow-sm border border-border-subtle p-6">
+              <h3 className="text-xs font-black tracking-widest text-secondary uppercase mb-5">{isArabic ? 'المستندات التلقائية' : 'Auto-Drafted Documents'}</h3>
 
-              <div class="space-y-3">
+              <div className="space-y-3">
                 <button
                   onClick={() => soapNote && setActiveDoc('soap')}
-                  class={`w-full flex items-center gap-4 group text-left p-3 rounded-xl transition-colors ${soapNote ? 'hover:bg-surface-container-low cursor-pointer' : 'opacity-40 cursor-not-allowed'}`}
+                  className={`w-full flex items-center gap-4 group text-left p-3 rounded-xl transition-colors ${soapNote ? 'hover:bg-surface-container-low cursor-pointer' : 'opacity-40 cursor-not-allowed'}`}
                 >
-                  <div class={`w-8 h-8 rounded-lg flex items-center justify-center ${soapNote ? 'bg-primary/10' : 'bg-surface-container'}`}>
-                    <span class={`material-symbols-outlined text-[18px] ${soapNote ? 'text-primary' : 'text-secondary'}`}>description</span>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${soapNote ? 'bg-primary/10' : 'bg-surface-container'}`}>
+                    <span className={`material-symbols-outlined text-[18px] ${soapNote ? 'text-primary' : 'text-secondary'}`}>description</span>
                   </div>
-                  <div class="flex-1">
-                    <span class="text-sm font-semibold text-on-surface block">SOAP Note</span>
-                    <span class="text-xs text-secondary">{soapNote ? 'Ready — click to view' : 'Generated after session'}</span>
+                  <div className="flex-1">
+                    <span className="text-sm font-semibold text-on-surface block">{isArabic ? 'ملاحظة SOAP' : 'SOAP Note'}</span>
+                    <span className="text-xs text-secondary">{soapNote ? (isArabic ? 'جاهز — اضغط للعرض' : 'Ready — click to view') : (isArabic ? 'يتم توليده بعد الجلسة' : 'Generated after session')}</span>
                   </div>
-                  {soapNote && <span class="material-symbols-outlined text-[16px] text-primary">arrow_forward</span>}
+                  {soapNote && <span className="material-symbols-outlined text-[16px] text-primary">arrow_forward</span>}
                 </button>
 
                 <button
                   onClick={() => patientSummary && setActiveDoc('patient_summary')}
-                  class={`w-full flex items-center gap-4 group text-left p-3 rounded-xl transition-colors ${patientSummary ? 'hover:bg-surface-container-low cursor-pointer' : 'opacity-40 cursor-not-allowed'}`}
+                  className={`w-full flex items-center gap-4 group text-left p-3 rounded-xl transition-colors ${patientSummary ? 'hover:bg-surface-container-low cursor-pointer' : 'opacity-40 cursor-not-allowed'}`}
                 >
-                  <div class={`w-8 h-8 rounded-lg flex items-center justify-center ${patientSummary ? 'bg-secondary/10' : 'bg-surface-container'}`}>
-                    <span class={`material-symbols-outlined text-[18px] ${patientSummary ? 'text-secondary' : 'text-secondary'}`}>medical_information</span>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${patientSummary ? 'bg-secondary/10' : 'bg-surface-container'}`}>
+                    <span className={`material-symbols-outlined text-[18px] ${patientSummary ? 'text-secondary' : 'text-secondary'}`}>medical_information</span>
                   </div>
-                  <div class="flex-1">
-                    <span class="text-sm font-semibold text-on-surface block">Patient Summary</span>
-                    <span class="text-xs text-secondary">{patientSummary ? 'Ready — click to view' : 'Generated after session'}</span>
+                  <div className="flex-1">
+                    <span className="text-sm font-semibold text-on-surface block">{isArabic ? 'ملخص المريض' : 'Patient Summary'}</span>
+                    <span className="text-xs text-secondary">{patientSummary ? (isArabic ? 'جاهز — اضغط للعرض' : 'Ready — click to view') : (isArabic ? 'يتم توليده بعد الجلسة' : 'Generated after session')}</span>
                   </div>
-                  {patientSummary && <span class="material-symbols-outlined text-[16px] text-secondary">arrow_forward</span>}
+                  {patientSummary && <span className="material-symbols-outlined text-[16px] text-secondary">arrow_forward</span>}
                 </button>
 
                 <button
                   onClick={() => prescriptions.length > 0 && setActiveDoc('prescriptions')}
-                  class={`w-full flex items-center gap-4 group text-left p-3 rounded-xl transition-colors ${prescriptions.length > 0 ? 'hover:bg-surface-container-low cursor-pointer' : 'opacity-40 cursor-not-allowed'}`}
+                  className={`w-full flex items-center gap-4 group text-left p-3 rounded-xl transition-colors ${prescriptions.length > 0 ? 'hover:bg-surface-container-low cursor-pointer' : 'opacity-40 cursor-not-allowed'}`}
                 >
-                  <div class={`w-8 h-8 rounded-lg flex items-center justify-center ${prescriptions.length > 0 ? 'bg-error/10' : 'bg-surface-container'}`}>
-                    <span class={`material-symbols-outlined text-[18px] ${prescriptions.length > 0 ? 'text-error' : 'text-secondary'}`}>prescriptions</span>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${prescriptions.length > 0 ? 'bg-error/10' : 'bg-surface-container'}`}>
+                    <span className={`material-symbols-outlined text-[18px] ${prescriptions.length > 0 ? 'text-error' : 'text-secondary'}`}>prescriptions</span>
                   </div>
-                  <div class="flex-1">
-                    <span class="text-sm font-semibold text-on-surface block">Prescriptions</span>
-                    <span class="text-xs text-secondary">
-                      {prescriptions.length > 0 ? `${prescriptions.length} medication(s) — click to view` : 'Generated after session'}
+                  <div className="flex-1">
+                    <span className="text-sm font-semibold text-on-surface block">{isArabic ? 'الروشتة العلاجية' : 'Prescriptions'}</span>
+                    <span className="text-xs text-secondary">
+                      {prescriptions.length > 0 
+                        ? (isArabic ? `${prescriptions.length} دواء (أدوية) — اضغط للعرض` : `${prescriptions.length} medication(s) — click to view`)
+                        : (isArabic ? 'يتم توليدها بعد الجلسة' : 'Generated after session')}
                     </span>
                   </div>
-                  {prescriptions.length > 0 && <span class="material-symbols-outlined text-[16px] text-error">arrow_forward</span>}
+                  {prescriptions.length > 0 && <span className="material-symbols-outlined text-[16px] text-error">arrow_forward</span>}
                 </button>
               </div>
             </div>

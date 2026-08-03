@@ -125,12 +125,12 @@ export default function Dashboard({ setActivePage }) {
   return (
     <div className="text-start">
       {/* Header */}
-      <header className="flex justify-between items-end mb-stack-lg border-b border-border-subtle pb-stack-md">
+      <header className="flex justify-between items-center mb-4 md:mb-stack-lg border-b border-border-subtle pb-3 md:pb-stack-md">
         <div>
-          <h1 className="font-display-lg text-headline-lg text-on-surface font-bold">
+          <h1 className="text-xl md:font-display-lg md:text-headline-lg text-on-surface font-bold">
             {t('dashboard')}
           </h1>
-          <p className="font-body-lg text-body-lg text-on-surface-variant mt-1">
+          <p className="hidden md:block font-body-lg text-body-lg text-on-surface-variant mt-1">
             {isArabic 
               ? `أهلاً بك د. ${currentUser?.name || ''}، إليك نظرة سريعة على إحصائيات عيادتك اليوم.`
               : `Welcome Dr. ${currentUser?.name || ''}, here is a quick overview of your clinic statistics today.`}
@@ -139,84 +139,85 @@ export default function Dashboard({ setActivePage }) {
         <div className="flex items-center gap-stack-md">
           <button 
             onClick={() => setActivePage('appointments')}
-            className="bg-primary hover:bg-primary-hover text-on-primary font-button text-sm py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm"
+            className="bg-primary hover:bg-primary-hover text-on-primary font-button text-xs md:text-sm py-1.5 md:py-2 px-3 md:px-4 rounded-lg transition-colors flex items-center justify-center gap-1 md:gap-2 shadow-sm"
           >
-            <span className="material-symbols-outlined text-[18px]">add</span>
-            {isArabic ? 'موعد جديد' : 'New Appointment'}
+            <span className="material-symbols-outlined text-[16px] md:text-[18px]">add</span>
+            <span className="hidden sm:inline">{isArabic ? 'موعد جديد' : 'New Appointment'}</span>
+            <span className="sm:hidden">{isArabic ? 'موعد' : 'Appt'}</span>
           </button>
         </div>
       </header>
 
       {/* Bento Grid Layout */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-gutter">
-        {/* Quick Stats Row */}
-        <div className="col-span-12 grid grid-cols-1 md:grid-cols-4 gap-gutter mb-stack-md">
+        {/* Quick Stats Row - 2 cols on mobile, 4 on desktop */}
+        <div className="col-span-12 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-gutter mb-4 md:mb-stack-md">
           {/* Stat Card 1 */}
-          <div className="bg-bg-card rounded-xl border border-border-subtle p-6 shadow-sm hover:shadow-ambient transition-shadow">
-            <div className="flex justify-between items-start mb-4">
-              <p className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wider">
+          <div className="bg-bg-card rounded-xl border border-border-subtle p-4 md:p-6 shadow-sm hover:shadow-ambient transition-shadow">
+            <div className="flex justify-between items-start mb-2 md:mb-4">
+              <p className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wide leading-tight">
                 {t('today_appointments')}
               </p>
-              <span className="material-symbols-outlined text-primary bg-primary-light p-2 rounded-lg">calendar_today</span>
+              <span className="material-symbols-outlined text-[16px] md:text-[20px] text-primary bg-primary-light p-1.5 md:p-2 rounded-lg">calendar_today</span>
             </div>
-            <div className="flex items-baseline gap-2">
-              <h3 className="font-headline-lg text-headline-lg text-on-surface font-bold">{myAppts.length}</h3>
+            <div className="flex items-baseline gap-1 md:gap-2">
+              <h3 className="text-2xl md:text-3xl text-on-surface font-sans font-black leading-none">{myAppts.length}</h3>
               <span className="font-body-sm text-xs text-tertiary-container flex items-center">
-                <span className={`material-symbols-outlined text-[16px] ${isArabic ? 'ml-1' : 'mr-1'}`}>trending_up</span> 
-                {isArabic ? 'نشط' : 'Active'}
+                <span className={`material-symbols-outlined text-[14px] md:text-[16px] ${isArabic ? 'ml-0.5' : 'mr-0.5'}`}>trending_up</span>
+                <span className="hidden sm:inline">{isArabic ? 'نشط' : 'Active'}</span>
               </span>
             </div>
           </div>
 
           {/* Stat Card 2 */}
-          <div className="bg-bg-card rounded-xl border border-border-subtle p-6 shadow-sm hover:shadow-ambient transition-shadow">
-            <div className="flex justify-between items-start mb-4">
-              <p className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wider">
-                {isArabic ? 'الملخصات المكتملة' : 'Completed Summaries'}
+          <div className="bg-bg-card rounded-xl border border-border-subtle p-4 md:p-6 shadow-sm hover:shadow-ambient transition-shadow">
+            <div className="flex justify-between items-start mb-2 md:mb-4">
+              <p className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wide leading-tight">
+                {isArabic ? 'الملخصات' : 'Summaries'}
               </p>
-              <span className="material-symbols-outlined text-status-warning bg-surface-container-high p-2 rounded-lg">description</span>
+              <span className="material-symbols-outlined text-[16px] md:text-[20px] text-status-warning bg-surface-container-high p-1.5 md:p-2 rounded-lg">description</span>
             </div>
-            <div className="flex items-baseline gap-2">
-              <h3 className="font-headline-lg text-headline-lg text-on-surface font-bold">
+            <div className="flex items-baseline gap-1 md:gap-2">
+              <h3 className="text-2xl md:text-3xl text-on-surface font-sans font-black leading-none">
                 {appointments.filter(a => a.doctor_id === currentUser.id && a.status === 'completed').length}
               </h3>
-              <span className="font-body-sm text-xs text-on-surface-variant">
-                {isArabic ? 'ملاحظة طبية' : 'clinical notes'}
+              <span className="font-body-sm text-xs text-on-surface-variant hidden sm:inline">
+                {isArabic ? 'ملاحظة' : 'notes'}
               </span>
             </div>
           </div>
 
           {/* Stat Card 3 */}
-          <div className="bg-bg-card rounded-xl border border-border-subtle p-6 shadow-sm hover:shadow-ambient transition-shadow">
-            <div className="flex justify-between items-start mb-4">
-              <p className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wider">
+          <div className="bg-bg-card rounded-xl border border-border-subtle p-4 md:p-6 shadow-sm hover:shadow-ambient transition-shadow">
+            <div className="flex justify-between items-start mb-2 md:mb-4">
+              <p className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wide leading-tight">
                 {t('total_patients')}
               </p>
-              <span className="material-symbols-outlined text-tertiary bg-tertiary-fixed p-2 rounded-lg">verified_user</span>
+              <span className="material-symbols-outlined text-[16px] md:text-[20px] text-tertiary bg-tertiary-fixed p-1.5 md:p-2 rounded-lg">verified_user</span>
             </div>
-            <div className="flex items-baseline gap-2">
-              <h3 className="font-headline-lg text-headline-lg text-on-surface font-bold">{patients.length}</h3>
-              <span className="font-body-sm text-xs text-tertiary-container flex items-center">
-                <span className={`material-symbols-outlined text-[16px] ${isArabic ? 'ml-1' : 'mr-1'}`}>group</span>
-                {isArabic ? 'مريض مسجل' : 'registered'}
+            <div className="flex items-baseline gap-1 md:gap-2">
+              <h3 className="text-2xl md:text-3xl text-on-surface font-sans font-black leading-none">{patients.length}</h3>
+              <span className="font-body-sm text-xs text-tertiary-container flex items-center hidden sm:flex">
+                <span className={`material-symbols-outlined text-[14px] ${isArabic ? 'ml-0.5' : 'mr-0.5'}`}>group</span>
+                {isArabic ? 'مريض' : 'patients'}
               </span>
             </div>
           </div>
 
           {/* Stat Card 4 */}
-          <div className="bg-bg-card rounded-xl border border-border-subtle p-6 shadow-sm hover:shadow-ambient transition-shadow">
-            <div className="flex justify-between items-start mb-4">
-              <p className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wider">
+          <div className="bg-bg-card rounded-xl border border-border-subtle p-4 md:p-6 shadow-sm hover:shadow-ambient transition-shadow">
+            <div className="flex justify-between items-start mb-2 md:mb-4">
+              <p className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wide leading-tight">
                 {t('ai_credits')}
               </p>
-              <span className="material-symbols-outlined text-primary bg-primary-light p-2 rounded-lg">payments</span>
+              <span className="material-symbols-outlined text-[16px] md:text-[20px] text-primary bg-primary-light p-1.5 md:p-2 rounded-lg">payments</span>
             </div>
-            <div className="flex items-baseline gap-2">
-              <h3 className="font-headline-lg text-headline-lg text-on-surface font-bold">
-                {isArabic ? `${remainingMinutes} دقيقة` : `${remainingMinutes} mins`}
+            <div className="flex items-baseline gap-1 md:gap-2">
+              <h3 className="text-2xl md:text-3xl text-on-surface font-sans font-black leading-none">
+                {remainingMinutes}
               </h3>
               <span className="font-body-sm text-xs text-on-surface-variant">
-                {isArabic ? 'متبقية' : 'remaining'}
+                {isArabic ? 'دقيقة' : 'mins'}
               </span>
             </div>
           </div>
@@ -230,7 +231,7 @@ export default function Dashboard({ setActivePage }) {
                 <h2 className="font-headline-md text-headline-md text-on-surface font-bold">
                   {isArabic ? 'المرضى القادمون اليوم' : "Today's Patients"}
                 </h2>
-                <p className="text-[10px] text-on-surface-variant mt-0.5 font-semibold">
+                <p className="text-xs text-on-surface-variant mt-0.5 font-semibold">
                   {new Date().toLocaleDateString(isArabic ? 'ar-EG' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                 </p>
               </div>
@@ -266,10 +267,10 @@ export default function Dashboard({ setActivePage }) {
                           {patient.initials}
                         </div>
                         <div>
-                          <h4 className="font-button text-sm text-on-surface group-hover:text-primary transition-colors font-semibold">
+                          <h4 className="font-button text-base text-on-surface group-hover:text-primary transition-colors font-semibold">
                             {patient.patientName}
                           </h4>
-                          <p className="font-body-sm text-xs text-on-surface-variant">
+                          <p className="font-body-sm text-sm text-on-surface-variant">
                             {patient.appointment_time && <span>{patient.appointment_time} • </span>}
                             {patient.description || (isArabic ? 'كشف عام' : 'General')}
                           </p>
@@ -329,7 +330,7 @@ export default function Dashboard({ setActivePage }) {
           {/* Recent Activity */}
           <div className="bg-bg-card rounded-xl border border-border-subtle p-stack-lg shadow-sm">
             <div className="flex justify-between items-center mb-stack-md pb-stack-sm border-b border-border-subtle">
-              <h2 className="font-button text-sm text-on-surface font-bold">
+              <h2 className="font-button text-base text-on-surface font-bold">
                 {isArabic ? 'آخر النشاطات' : 'Recent Activity'}
               </h2>
               {activityFeed.length > 0 && (
@@ -354,10 +355,10 @@ export default function Dashboard({ setActivePage }) {
                       <span className={`material-symbols-outlined text-[16px] ${item.color}`}>{item.icon}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-on-surface font-semibold leading-snug">
+                      <p className="text-sm text-on-surface font-semibold leading-snug">
                         {isArabic ? item.textAr : item.textEn}
                       </p>
-                      <p className="text-[10px] text-on-surface-variant mt-0.5 font-medium">
+                      <p className="text-xs text-on-surface-variant mt-0.5 font-medium">
                         {relativeTime(item.date)}
                       </p>
                     </div>

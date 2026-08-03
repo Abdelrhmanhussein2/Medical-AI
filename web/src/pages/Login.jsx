@@ -74,7 +74,7 @@ export default function Login({ setActivePage }) {
         </div>
 
         {/* Form Panel */}
-        <div className="w-full lg:w-1/2 flex flex-col justify-center py-12 px-6 sm:px-12 lg:px-24 bg-white relative">
+        <div className="w-full lg:w-1/2 flex flex-col justify-center py-6 md:py-12 px-6 sm:px-12 lg:px-24 bg-white relative">
           {/* Floating Language Switcher */}
           <div className={`absolute top-6 ${isArabic ? 'left-6' : 'right-6'} z-10`}>
             <button
@@ -91,10 +91,10 @@ export default function Login({ setActivePage }) {
               <div className="mb-4 lg:hidden">
                 <SbrLogo size={44} color="#24564C" showText={true} textClass="text-primary" />
               </div>
-              <h2 className="font-display-lg text-headline-lg text-primary font-bold">
+              <h2 className="font-display-lg text-2xl md:text-3xl text-primary font-bold">
                 {isArabic ? 'مرحباً بعودتك' : 'Welcome back'}
               </h2>
-              <p className="mt-2 text-sm text-secondary text-center">
+              <p className="mt-1 text-sm md:text-base text-secondary text-center">
                 {isArabic
                   ? 'أدخل بياناتك للوصول إلى مساحة عملك.'
                   : 'Please enter your credentials to access your workspace.'}
@@ -113,7 +113,7 @@ export default function Login({ setActivePage }) {
                   key={key}
                   onClick={() => { setRole(key); setEmail(''); setPassword(''); }}
                   type="button"
-                  className={`flex-1 py-1.5 text-[11px] font-bold rounded-md transition-colors ${
+                  className={`flex-1 py-2 text-xs font-bold rounded-md transition-colors ${
                     role === key ? 'bg-white text-primary shadow-sm' : 'text-secondary hover:text-primary'
                   }`}
                 >
@@ -131,7 +131,7 @@ export default function Login({ setActivePage }) {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className={`block text-xs font-semibold text-on-surface-variant mb-1 ${isArabic ? 'text-right' : 'text-left'}`}>
+                <label className={`block text-sm font-semibold text-on-surface-variant mb-1.5 ${isArabic ? 'text-right' : 'text-left'}`}>
                   {isArabic ? 'البريد الإلكتروني' : 'Email Address'}
                 </label>
                 <input
@@ -146,12 +146,12 @@ export default function Login({ setActivePage }) {
                       ? 'org@cardiology.com'
                       : 'doctor@example.com'
                   }
-                  className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
+                  className={`w-full px-4 py-2.5 bg-white border border-border-subtle rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
                 />
               </div>
 
               <div>
-                <label className={`block text-xs font-semibold text-on-surface-variant mb-1 ${isArabic ? 'text-right' : 'text-left'}`}>
+                <label className={`block text-sm font-semibold text-on-surface-variant mb-1.5 ${isArabic ? 'text-right' : 'text-left'}`}>
                   {isArabic ? 'كلمة المرور' : 'Password'}
                 </label>
                 <input
@@ -160,13 +160,13 @@ export default function Login({ setActivePage }) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
+                  className={`w-full px-4 py-2.5 bg-white border border-border-subtle rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-primary hover:bg-primary-hover text-on-primary font-button py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm font-semibold mt-6 text-sm"
+                className="w-full bg-primary hover:bg-primary-hover text-on-primary font-button py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm font-semibold mt-6 text-base"
               >
                 {isArabic ? 'تسجيل الدخول' : 'Sign In'}
               </button>
@@ -174,7 +174,7 @@ export default function Login({ setActivePage }) {
 
             {role === 'doctor' && (
               <div className="mt-6 text-center">
-                <p className="text-xs text-secondary">
+                <p className="text-sm text-secondary">
                   {isArabic ? 'طبيب جديد؟ ' : 'New doctor? '}
                   <button
                     onClick={() => setActivePage('register')}
@@ -189,7 +189,7 @@ export default function Login({ setActivePage }) {
 
             {role === 'org' && (
               <div className="mt-6 text-center">
-                <p className="text-xs text-secondary">
+                <p className="text-sm text-secondary">
                   {isArabic ? 'منظمة جديدة؟ ' : 'New organization? '}
                   <button
                     onClick={() => setActivePage('register')}

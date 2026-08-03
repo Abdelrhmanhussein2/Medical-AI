@@ -346,11 +346,10 @@ export default function AdminUsers() {
             </button>
           )}
         </header>
-
         {/* Tabs & Search controls */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 border border-border-subtle rounded-xl shadow-sm">
-          {/* Tabs */}
-          <div className="flex gap-2 p-1 bg-surface-container-low rounded-lg w-full sm:w-auto">
+          {/* Tabs with explicit active/inactive styles */}
+          <div className="flex gap-2 p-1 bg-surface-container-low rounded-lg w-full sm:w-auto border border-border-subtle shadow-inner">
             <button
               onClick={() => {
                 setActiveTab('doctors');
@@ -358,13 +357,13 @@ export default function AdminUsers() {
                 setStatusFilter('all');
               }}
               type="button"
-              className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-colors ${
+              className={`flex-1 sm:flex-none px-5 py-2 text-xs font-black rounded-lg transition-all ${
                 activeTab === 'doctors' 
-                  ? 'bg-white text-primary shadow-sm' 
-                  : 'text-secondary hover:text-primary'
+                  ? 'bg-primary text-white shadow-md scale-[1.02]' 
+                  : 'text-secondary hover:text-primary hover:bg-white/50'
               }`}
             >
-              {isArabic ? 'الأطباء' : 'Doctors'}
+              {isArabic ? 'الأطباء الممارسين' : 'Clinicians'}
             </button>
             <button
               onClick={() => {
@@ -373,13 +372,13 @@ export default function AdminUsers() {
                 setStatusFilter('all');
               }}
               type="button"
-              className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-colors ${
+              className={`flex-1 sm:flex-none px-5 py-2 text-xs font-black rounded-lg transition-all ${
                 activeTab === 'orgs' 
-                  ? 'bg-white text-primary shadow-sm' 
-                  : 'text-secondary hover:text-primary'
+                  ? 'bg-primary text-white shadow-md scale-[1.02]' 
+                  : 'text-secondary hover:text-primary hover:bg-white/50'
               }`}
             >
-              {isArabic ? 'المنظمات' : 'Organizations'}
+              {isArabic ? 'المنظمات والشركاء' : 'Organizations'}
             </button>
           </div>
 
@@ -518,7 +517,7 @@ export default function AdminUsers() {
                   </tr>
                 ) : (
                   filteredOrgs.map((org) => {
-                    const assignedCount = doctors.filter(d => d.org_id === org.id).length;
+                    const assignedCount = doctors.filter(d => d.department_id === org.id).length;
                     return (
                       <tr key={org.id} className="hover:bg-surface-container-low transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">

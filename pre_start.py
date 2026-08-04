@@ -33,13 +33,17 @@ async def check_and_migrate():
             await asyncio.sleep(2)
 
     try:
-        # Check if 'alembic_version' table exists
+        # Check if 'alembic_version' table exists and fetch current version
         alembic_exists = await conn.fetchval("""
             SELECT EXISTS (
                 SELECT FROM information_schema.tables 
                 WHERE table_name = 'alembic_version'
             );
         """)
+        
+        current_version = None
+        if alembic_exists:
+            current_version = await conn.fetchval("SELECT version_num FROM alembic_version LIMIT 1")
         
         # Check if 'admins' table exists (meaning schema.sql was imported by postgres service init)
         admins_exists = await conn.fetchval("""
@@ -52,11 +56,15 @@ async def check_and_migrate():
         await conn.close()
         
         if alembic_exists:
-            print("Database has been stamped with Alembic. Running pending migrations (alembic upgrade head)...")
-            subprocess.run(["alembic", "upgrade", "head"], check=True)
+            if current_version != 'a00000000001':
+                print(f"Old Alembic version {current_version} found. Force-stamping database to new baseline (a00000000001)...")
+                subprocess.run(["alembic", "stamp", "a00000000001"], check=True)
+            else:
+                print("Database is already at the new baseline. Running pending migrations (alembic upgrade head)...")
+                subprocess.run(["alembic", "upgrade", "head"], check=True)
         elif admins_exists:
-            print("Database has existing tables (from schema.sql) but is unstamped. Stamping baseline (alembic stamp 8b709742a161)...")
-            subprocess.run(["alembic", "stamp", "8b709742a161"], check=True)
+            print("Database has existing tables (from schema.sql) but is unstamped. Stamping baseline (alembic stamp a00000000001)...")
+            subprocess.run(["alembic", "stamp", "a00000000001"], check=True)
             print("Database stamped. Running any new upgrades...")
             subprocess.run(["alembic", "upgrade", "head"], check=True)
         else:

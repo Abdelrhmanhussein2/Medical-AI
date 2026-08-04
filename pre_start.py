@@ -55,8 +55,8 @@ async def check_and_migrate():
             print("Database has been stamped with Alembic. Running pending migrations (alembic upgrade head)...")
             subprocess.run(["alembic", "upgrade", "head"], check=True)
         elif admins_exists:
-            print("Database has existing tables (from schema.sql) but is unstamped. Stamping head (alembic stamp head)...")
-            subprocess.run(["alembic", "stamp", "head"], check=True)
+            print("Database has existing tables (from schema.sql) but is unstamped. Stamping baseline (alembic stamp 8b709742a161)...")
+            subprocess.run(["alembic", "stamp", "8b709742a161"], check=True)
             print("Database stamped. Running any new upgrades...")
             subprocess.run(["alembic", "upgrade", "head"], check=True)
         else:

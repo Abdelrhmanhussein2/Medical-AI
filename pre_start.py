@@ -69,6 +69,10 @@ async def check_and_migrate():
             
         await conn.close()
         
+        # Ensure all columns/tables are synchronized
+        print("Ensuring database schema is fully synchronized...")
+        subprocess.run([sys.executable, "-m", "app.sync_db_schema"], check=True)
+        
         # Now we only run alembic upgrade head to apply any future migrations
         if alembic_exists:
             print("Database is at the baseline a00000000001. Running pending migrations (alembic upgrade head)...")

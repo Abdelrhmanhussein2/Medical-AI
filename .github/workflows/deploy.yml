@@ -18,14 +18,18 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
 
           script: |
+            set -e
+
             cd /opt/apps/Medical-AI
 
             git fetch origin
             git reset --hard origin/main
 
-            cd app/docker
+            cd web
+            npm ci
+            npm run build
 
-            docker compose pull
+            cd ../app/docker
             docker compose up -d --build
 
             docker image prune -f

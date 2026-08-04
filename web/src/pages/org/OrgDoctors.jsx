@@ -241,11 +241,11 @@ export default function OrgDoctors() {
           <thead className="bg-bg-canvas">
             <tr>
               <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'الطبيب' : 'Doctor'}</th>
-              <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'التخصص' : 'Specialization'}</th>
-              <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'استشارات AI' : 'AI Consults'}</th>
-              <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'التقارير' : 'Reports'}</th>
-              <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'الاشتراك' : 'Subscription'}</th>
-              <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'آخر نشاط' : 'Last Activity'}</th>
+              <th scope="col" className="hidden sm:table-cell px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'التخصص' : 'Specialization'}</th>
+              <th scope="col" className="hidden sm:table-cell px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'استشارات AI' : 'AI Consults'}</th>
+              <th scope="col" className="hidden md:table-cell px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'التقارير' : 'Reports'}</th>
+              <th scope="col" className="hidden sm:table-cell px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'الاشتراك' : 'Subscription'}</th>
+              <th scope="col" className="hidden lg:table-cell px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'آخر نشاط' : 'Last Activity'}</th>
               <th scope="col" className="relative px-6 py-3">
                 <span className="sr-only">{isArabic ? 'إجراءات' : 'Actions'}</span>
               </th>
@@ -260,29 +260,33 @@ export default function OrgDoctors() {
               </tr>
             ) : (
               filteredDocs.map((doc) => (
-                <tr key={doc.id} className="hover:bg-surface-container-low transition-colors">
+                <tr 
+                  key={doc.id} 
+                  onClick={() => openDoctorDetails(doc)}
+                  className="group hover:bg-primary-light/30 transition-all duration-200 cursor-pointer"
+                >
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className={`flex items-center gap-3 ${isArabic ? 'flex-row-reverse' : ''}`}>
-                      <div className="w-8 h-8 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold font-display-md">
+                    <div className={`flex items-center gap-3 w-fit ${isArabic ? 'flex-row-reverse mr-0' : 'ml-0'}`}>
+                      <div className="w-8 h-8 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold font-display-md shrink-0">
                         {doc.name.split(' ').map(n => n[0]).join('')}
                       </div>
-                      <div>
-                        <div className="font-bold text-on-surface text-xs">{doc.name}</div>
+                      <div className={isArabic ? 'text-right' : 'text-left'}>
+                        <div className="font-bold text-on-surface text-xs group-hover:text-primary transition-colors duration-200">{doc.name}</div>
                         <div className="text-[10px] text-secondary">{doc.email}</div>
                         <div className="text-[10px] text-secondary">{doc.phone}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-secondary font-semibold">
+                  <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-secondary font-semibold">
                     {getSpecialtyLabel(doc.specialization || doc.department)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-secondary font-bold text-sm">
+                  <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-secondary font-bold text-sm">
                     {doc.ai_consults}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-secondary font-semibold">
+                  <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap text-secondary font-semibold">
                     {doc.reports} {isArabic ? 'تقارير' : 'reports'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                       doc.is_active !== false
                         ? 'bg-primary-light text-primary' 
@@ -291,18 +295,18 @@ export default function OrgDoctors() {
                       {doc.is_active !== false ? (isArabic ? 'نشط' : 'Active') : (isArabic ? 'معطل' : 'Disabled')}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-secondary">
+                  <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-secondary">
                     {doc.last_login}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-xs font-semibold">
-                    <div className={`flex ${isArabic ? 'justify-start' : 'justify-end'}`}>
-                      <button
-                        onClick={() => openDoctorDetails(doc)}
-                        className="px-3 py-1.5 bg-primary-light hover:bg-primary/20 text-primary rounded font-bold text-xs shadow-sm transition-colors"
-                      >
-                        {isArabic ? 'عرض التفاصيل والإدارة' : 'View Details & Manage'}
-                      </button>
-                    </div>
+                  <td className={`px-6 py-4 whitespace-nowrap text-xs font-semibold ${isArabic ? 'text-left' : 'text-right'}`}>
+                    <span className="text-primary group-hover:text-primary-hover font-bold transition-all flex items-center gap-0.5 justify-end">
+                      <span className="hidden sm:inline">{isArabic ? 'التفاصيل والإدارة' : 'Manage'}</span>
+                      <span className={`material-symbols-outlined text-[20px] transition-transform duration-200 ${
+                        isArabic ? 'group-hover:-translate-x-1' : 'group-hover:translate-x-1'
+                      }`}>
+                        {isArabic ? 'chevron_left' : 'chevron_right'}
+                      </span>
+                    </span>
                   </td>
                 </tr>
               ))
@@ -431,9 +435,9 @@ export default function OrgDoctors() {
 
       {/* Details & Edit Doctor Modal */}
       {selectedDoctor && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl border border-border-subtle shadow-lg max-w-md w-full overflow-hidden animate-fade-in">
-            <div className={`px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas ${isArabic ? 'flex-row-reverse' : ''}`}>
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-xl border border-border-subtle shadow-lg max-w-md w-full overflow-hidden animate-fade-in flex flex-col max-h-[90vh]">
+            <div className={`px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas shrink-0 ${isArabic ? 'flex-row-reverse' : ''}`}>
               <h3 className="font-headline-md text-base text-primary font-bold">
                 {isEditMode
                   ? (isArabic ? 'تعديل ملف الطبيب' : 'Edit Doctor Profile')
@@ -448,7 +452,7 @@ export default function OrgDoctors() {
             </div>
             
             {isEditMode ? (
-              <form onSubmit={handleEditDoctorSubmit} className="p-6 space-y-4 text-start">
+              <form onSubmit={handleEditDoctorSubmit} className="p-6 space-y-4 text-start overflow-y-auto flex-1">
                 <div>
                   <label className="block text-xs font-semibold text-on-surface-variant mb-1">
                     {isArabic ? 'اسم الطبيب *' : 'Doctor Name *'}
@@ -544,7 +548,7 @@ export default function OrgDoctors() {
                 </div>
               </form>
             ) : (
-              <div className="p-6 space-y-6 text-xs text-secondary text-start">
+              <div className="p-6 space-y-6 text-xs text-secondary text-start overflow-y-auto flex-1">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-4">
                   <div>
                     <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'اسم الطبيب' : 'Doctor Name'}</span>

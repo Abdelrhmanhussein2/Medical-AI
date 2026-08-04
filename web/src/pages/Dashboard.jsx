@@ -155,7 +155,7 @@ export default function Dashboard({ setActivePage }) {
           {/* Stat Card 1 */}
           <div className="bg-bg-card rounded-xl border border-border-subtle p-4 md:p-6 shadow-sm hover:shadow-ambient transition-shadow">
             <div className="flex justify-between items-start mb-2 md:mb-4">
-              <p className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wide leading-tight">
+              <p className="font-headline-md text-xs md:text-sm text-on-surface-variant font-bold leading-tight">
                 {t('today_appointments')}
               </p>
               <span className="material-symbols-outlined text-[16px] md:text-[20px] text-primary bg-primary-light p-1.5 md:p-2 rounded-lg">calendar_today</span>
@@ -172,7 +172,7 @@ export default function Dashboard({ setActivePage }) {
           {/* Stat Card 2 */}
           <div className="bg-bg-card rounded-xl border border-border-subtle p-4 md:p-6 shadow-sm hover:shadow-ambient transition-shadow">
             <div className="flex justify-between items-start mb-2 md:mb-4">
-              <p className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wide leading-tight">
+              <p className="font-headline-md text-xs md:text-sm text-on-surface-variant font-bold leading-tight">
                 {isArabic ? 'الملخصات' : 'Summaries'}
               </p>
               <span className="material-symbols-outlined text-[16px] md:text-[20px] text-status-warning bg-surface-container-high p-1.5 md:p-2 rounded-lg">description</span>
@@ -190,7 +190,7 @@ export default function Dashboard({ setActivePage }) {
           {/* Stat Card 3 */}
           <div className="bg-bg-card rounded-xl border border-border-subtle p-4 md:p-6 shadow-sm hover:shadow-ambient transition-shadow">
             <div className="flex justify-between items-start mb-2 md:mb-4">
-              <p className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wide leading-tight">
+              <p className="font-headline-md text-xs md:text-sm text-on-surface-variant font-bold leading-tight">
                 {t('total_patients')}
               </p>
               <span className="material-symbols-outlined text-[16px] md:text-[20px] text-tertiary bg-tertiary-fixed p-1.5 md:p-2 rounded-lg">verified_user</span>
@@ -207,7 +207,7 @@ export default function Dashboard({ setActivePage }) {
           {/* Stat Card 4 */}
           <div className="bg-bg-card rounded-xl border border-border-subtle p-4 md:p-6 shadow-sm hover:shadow-ambient transition-shadow">
             <div className="flex justify-between items-start mb-2 md:mb-4">
-              <p className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wide leading-tight">
+              <p className="font-headline-md text-xs md:text-sm text-on-surface-variant font-bold leading-tight">
                 {t('ai_credits')}
               </p>
               <span className="material-symbols-outlined text-[16px] md:text-[20px] text-primary bg-primary-light p-1.5 md:p-2 rounded-lg">payments</span>

@@ -85,9 +85,9 @@ export const PLANS = [
       'All features in Starter plan.',
       'Usage reports and multi-user support.'
     ],
-    badgeAr: null,
-    badgeEn: null,
-    highlight: false
+    badgeAr: 'الخيار الأفضل',
+    badgeEn: 'Best Choice',
+    highlight: true
   },
   {
     id: 'business',

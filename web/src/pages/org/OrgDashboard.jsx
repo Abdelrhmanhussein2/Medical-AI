@@ -61,62 +61,62 @@ export default function OrgDashboard({ setActivePage }) {
       </header>
 
       {/* 4 Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
-        <div className="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-gutter">
+        <div className="bg-white border border-border-subtle p-4 md:p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
           <div className="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
-          <span className="text-xs font-semibold text-secondary uppercase tracking-wider block">
+          <span className="font-headline-md text-xs md:text-sm text-on-surface-variant font-bold leading-tight block">
             {isArabic ? 'إجمالي الأطباء' : 'Total Doctors'}
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-on-surface font-display-lg">{total_doctors || 0}</span>
-            <span className="text-xs font-semibold text-primary flex items-center gap-0.5">
-              <span className="material-symbols-outlined text-xs">trending_up</span>
-              {isArabic ? '+0 هذا الشهر' : '+0 this month'}
+            <span className="text-2xl md:text-3xl text-on-surface font-sans font-black leading-none">{total_doctors || 0}</span>
+            <span className="text-[10px] sm:text-xs font-semibold text-primary flex items-center gap-0.5">
+              <span className="material-symbols-outlined text-[10px] sm:text-xs">trending_up</span>
+              {isArabic ? '+0' : '+0'}
             </span>
           </div>
         </div>
 
-        <div className="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
+        <div className="bg-white border border-border-subtle p-4 md:p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
           <div className="absolute right-0 top-0 w-24 h-24 bg-tertiary-fixed-dim/5 rounded-full blur-2xl"></div>
-          <span className="text-xs font-semibold text-secondary uppercase tracking-wider block">
+          <span className="font-headline-md text-xs md:text-sm text-on-surface-variant font-bold leading-tight block">
             {isArabic ? 'التراخيص النشطة' : 'Active Licenses'}
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-on-surface font-display-lg">{active_licenses || 0}</span>
-            <span className="text-xs font-semibold text-secondary">
-              {isArabic ? '/ المقاعد المخصصة' : '/ allocated seats'}
+            <span className="text-2xl md:text-3xl text-on-surface font-sans font-black leading-none">{active_licenses || 0}</span>
+            <span className="text-[10px] sm:text-xs font-semibold text-secondary truncate max-w-[80px] sm:max-w-none">
+              {isArabic ? '/ المقاعد' : '/ seats'}
             </span>
           </div>
         </div>
 
-        <div className="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
+        <div className="bg-white border border-border-subtle p-4 md:p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
           <div className="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
-          <span className="text-xs font-semibold text-secondary uppercase tracking-wider block">
+          <span className="font-headline-md text-xs md:text-sm text-on-surface-variant font-bold leading-tight block">
             {isArabic ? 'نسبة استخدام الذكاء الاصطناعي' : 'AI Usage Rate'}
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-on-surface font-display-lg">{ai_adoption_rate || 0}%</span>
-            <span className={`text-xs font-semibold ${(ai_adoption_rate || 0) >= 60 ? 'text-primary' : (ai_adoption_rate || 0) >= 30 ? 'text-status-warning' : (ai_adoption_rate || 0) > 0 ? 'text-status-warning' : 'text-secondary'}`}>
+            <span className="text-2xl md:text-3xl text-on-surface font-sans font-black leading-none">{ai_adoption_rate || 0}%</span>
+            <span className={`text-[10px] sm:text-xs font-semibold truncate max-w-[65px] sm:max-w-none ${(ai_adoption_rate || 0) >= 60 ? 'text-primary' : (ai_adoption_rate || 0) >= 30 ? 'text-status-warning' : (ai_adoption_rate || 0) > 0 ? 'text-status-warning' : 'text-secondary'}`}>
               {(ai_adoption_rate || 0) >= 60
-                ? (isArabic ? 'نشاط مرتفع' : 'High Activity')
+                ? (isArabic ? 'مرتفع' : 'High')
                 : (ai_adoption_rate || 0) >= 30
-                  ? (isArabic ? 'نشاط متوسط' : 'Moderate Activity')
+                  ? (isArabic ? 'متوسط' : 'Moderate')
                   : (ai_adoption_rate || 0) > 0
-                    ? (isArabic ? 'نشاط منخفض' : 'Low Activity')
-                    : (isArabic ? 'لم يبدأ الاستخدام بعد' : 'Not Started Yet')}
+                    ? (isArabic ? 'منخفض' : 'Low')
+                    : (isArabic ? 'غير نشط' : 'Inactive')}
             </span>
           </div>
         </div>
 
-        <div className="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
+        <div className="bg-white border border-border-subtle p-4 md:p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
           <div className="absolute right-0 top-0 w-24 h-24 bg-tertiary-fixed-dim/5 rounded-full blur-2xl"></div>
-          <span className="text-xs font-semibold text-secondary uppercase tracking-wider block">
+          <span className="font-headline-md text-xs md:text-sm text-on-surface-variant font-bold leading-tight block">
             {isArabic ? 'الاستشارات الشهرية' : 'Monthly Consults'}
           </span>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-on-surface font-display-lg">{monthly_consults || 0}</span>
-            <span className="text-xs font-semibold text-primary flex items-center gap-0.5">
-              <span className="material-symbols-outlined text-xs">trending_up</span>
+            <span className="text-2xl md:text-3xl text-on-surface font-sans font-black leading-none">{monthly_consults || 0}</span>
+            <span className="text-[10px] sm:text-xs font-semibold text-primary flex items-center gap-0.5">
+              <span className="material-symbols-outlined text-[10px] sm:text-xs">trending_up</span>
               +0%
             </span>
           </div>

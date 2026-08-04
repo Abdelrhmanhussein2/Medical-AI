@@ -317,65 +317,67 @@ export default function OrgSubscriptions() {
   return (
     <div className={`space-y-stack-lg font-body-md animate-fade-in ${isArabic ? 'text-right' : 'text-left'}`}>
       {/* Header */}
-      <header className="flex justify-between items-center border-b border-border-subtle pb-4">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-stack-lg border-b border-border-subtle pb-stack-md gap-4">
         <div>
           <h1 className="font-display-lg text-headline-lg text-on-surface font-bold">
             {isArabic ? 'اشتراكات القسم' : 'Department Subscriptions'}
           </h1>
         </div>
         
-        <button
-          onClick={() => setShowOrgRenewModal(true)}
-          className="px-4 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold text-xs rounded-lg shadow-sm flex items-center gap-2 transition-colors cursor-pointer"
-        >
-          <span className="material-symbols-outlined text-[18px]">credit_card</span>
-          {isArabic ? 'تجديد أو ترقية الاشتراك' : 'Renew or Upgrade Subscription'}
-        </button>
+        <div className="w-full sm:w-auto">
+          <button
+            onClick={() => setShowOrgRenewModal(true)}
+            className="w-full sm:w-auto px-4 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold text-xs rounded-lg shadow-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px]">credit_card</span>
+            {isArabic ? 'تجديد أو ترقية الاشتراك' : 'Renew or Upgrade Subscription'}
+          </button>
+        </div>
       </header>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-gutter">
-        <div className="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-gutter">
+        <div className="bg-white border border-border-subtle p-3.5 md:p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden flex flex-col justify-between">
           <div className="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
-          <span className="text-xs font-semibold text-secondary uppercase tracking-wider block">
+          <span className="font-headline-md text-xs md:text-sm text-on-surface-variant font-bold leading-tight block">
             {isArabic ? 'إجمالي استخدام المقاعد' : 'Total Seat Utilization'}
           </span>
-          <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-on-surface font-display-lg">{seatsUtilized} / {totalSeats}</span>
-            <span className="text-xs font-semibold text-primary">
+          <div className="flex items-baseline gap-1 md:gap-2 flex-wrap">
+            <span className="text-xl md:text-3xl text-on-surface font-sans font-black leading-none" dir="ltr">{seatsUtilized} / {totalSeats}</span>
+            <span className="text-[10px] sm:text-xs font-semibold text-primary">
               {capacityPct}% {isArabic ? 'نشط' : 'active'}
             </span>
           </div>
-          <div className="w-full bg-surface-container rounded-full h-1.5 overflow-hidden mt-2">
+          <div className="w-full bg-surface-container rounded-full h-1 overflow-hidden mt-1 shrink-0">
             <div className="bg-primary h-full rounded-full transition-all duration-500" style={{ width: `${capacityPct}%` }}></div>
           </div>
         </div>
 
-        <div className="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
+        <div className="bg-white border border-border-subtle p-3.5 md:p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden flex flex-col justify-between">
           <div className="absolute right-0 top-0 w-24 h-24 bg-status-warning/5 rounded-full blur-2xl"></div>
-          <span className="text-xs font-semibold text-secondary uppercase tracking-wider block">
+          <span className="font-headline-md text-xs md:text-sm text-on-surface-variant font-bold leading-tight block">
             {isArabic ? 'في انتظار التفعيل' : 'Pending Activation'}
           </span>
-          <div className="flex items-baseline gap-2">
-            <span className={`text-4xl font-bold font-display-lg ${pendingCount > 0 ? 'text-status-warning' : 'text-on-surface'}`}>{pendingCount}</span>
-            <span className="text-xs font-semibold text-status-warning">
+          <div className="flex items-baseline gap-1 md:gap-2 flex-wrap">
+            <span className={`text-xl md:text-3xl font-sans font-black leading-none ${pendingCount > 0 ? 'text-status-warning' : 'text-on-surface'}`}>{pendingCount}</span>
+            <span className="text-[10px] sm:text-xs font-semibold text-status-warning truncate max-w-[65px] sm:max-w-none">
               {pendingCount > 0 
-                ? (isArabic ? 'يحتاج اشتراك' : 'Needs Subscription') 
-                : (isArabic ? 'الكل نشط' : 'All Active')}
+                ? (isArabic ? 'مطلوب' : 'Required') 
+                : (isArabic ? 'مكتمل' : 'All Active')}
             </span>
           </div>
         </div>
 
-        <div className="bg-white border border-border-subtle p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden">
+        <div className="col-span-2 sm:col-span-1 bg-white border border-border-subtle p-3.5 md:p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden flex flex-col justify-between">
           <div className="absolute right-0 top-0 w-24 h-24 bg-error/5 rounded-full blur-2xl"></div>
-          <span className="text-xs font-semibold text-secondary uppercase tracking-wider block">
-            {isArabic ? 'التراخيص التي تنتهي قريباً (30 يوم)' : 'Expiring Licenses (30d)'}
+          <span className="font-headline-md text-xs md:text-sm text-on-surface-variant font-bold leading-tight block">
+            {isArabic ? 'التراخيص التي تنتهي قريباً' : 'Expiring Licenses'}
           </span>
-          <div className="flex items-baseline gap-2">
-            <span className={`text-4xl font-bold font-display-lg ${expiringSoonCount > 0 ? 'text-error' : 'text-on-surface'}`}>{expiringSoonCount}</span>
-            <span className="text-xs font-semibold text-error">
+          <div className="flex items-baseline gap-1 md:gap-2 flex-wrap">
+            <span className={`text-xl md:text-3xl font-sans font-black leading-none ${expiringSoonCount > 0 ? 'text-error' : 'text-on-surface'}`}>{expiringSoonCount}</span>
+            <span className="text-[10px] sm:text-xs font-semibold text-error truncate max-w-[65px] sm:max-w-none">
               {expiringSoonCount > 0 
-                ? (isArabic ? 'مراجعة التجديدات' : 'Review Renewals') 
+                ? (isArabic ? 'تجديد' : 'Renew') 
                 : (isArabic ? 'لا يوجد' : 'None')}
             </span>
           </div>
@@ -399,13 +401,13 @@ export default function OrgSubscriptions() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-border-subtle shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-border-subtle shadow-sm overflow-x-auto">
         <table className={`min-w-full divide-y divide-border-subtle ${isArabic ? 'text-right' : 'text-left'}`}>
           <thead className="bg-bg-canvas">
             <tr>
               <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'الطبيب / الممارس' : 'Doctor / Clinician'}</th>
-              <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'الخطة الحالية' : 'Current Plan'}</th>
-              <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'تاريخ الانتهاء' : 'Expiry Date'}</th>
+              <th scope="col" className="hidden sm:table-cell px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'الخطة الحالية' : 'Current Plan'}</th>
+              <th scope="col" className="hidden sm:table-cell px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'تاريخ الانتهاء' : 'Expiry Date'}</th>
               <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'الحالة' : 'Status'}</th>
               <th scope="col" className="relative px-6 py-3"><span className="sr-only">{isArabic ? 'إجراءات' : 'Actions'}</span></th>
             </tr>
@@ -418,52 +420,63 @@ export default function OrgSubscriptions() {
                 </td>
               </tr>
             ) : (
-              filteredLicenses.map((license) => (
-                <tr key={license.id} className={`hover:bg-surface-container-low transition-colors ${license.status === 'pending' ? 'bg-status-warning/5' : ''}`}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className={`flex items-center gap-3 ${isArabic ? 'flex-row-reverse' : ''}`}>
-                      <div className="w-7 h-7 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold text-xs">
-                        {license.doctorName?.[0] || '?'}
+              filteredLicenses.map((license) => {
+                const canActivate = license.status === 'pending' || license.status === 'expired' || license.status === 'expiring';
+                return (
+                  <tr 
+                    key={license.id} 
+                    onClick={() => canActivate && openSubscribeModal(license)}
+                    className={`group transition-all duration-200 ${canActivate ? 'hover:bg-primary-light/30 cursor-pointer' : 'hover:bg-surface-container-low'} ${license.status === 'pending' ? 'bg-status-warning/5' : ''}`}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className={`flex items-center gap-3 w-fit ${isArabic ? 'flex-row-reverse mr-0' : 'ml-0'}`}>
+                        <div className="w-8 h-8 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold font-display-md shrink-0">
+                          {license.doctorName?.[0] || '?'}
+                        </div>
+                        <div className={isArabic ? 'text-right' : 'text-left'}>
+                          <div className="font-bold text-on-surface text-xs group-hover:text-primary transition-colors duration-200">{license.doctorName}</div>
+                          <div className="text-[10px] text-secondary">{license.doctorEmail}</div>
+                          {license.rawDoc?.phone && (
+                            <div className="text-[10px] text-secondary">{license.rawDoc.phone}</div>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <div className="font-bold text-on-surface">{license.doctorName}</div>
-                        <div className="text-[10px] text-secondary">{license.doctorEmail}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {license.planTier && license.planTier !== '—' ? (
-                      <span className="inline-flex items-center gap-1.5 bg-primary/10 text-primary text-[11px] font-bold px-3 py-1 rounded-full">
-                        <span className="material-symbols-outlined text-[13px]">workspace_premium</span>
-                        {getPlanLabel(license.planTier)}
-                      </span>
-                    ) : (
-                      <span className="text-secondary font-semibold text-xs">—</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-secondary font-semibold">
-                    {license.renewalDate}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {statusBadge(license.status, license.daysRemaining)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-xs font-semibold">
-                    <div className={`flex ${isArabic ? 'justify-start' : 'justify-end'}`}>
-                      {(license.status === 'pending' || license.status === 'expired' || license.status === 'expiring') && (
-                        <button
-                          onClick={() => openSubscribeModal(license)}
-                          className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-on-primary text-[10px] font-bold shadow-sm transition-colors flex items-center gap-1"
-                        >
-                          <span className="material-symbols-outlined text-[14px]">subscriptions</span>
-                          {license.status === 'pending'
-                            ? (isArabic ? 'تفعيل الاشتراك' : 'Activate Subscription')
-                            : (isArabic ? 'تجديد' : 'Renew')}
-                        </button>
+                    </td>
+                    <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap">
+                      {license.planTier && license.planTier !== '—' ? (
+                        <span className="inline-flex items-center gap-1.5 bg-primary/10 text-primary text-[11px] font-bold px-3 py-1 rounded-full">
+                          <span className="material-symbols-outlined text-[13px]">workspace_premium</span>
+                          {getPlanLabel(license.planTier)}
+                        </span>
+                      ) : (
+                        <span className="text-secondary font-semibold text-xs">—</span>
                       )}
-                    </div>
-                  </td>
-                </tr>
-              ))
+                    </td>
+                    <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-secondary font-semibold">
+                      {license.renewalDate}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {statusBadge(license.status, license.daysRemaining)}
+                    </td>
+                    <td className={`px-6 py-4 whitespace-nowrap text-xs font-semibold ${isArabic ? 'text-left' : 'text-right'}`}>
+                      <div className="flex items-center gap-0.5 justify-end">
+                        {canActivate ? (
+                          <span className="text-primary group-hover:text-primary-hover font-bold transition-all flex items-center gap-0.5 justify-end">
+                            <span className="hidden sm:inline">{license.status === 'pending' ? (isArabic ? 'تفعيل الاشتراك' : 'Activate') : (isArabic ? 'تجديد' : 'Renew')}</span>
+                            <span className={`material-symbols-outlined text-[20px] transition-transform duration-200 ${
+                              isArabic ? 'group-hover:-translate-x-1' : 'group-hover:translate-x-1'
+                            }`}>
+                              {isArabic ? 'chevron_left' : 'chevron_right'}
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="text-secondary font-medium">—</span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -471,9 +484,9 @@ export default function OrgSubscriptions() {
 
       {/* Subscribe Modal */}
       {showSubModal && selectedDoc && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl border border-border-subtle shadow-lg max-w-md w-full overflow-hidden animate-fade-in">
-            <div className={`px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas ${isArabic ? 'flex-row-reverse' : ''}`}>
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-xl border border-border-subtle shadow-lg max-w-md w-full overflow-hidden animate-fade-in flex flex-col max-h-[90vh]">
+            <div className={`px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas shrink-0 ${isArabic ? 'flex-row-reverse' : ''}`}>
               <div>
                 <h3 className="font-headline-md text-base text-primary font-bold">
                   {isArabic ? 'تفعيل الاشتراك' : 'Activate Subscription'}
@@ -487,7 +500,7 @@ export default function OrgSubscriptions() {
               </button>
             </div>
 
-            <form onSubmit={handleActivate} className="p-6 space-y-4 text-start">
+            <form onSubmit={handleActivate} className="p-6 space-y-4 text-start overflow-y-auto flex-1">
               {subError && (
                 <div className="bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2">
                   <span className="material-symbols-outlined text-[16px]">error</span>

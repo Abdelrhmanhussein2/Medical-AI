@@ -17,6 +17,9 @@ import Checkout from './pages/Checkout';
 import Settings from './pages/Settings';
 import Templates from './pages/Templates';
 import ForceChangePassword from './pages/ForceChangePassword';
+import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
+import RefundPolicyPage from './pages/RefundPolicyPage';
 
 // Admin pages
 import AdminOverview from './pages/admin/AdminOverview';
@@ -133,6 +136,9 @@ function AppContent() {
         } />
 
         <Route path="/checkout" element={<Checkout />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/refund-policy" element={<RefundPolicyPage />} />
 
         <Route path="/change-password" element={
           <ProtectedRoute>

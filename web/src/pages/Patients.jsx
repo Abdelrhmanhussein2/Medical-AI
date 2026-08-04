@@ -230,7 +230,7 @@ export default function Patients({ setActivePage }) {
   return (
     <div className="text-start">
       {/* Header */}
-      <header className="flex justify-between items-end mb-stack-lg border-b border-border-subtle pb-stack-md">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-stack-lg border-b border-border-subtle pb-stack-md gap-4">
         <div>
           <h1 className="font-display-lg text-headline-lg text-on-surface font-bold">
             {t('patient_directory')}
@@ -239,10 +239,10 @@ export default function Patients({ setActivePage }) {
             {isArabic ? 'إدارة والبحث في سجلات المرضى المسجلين لديك.' : 'Manage and search your registered patients.'}
           </p>
         </div>
-        <div>
+        <div className="w-full sm:w-auto">
           <button
             onClick={() => setShowAddModal(true)}
-            className="bg-primary hover:bg-primary-hover text-on-primary font-button text-sm py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm font-bold"
+            className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-on-primary font-button text-xs sm:text-sm py-2 px-3 sm:px-4 rounded-lg transition-colors flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm font-bold cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">person_add</span>
             {t('add_patient')}
@@ -265,15 +265,15 @@ export default function Patients({ setActivePage }) {
       </div>
 
       {/* Patients Grid */}
-      <div className="bg-white rounded-xl border border-border-subtle shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-border-subtle shadow-sm overflow-x-auto">
         <table className="min-w-full divide-y divide-border-subtle">
           <thead className="bg-bg-canvas">
             <tr>
               <th scope="col" className={`px-6 py-3 text-xs font-semibold text-secondary uppercase tracking-wider ${isArabic ? 'text-right' : 'text-left'}`}>{t('patient_name')}</th>
               <th scope="col" className={`px-6 py-3 text-xs font-semibold text-secondary uppercase tracking-wider ${isArabic ? 'text-right' : 'text-left'}`}>{t('phone')}</th>
-              <th scope="col" className={`px-6 py-3 text-xs font-semibold text-secondary uppercase tracking-wider ${isArabic ? 'text-right' : 'text-left'}`}>{t('dob')}</th>
-              <th scope="col" className={`px-6 py-3 text-xs font-semibold text-secondary uppercase tracking-wider ${isArabic ? 'text-right' : 'text-left'}`}>{t('gender')}</th>
-              <th scope="col" className={`px-6 py-3 text-xs font-semibold text-secondary uppercase tracking-wider ${isArabic ? 'text-right' : 'text-left'}`}>{t('file_id')}</th>
+              <th scope="col" className={`hidden sm:table-cell px-6 py-3 text-xs font-semibold text-secondary uppercase tracking-wider ${isArabic ? 'text-right' : 'text-left'}`}>{t('dob')}</th>
+              <th scope="col" className={`hidden md:table-cell px-6 py-3 text-xs font-semibold text-secondary uppercase tracking-wider ${isArabic ? 'text-right' : 'text-left'}`}>{t('gender')}</th>
+              <th scope="col" className={`hidden sm:table-cell px-6 py-3 text-xs font-semibold text-secondary uppercase tracking-wider ${isArabic ? 'text-right' : 'text-left'}`}>{t('file_id')}</th>
               <th scope="col" className="relative px-6 py-3">
                 <span className="sr-only">Actions</span>
               </th>
@@ -288,17 +288,21 @@ export default function Patients({ setActivePage }) {
               </tr>
             ) : (
               filteredPatients.map((patient) => (
-                <tr key={patient.id} className="hover:bg-surface-container-low transition-colors">
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}>
+                <tr 
+                  key={patient.id} 
+                  onClick={() => handleSelectPatient(patient)}
+                  className="group hover:bg-primary-light/30 transition-all duration-200 cursor-pointer"
+                >
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold text-on-surface group-hover:text-primary transition-colors duration-200 ${isArabic ? 'text-right' : 'text-left'}`}>
                     {patient.name}
                   </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-secondary ${isArabic ? 'text-right' : 'text-left'}`}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary">
                     {patient.phone}
                   </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-secondary ${isArabic ? 'text-right' : 'text-left'}`}>
+                  <td className={`hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-secondary ${isArabic ? 'text-right' : 'text-left'}`}>
                     {patient.date_of_birth || 'N/A'}
                   </td>
-                  <td className={`px-6 py-4 whitespace-nowrap ${isArabic ? 'text-right' : 'text-left'}`}>
+                  <td className={`hidden md:table-cell px-6 py-4 whitespace-nowrap ${isArabic ? 'text-right' : 'text-left'}`}>
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
                       patient.gender === 'male' 
                         ? 'bg-primary-light text-primary' 
@@ -307,16 +311,18 @@ export default function Patients({ setActivePage }) {
                       {patient.gender === 'male' ? (isArabic ? 'ذكر' : 'Male') : (isArabic ? 'أنثى' : 'Female')}
                     </span>
                   </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-secondary font-mono ${isArabic ? 'text-right' : 'text-left'}`}>
+                  <td className={`hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-secondary font-mono ${isArabic ? 'text-right' : 'text-left'}`}>
                     {patient.file_id || '—'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button 
-                      onClick={() => handleSelectPatient(patient)}
-                      className="text-primary hover:text-primary-hover font-semibold"
-                    >
-                      {isArabic ? 'التفاصيل' : 'Details'}
-                    </button>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isArabic ? 'text-left' : 'text-right'}`}>
+                    <span className="text-primary group-hover:text-primary-hover font-bold transition-all flex items-center gap-0.5 justify-end">
+                      <span className="hidden sm:inline">{isArabic ? 'التفاصيل' : 'Details'}</span>
+                      <span className={`material-symbols-outlined text-[20px] transition-transform duration-200 ${
+                        isArabic ? 'group-hover:-translate-x-1' : 'group-hover:translate-x-1'
+                      }`}>
+                        {isArabic ? 'chevron_left' : 'chevron_right'}
+                      </span>
+                    </span>
                   </td>
                 </tr>
               ))

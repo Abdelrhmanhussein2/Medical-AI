@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import SbrLogo from '../components/SbrLogo';
 import { useLanguage } from '../context/LanguageContext';
 import { useApp } from '../context/AppContext';
+import { Link } from 'react-router-dom';
 
 // ── FAQ Data ──────────────────────────────────────────────────────────────────
 const FAQ_ITEMS = [
@@ -12,10 +13,10 @@ const FAQ_ITEMS = [
     aEn: 'SBR AI is a comprehensive clinical AI assistant designed specifically for physicians. It automatically documents patient encounters through ambient voice dictation, generates accurate SOAP notes, and manages schedules — allowing clinicians to focus entirely on patient care instead of manual data entry.',
   },
   {
-    qAr: 'هل SBR AI متوافق مع معايير الخصوصية الطبية (HIPAA)؟',
-    qEn: 'Is SBR AI HIPAA compliant?',
-    aAr: 'نعم. يتمتع SBR AI ببنية أمنية مؤسسية كاملة تضمن تشفير جميع بيانات صحة المرضى أثناء النقل وفي حالة السكون. النظام مُصمَّم وفق أعلى المعايير الأمنية الطبية ومتوافق تماماً مع لوائح HIPAA وSOC2.',
-    aEn: 'Yes. SBR AI features enterprise-grade security architecture ensuring all patient health data is encrypted both in transit and at rest. The system is fully compliant with HIPAA regulations and SOC2 standards.',
+    qAr: 'كيف تحمي SBR AI بيانات مرضاي؟',
+    qEn: 'How does SBR AI protect my patients\' data?',
+    aAr: 'تعتمد SBR AI بنية تقنية تهدف إلى حماية بيانات المستخدمين والمرضى. يتم تشفير البيانات أثناء النقل وفي حالة السكون. لا نشارك أو نبيع أي بيانات طبية لجهات خارجية. تتم معالجة المدفوعات عبر بوابة دفع خارجية آمنة ولا نحتفظ ببيانات البطاقات البنكية.',
+    aEn: 'SBR AI uses a technical architecture designed to protect user and patient data. Data is encrypted both in transit and at rest. We do not share or sell any medical data to third parties. Payments are processed through a secure external payment gateway and we do not store bank card data.',
   },
   {
     qAr: 'كيف يعمل الإملاء الصوتي المحيطي؟',
@@ -157,7 +158,7 @@ export default function Landing({ setActivePage }) {
                     <span className="material-symbols-outlined text-xs text-secondary">person</span>
                   </div>
                 </div>
-                <p>{isArabic ? 'يثق به أكثر من 10,000 طبيب حول العالم' : 'Trusted by 10,000+ clinicians globally'}</p>
+                <p>{isArabic ? 'صُمِّم لمساعدة الأطباء على العمل بكفاءة أعلى' : 'Designed to help clinicians work smarter'}</p>
               </div>
             </div>
 
@@ -223,8 +224,8 @@ export default function Landing({ setActivePage }) {
               </h2>
               <p className="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
                 {isArabic
-                  ? 'SBR AI هو محرك سريري مدعوم بالذكاء الاصطناعي مُصمَّم من الأساس لأتمتة التوثيق المعقد، وتبسيط سير العمل اليومي، وضمان الامتثال لمعايير HIPAA في جميع العمليات.'
-                  : 'SBR AI is an AI-powered clinical engine designed from the ground up to automate complex documentation, intuitively streamline your daily workflows, and strictly ensure HIPAA compliance across all operations.'}
+                  ? 'SBR AI هو محرك سريري مدعوم بالذكاء الاصطناعي مُصمَّم من الأساس لأتمتة التوثيق المعقد، وتبسيط سير العمل اليومي، وتمكين الأطباء من التركيز الكامل على رعاية مرضاهم.'
+                  : 'SBR AI is an AI-powered clinical engine designed from the ground up to automate complex documentation, intuitively streamline your daily workflows, and free clinicians to focus entirely on patient care.'}
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter">
@@ -244,11 +245,11 @@ export default function Landing({ setActivePage }) {
                   descEn: 'Integrate seamlessly with your existing processes to reduce clicks and keep the focus entirely on patient care.'
                 },
                 {
-                  icon: 'shield_locked',
-                  titleAr: 'متوافق مع HIPAA',
-                  titleEn: 'HIPAA Compliant',
-                  descAr: 'بنية أمان مؤسسية تضمن تشفير جميع بيانات صحة المرضى وحمايتها الصارمة.',
-                  descEn: 'Enterprise-grade security architecture ensuring all patient health information is encrypted and strictly protected.'
+                  icon: 'lock',
+                  titleAr: 'حماية بيانات المرضى',
+                  titleEn: 'Patient Data Protection',
+                  descAr: 'بياناتك وبيانات مرضاك مشفّرة أثناء النقل والتخزين. لا نبيع أو نشارك المعلومات الطبية مع أي جهة خارجية.',
+                  descEn: 'Your data and your patients\' data is encrypted in transit and at rest. We never sell or share medical information with third parties.'
                 }
               ].map(({ icon, titleAr, titleEn, descAr, descEn }) => (
                 <div key={icon} className="bg-bg-canvas p-stack-lg rounded-xl border border-border-subtle text-center hover:shadow-lg transition-shadow">
@@ -396,9 +397,14 @@ export default function Landing({ setActivePage }) {
                     <h3 className="font-headline-md text-base md:text-lg text-on-surface font-bold mb-1">{name}</h3>
 
                     <div className="mb-4 flex items-baseline gap-1">
-                      <span className="text-2xl md:text-4xl font-black text-primary">$</span>
-                      <span className="text-2xl md:text-4xl font-black text-primary">{plan.priceEn}</span>
-                      <span className="text-on-surface-variant text-xs ml-1">USD / {isArabic ? 'شهر' : 'mo'}</span>
+                      <span className="text-2xl md:text-4xl font-black text-primary">
+                        {plan.id === 'free' ? (isArabic ? 'مجاناً' : 'Free') : plan.priceEn}
+                      </span>
+                      {plan.id !== 'free' && (
+                        <span className="text-on-surface-variant text-xs ml-1">
+                          {isArabic ? 'ريال' : 'SAR'} / {isArabic ? 'شهر' : 'mo'}
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex gap-2 mb-4 flex-wrap">
@@ -442,7 +448,7 @@ export default function Landing({ setActivePage }) {
             </div>
 
             <p className="text-center text-xs text-secondary mt-8">
-              {isArabic ? 'جميع الأسعار بالدولار الأمريكي شهرياً. يمكن الإلغاء في أي وقت.' : 'All prices in USD / month. Cancel anytime.'}
+              {isArabic ? 'جميع الأسعار بالريال السعودي شهرياً. يمكن الإلغاء في أي وقت.' : 'All prices in SAR / month. Cancel anytime.'}
             </p>
 
           </div>
@@ -579,14 +585,14 @@ export default function Landing({ setActivePage }) {
                     isArabic ? 'flex-row-reverse text-right' : ''
                   }`}>
                     <div className="w-11 h-11 rounded-full bg-success/10 text-success flex items-center justify-center shrink-0">
-                      <span className="material-symbols-outlined text-xl">verified_user</span>
+                      <span className="material-symbols-outlined text-xl">lock</span>
                     </div>
                     <div>
                       <p className="text-[11px] text-on-surface-variant font-semibold uppercase tracking-wider mb-0.5">
-                        {isArabic ? 'الأمان والخصوصية' : 'Security & Privacy'}
+                        {isArabic ? 'حماية البيانات' : 'Data Protection'}
                       </p>
                       <p className="text-sm font-bold text-on-surface">
-                        {isArabic ? 'متوافق مع HIPAA وSOC2' : 'HIPAA & SOC2 Compliant'}
+                        {isArabic ? 'بياناتك مشفّرة ومحمية' : 'Your data is encrypted & protected'}
                       </p>
                     </div>
                   </div>
@@ -620,7 +626,7 @@ export default function Landing({ setActivePage }) {
                     {isArabic ? 'تسجيل الدخول' : 'Sign In'}
                   </button>
                   <p className="text-center text-xs text-on-primary/60 mt-4">
-                    {isArabic ? 'يثق به أكثر من 10,000 طبيب حول العالم' : 'Trusted by 10,000+ clinicians worldwide'}
+                    {isArabic ? 'لا حاجة لبطاقة ائتمانية — ابدأ مجاناً الآن' : 'No credit card required — start for free today'}
                   </p>
                 </div>
               </div>
@@ -680,29 +686,33 @@ export default function Landing({ setActivePage }) {
                   { ar: 'الأسعار', en: 'Pricing', href: '#pricing' },
                   { ar: 'الأسئلة الشائعة', en: 'FAQ', href: '#faq' },
                   { ar: 'تواصل معنا', en: 'Contact Us', href: '#contact' },
-                  { ar: 'سياسة الخصوصية', en: 'Privacy Policy', href: '#' },
                 ].map((l, i) => (
                   <li key={i}><a href={l.href} className="hover:text-white transition-colors">{isArabic ? l.ar : l.en}</a></li>
                 ))}
+                <li>
+                  <Link to="/privacy" className="hover:text-white transition-colors">{isArabic ? 'سياسة الخصوصية' : 'Privacy Policy'}</Link>
+                </li>
               </ul>
             </div>
 
             {/* Legal */}
             <div>
               <h4 className="text-white text-xs font-bold uppercase tracking-wider mb-4">
-                {isArabic ? 'الأمان والامتثال' : 'Security & Compliance'}
+                {isArabic ? 'الأمان والخصوصية' : 'Security & Privacy'}
               </h4>
-              <div className="space-y-3">
-                {[
-                  { icon: 'shield_locked', label: 'HIPAA Compliant' },
-                  { icon: 'verified_user', label: 'SOC2 Certified' },
-                  { icon: 'lock', label: 'End-to-End Encryption' },
-                ].map((b, i) => (
-                  <div key={i} className="flex items-center gap-2 text-white/80 text-xs">
-                    <span className="material-symbols-outlined text-[14px] text-primary-container">{b.icon}</span>
-                    {b.label}
-                  </div>
-                ))}
+              <div className="space-y-3 text-white/80 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[14px] text-primary-container">lock</span>
+                  <span>{isArabic ? 'بياناتك مشفرة أثناء النقل والتخزين' : 'Data encrypted in transit and at rest'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[14px] text-primary-container">privacy_tip</span>
+                  <span>{isArabic ? 'لا نبيع بياناتك أو بيانات مرضاك' : 'We never sell your or your patients\' data'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[14px] text-primary-container">credit_card_off</span>
+                  <span>{isArabic ? 'المدفوعات عبر بوابة دفع آمنة خارجية' : 'Payments via secure third-party gateway'}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -710,9 +720,9 @@ export default function Landing({ setActivePage }) {
           <div className="border-t border-white/10 pt-6 flex flex-col md:flex-row justify-between items-center gap-3 text-white/60 text-xs">
             <p>© 2026 SBR AI Systems. {isArabic ? 'جميع الحقوق محفوظة.' : 'All rights reserved.'}</p>
             <div className="flex gap-6">
-              <a href="#" className="hover:text-white transition-colors">{isArabic ? 'الشروط والأحكام' : 'Terms of Service'}</a>
-              <a href="#" className="hover:text-white transition-colors">{isArabic ? 'سياسة الخصوصية' : 'Privacy Policy'}</a>
-              <a href="#" className="hover:text-white transition-colors">{isArabic ? 'الأمان' : 'Security'}</a>
+              <Link to="/terms" className="hover:text-white transition-colors">{isArabic ? 'الشروط والأحكام' : 'Terms of Service'}</Link>
+              <Link to="/privacy" className="hover:text-white transition-colors">{isArabic ? 'سياسة الخصوصية' : 'Privacy Policy'}</Link>
+              <Link to="/refund-policy" className="hover:text-white transition-colors">{isArabic ? 'سياسة الاسترجاع' : 'Refund Policy'}</Link>
             </div>
           </div>
         </div>

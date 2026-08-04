@@ -53,19 +53,25 @@ async def check_and_migrate():
             );
         """)
         
+        # Direct SQL stamping/updating to bypass Alembic revision validation checks on deleted history
+        if alembic_exists and current_version != 'a00000000001':
+            print(f"Old Alembic version {current_version} found. Direct SQL force-updating alembic_version to a00000000001...")
+            await conn.execute("DELETE FROM alembic_version;")
+            await conn.execute("INSERT INTO alembic_version (version_num) VALUES ('a00000000001');")
+            current_version = 'a00000000001'
+        elif admins_exists and not alembic_exists:
+            print("Database has existing tables but no stamp. Direct SQL creating alembic_version and stamping a00000000001...")
+            await conn.execute("CREATE TABLE IF NOT EXISTS alembic_version (version_num VARCHAR(32) PRIMARY KEY);")
+            await conn.execute("DELETE FROM alembic_version;")
+            await conn.execute("INSERT INTO alembic_version (version_num) VALUES ('a00000000001');")
+            alembic_exists = True
+            current_version = 'a00000000001'
+            
         await conn.close()
         
+        # Now we only run alembic upgrade head to apply any future migrations
         if alembic_exists:
-            if current_version != 'a00000000001':
-                print(f"Old Alembic version {current_version} found. Force-stamping database to new baseline (a00000000001)...")
-                subprocess.run(["alembic", "stamp", "a00000000001"], check=True)
-            else:
-                print("Database is already at the new baseline. Running pending migrations (alembic upgrade head)...")
-                subprocess.run(["alembic", "upgrade", "head"], check=True)
-        elif admins_exists:
-            print("Database has existing tables (from schema.sql) but is unstamped. Stamping baseline (alembic stamp a00000000001)...")
-            subprocess.run(["alembic", "stamp", "a00000000001"], check=True)
-            print("Database stamped. Running any new upgrades...")
+            print("Database is at the baseline a00000000001. Running pending migrations (alembic upgrade head)...")
             subprocess.run(["alembic", "upgrade", "head"], check=True)
         else:
             print("Database is empty. Initializing and running all migrations to head...")

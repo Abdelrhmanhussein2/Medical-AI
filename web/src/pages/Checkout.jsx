@@ -214,10 +214,6 @@ export default function Checkout() {
           ) : (
             <>
               <div className="mb-6">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary-light text-primary text-[10px] font-bold rounded-full uppercase tracking-wider mb-2">
-                  <span className="material-symbols-outlined text-[12px] fill">shield</span>
-                  {isArabic ? 'اتصال آمن ومحمي 256 بت SSL' : 'Secure 256-bit SSL Connection'}
-                </span>
                 <h1 className="text-2xl font-bold text-primary font-headline-md">
                   {isArabic ? 'تفاصيل الدفع' : 'Payment Details'}
                 </h1>

@@ -388,6 +388,23 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
                     "required": ["patient_id", "appointment_date", "appointment_time"]
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "send_report_to_doctor_whatsapp",
+                "description": "أرسل تقريراً أو إحصائيات معينة أو ملخص الحالات مباشرة إلى رقم هاتف الطبيب المسجل عبر الواتساب. استخدمها عندما يطلب الطبيب إرسال شيء له على الواتساب.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "report_text": {
+                            "type": "string",
+                            "description": "نص التقرير أو ملخص الحالات التي سيتم إرسالها على الواتساب للطبيب."
+                        }
+                    },
+                    "required": ["report_text"]
+                }
+            }
         }
     ]
 

@@ -152,9 +152,18 @@ export default function Login({ setActivePage, isPortal = false }) {
               </div>
 
               <div>
-                <label className={`block text-sm font-semibold text-on-surface-variant mb-1.5 ${isArabic ? 'text-right' : 'text-left'}`}>
-                  {isArabic ? 'كلمة المرور' : 'Password'}
-                </label>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-sm font-semibold text-on-surface-variant">
+                    {isArabic ? 'كلمة المرور' : 'Password'}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setActivePage('forgot-password')}
+                    className="text-xs font-semibold text-primary hover:underline cursor-pointer"
+                  >
+                    {isArabic ? 'نسيت كلمة المرور؟' : 'Forgot Password?'}
+                  </button>
+                </div>
                 <input
                   type="password"
                   required

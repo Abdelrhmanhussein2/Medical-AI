@@ -199,7 +199,7 @@ export const AppProvider = ({ children }) => {
       body: JSON.stringify({
         name,
         email,
-        password: password || "defaultpassword123"
+        password
       })
     });
     const mappedOrg = {
@@ -350,7 +350,7 @@ export const AppProvider = ({ children }) => {
     formData.append('name', name);
     formData.append('email', email);
     formData.append('phone', phone);
-    formData.append('password', password || "defaultpassword123");
+    formData.append('password', password || "");
     formData.append('specialization', specialty || "General");
     formData.append('department_id', orgId);
     formData.append('status', 'pending');

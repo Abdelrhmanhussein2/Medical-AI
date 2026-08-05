@@ -6,7 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import StatsCard from '../components/StatsCard';
 
-export default function AiChat({ initialPatientId }) {
+export default function AiChat({ initialPatientId, initialThreadId }) {
   const { currentUser } = useApp();
   const { t, isArabic } = useLanguage();
   const messagesEndRef = useRef(null);
@@ -103,17 +103,23 @@ export default function AiChat({ initialPatientId }) {
     fetchPatients();
   }, []);
 
+  // Auto-open thread for a specific thread ID
+  useEffect(() => {
+    if (!initialThreadId || loadingThreads) return;
+    setActiveThreadId(initialThreadId);
+  }, [initialThreadId, loadingThreads]);
+
   // Auto-open thread for a specific patient when navigated from Patients page
   useEffect(() => {
-    if (!initialPatientId || loadingThreads) return;
-    // Check if a thread for this patient already exists
-    const existing = threads.find(t => t.patient_id === initialPatientId);
-    if (existing) {
-      setActiveThreadId(existing.id);
+    if (!initialPatientId || loadingThreads || initialThreadId) return;
+    // Check if a thread for this patient already exists (sort by date descending to get the newest)
+    const existing = [...threads]
+      .filter(t => t.patient_id === initialPatientId)
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    if (existing.length > 0) {
+      setActiveThreadId(existing[0].id);
     }
-    // If not, it was just created by Patients.jsx before navigation, so it should be in threads after reload
-    // We just activate the first thread that matches
-  }, [initialPatientId, loadingThreads, threads]);
+  }, [initialPatientId, loadingThreads, threads, initialThreadId]);
 
   // 2. Fetch messages when activeThreadId changes
   useEffect(() => {

@@ -255,7 +255,7 @@ export default function Dashboard({ setActivePage }) {
                   {upcomingPatients.map((patient, idx) => (
                     <div 
                       key={patient.id} 
-                      onClick={() => setActivePage('visits')}
+                      onClick={() => setActivePage(`visits-patient-${patient.patient_id}`)}
                       className="flex items-center justify-between p-4 hover:bg-surface-container-low rounded-xl transition-colors border border-transparent hover:border-border-subtle group cursor-pointer"
                     >
                       <div className="flex items-center gap-4">

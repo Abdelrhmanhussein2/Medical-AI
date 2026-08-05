@@ -18,14 +18,11 @@ def build_severe_patient_reply() -> str:
     )
 
 def build_doctor_alert(patient_name: str, phone: str, visit_date: str, summary: str = None) -> str:
-    summary_section = f"\n📝 ملخص حالة المريض:\n{summary}" if summary else ""
+    summary_section = f" (ملخص الحالة: {summary})" if summary else ""
     return (
-        "⚠️ *تنبيه عاجل من SBR AI*:\n"
-        f"المريض: *{patient_name}*\n"
-        f"رقم الجوال: {phone}\n"
-        f"تاريخ الزيارة: {visit_date}\n"
-        f"{summary_section}\n"
-        "المريض يشعر بألم شديد وتعب شديد جداً بعد الزيارة. يرجى التواصل معه فوراً لمتابعة حالته."
+        f"تنبيه عاجل من SBR AI: يرجى التواصل مع مريضك {patient_name} على الرقم {phone}. "
+        f"أبلغ المريض عن شعوره بألم شديد وتعب شديد بعد زيارته بتاريخ {visit_date}{summary_section}. "
+        f"نرجو التواصل معه فوراً للاطمئنان على حالته ومتابعتها."
     )
 
 def build_6m_reminder(patient_name: str) -> str:

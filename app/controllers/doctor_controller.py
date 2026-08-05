@@ -20,7 +20,7 @@ async def register_doctor(
     name: str = Form(...),
     email: EmailStr = Form(...),
     phone: str = Form(...),
-    password: str = Form(...),
+    password: Optional[str] = Form(None),
     specialization: str = Form(...),
     department_id: str = Form(None),
     status: str = Form(None),
@@ -36,11 +36,13 @@ async def register_doctor(
             certificate_url = await doctor_service.save_certificate(certificate_file, email)
         
         # Prepare data
+        import secrets
+        actual_password = password if (password and password.strip()) else secrets.token_urlsafe(10)
         doctor_data = DoctorCreate(
             name=name,
             email=email,
             phone=phone,
-            password=password,
+            password=actual_password,
             specialization=specialization,
             department_id=department_id,
             certificate_url=certificate_url,
@@ -360,8 +362,7 @@ async def request_otp_for_action(body: OTPRequest, current_user: dict = Depends(
     asyncio.create_task(email_service.send_otp_email(email, otp, action_text))
     
     return {
-        "message": "تم إرسال رمز التحقق إلى بريدك الإلكتروني.",
-        "otp": otp  # Returned for API testing
+        "message": "تم إرسال رمز التحقق إلى بريدك الإلكتروني."
     }
 
 class VerifyOTPChangePasswordRequest(BaseModel):

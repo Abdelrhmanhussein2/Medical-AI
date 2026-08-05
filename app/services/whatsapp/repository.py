@@ -164,7 +164,20 @@ class WhatsAppRepository:
         except Exception as e:
             logger.error(f"Error fetching last visit for patient {patient_id}: {e}")
             return None
-            
+
+    async def get_visit(self, visit_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Retrieves a visit details by its ID.
+        """
+        query = "SELECT id as visit_id, notes, description, created_at, visit_date FROM visits WHERE id = $1"
+        try:
+            async with self.pool.acquire() as conn:
+                row = await conn.fetchrow(query, UUID(visit_id))
+                return dict(row) if row else None
+        except Exception as e:
+            logger.error(f"Error fetching visit {visit_id}: {e}")
+            return None
+
     async def get_recent_logs(self, limit: int = 50) -> List[Dict[str, Any]]:
         """
         Gets the most recent message logs.

@@ -195,3 +195,21 @@ async def tool_get_monthly_report(fn_args: dict, owner_id: str, conn) -> dict:
     except Exception as e:
         logger.exception(f"Error in get_monthly_report: {e}")
         return {"status": "error", "message": f"حدث خطأ: {str(e)}"}
+
+async def tool_send_report_to_doctor_whatsapp(fn_args: dict, owner_id: str, conn) -> dict:
+    report_text = fn_args.get("report_text")
+    if not report_text:
+        return {"status": "error", "message": "نص التقرير مطلوب."}
+    
+    try:
+        from app.services.whatsapp_service import WhatsAppService
+        whatsapp_service = WhatsAppService()
+        success = await whatsapp_service.send_report_to_doctor(UUID(owner_id), report_text)
+        if success:
+            return {"status": "success", "message": "تم إرسال التقرير بنجاح إلى رقم الواتساب الخاص بك."}
+        else:
+            return {"status": "error", "message": "فشل إرسال التقرير عبر الواتساب. يرجى التأكد من ربط حساب الواتساب الخاص بك."}
+    except Exception as e:
+        logger.exception(f"Error in send_report_to_doctor_whatsapp: {e}")
+        return {"status": "error", "message": f"حدث خطأ أثناء إرسال التقرير: {str(e)}"}
+

@@ -17,6 +17,7 @@ import Checkout from './pages/Checkout';
 import Settings from './pages/Settings';
 import Templates from './pages/Templates';
 import ForceChangePassword from './pages/ForceChangePassword';
+import ForgotPassword from './pages/ForgotPassword';
 import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
 import RefundPolicyPage from './pages/RefundPolicyPage';
@@ -74,6 +75,16 @@ function AiChatRouteWrapper() {
   return <AiChat initialPatientId={patientId} />;
 }
 
+function VisitsRouteWrapper() {
+  const { patientId } = useParams();
+  return <Visits initialPatientId={patientId} />;
+}
+
+function AiChatThreadRouteWrapper() {
+  const { threadId } = useParams();
+  return <AiChat initialThreadId={threadId} />;
+}
+
 function AppContent() {
   const { currentUser } = useApp();
   const { dir } = useLanguage();
@@ -83,6 +94,12 @@ function AppContent() {
     if (page.startsWith('aichat-patient-')) {
       const id = page.replace('aichat-patient-', '');
       navigate(`/aichat-patient/${id}`);
+    } else if (page.startsWith('aichat-thread-')) {
+      const id = page.replace('aichat-thread-', '');
+      navigate(`/aichat-thread/${id}`);
+    } else if (page.startsWith('visits-patient-')) {
+      const id = page.replace('visits-patient-', '');
+      navigate(`/visits-patient/${id}`);
     } else if (page.startsWith('live-session-')) {
       const id = page.replace('live-session-', '');
       navigate(`/live-session/${id}`);
@@ -132,6 +149,16 @@ function AppContent() {
             <Navigate to="/dashboard" replace />
           ) : (
             <Register setActivePage={handleNavigation} />
+          )
+        } />
+
+        <Route path="/forgot-password" element={
+          currentUser ? (
+            currentUser.role === 'admin' ? <Navigate to="/admin-overview" replace /> :
+            currentUser.role === 'org' ? <Navigate to="/org-dashboard" replace /> :
+            <Navigate to="/dashboard" replace />
+          ) : (
+            <ForgotPassword setActivePage={handleNavigation} />
           )
         } />
 
@@ -200,6 +227,20 @@ function AppContent() {
           <ProtectedRoute role="doctor">
             <LayoutWrapper activePage="aichat" handleNavigation={handleNavigation}>
               <AiChatRouteWrapper />
+            </LayoutWrapper>
+          </ProtectedRoute>
+        } />
+        <Route path="/aichat-thread/:threadId" element={
+          <ProtectedRoute role="doctor">
+            <LayoutWrapper activePage="aichat" handleNavigation={handleNavigation}>
+              <AiChatThreadRouteWrapper />
+            </LayoutWrapper>
+          </ProtectedRoute>
+        } />
+        <Route path="/visits-patient/:patientId" element={
+          <ProtectedRoute role="doctor">
+            <LayoutWrapper activePage="visits" handleNavigation={handleNavigation}>
+              <VisitsRouteWrapper />
             </LayoutWrapper>
           </ProtectedRoute>
         } />

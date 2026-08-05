@@ -163,21 +163,6 @@ export default function Patients({ setActivePage }) {
     try {
       const token = sessionStorage.getItem('accessToken');
       
-      // Fetch threads first to check if one exists for this patient
-      const threadsRes = await fetch('/api/v1/chat/threads', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (threadsRes.ok) {
-        const threads = await threadsRes.json();
-        const existing = (threads || []).find(t => t.patient_id === patient.id);
-        if (existing) {
-          setSelectedPatient(null);
-          setActivePage(`aichat-patient-${patient.id}`);
-          return;
-        }
-      }
-      
       const res = await fetch('/api/v1/chat/threads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -187,8 +172,9 @@ export default function Patients({ setActivePage }) {
         })
       });
       if (res.ok) {
+        const newThreadObj = await res.json();
         setSelectedPatient(null);
-        setActivePage(`aichat-patient-${patient.id}`);
+        setActivePage(`aichat-thread-${newThreadObj.id}`);
       }
     } catch (err) {
       console.error('Failed to create AI thread', err);

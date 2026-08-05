@@ -2,10 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 
-export default function Visits() {
+export default function Visits({ initialPatientId }) {
   const { patients, currentUser, updatePatient, generateGeneralSummary } = useApp();
   const { t, isArabic } = useLanguage();
   const [selectedPatientId, setSelectedPatientId] = useState('');
+
+  useEffect(() => {
+    if (initialPatientId) {
+      setSelectedPatientId(initialPatientId);
+    }
+  }, [initialPatientId]);
 
   // General summary state (Left side)
   const [generalSummary, setGeneralSummary] = useState('');

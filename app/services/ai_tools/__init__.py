@@ -25,6 +25,7 @@ class ToolExecutor:
         "search_visits_by_diagnosis":report_tools.tool_search_visits_by_diagnosis,
         "get_monthly_report":        report_tools.tool_get_monthly_report,
         "send_appointment_welcome_message": appointment_tools.tool_send_appointment_welcome_message,
+        "send_report_to_doctor_whatsapp": report_tools.tool_send_report_to_doctor_whatsapp,
         "get_system_stats":          admin_tools.tool_get_system_stats,
         "get_doctor_performance":    admin_tools.tool_get_doctor_performance,
         "get_revenue_report":        admin_tools.tool_get_revenue_report,

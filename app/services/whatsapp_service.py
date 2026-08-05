@@ -286,8 +286,14 @@ class WhatsAppService:
                 status="received"
             )
             
-        # Delete Redis session state since flow is complete for this followup
-        await r_client.delete(state_key)
+        # Delete Redis session state only if they are fine.
+        # Otherwise, keep it active and extend for another 24 hours to allow continued chat.
+        if classification == "fine":
+            await r_client.delete(state_key)
+            logger.info(f"Patient {normalized_from} is fine. Deleted follow-up session state.")
+        else:
+            await r_client.expire(state_key, 86400)
+            logger.info(f"Patient {normalized_from} is {classification}. Kept session active and extended TTL by 24h.")
         return True
 
     async def send_report_to_doctor(self, doctor_id: UUID, report_text: str) -> bool:

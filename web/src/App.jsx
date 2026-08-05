@@ -20,6 +20,7 @@ import ForceChangePassword from './pages/ForceChangePassword';
 import ForgotPassword from './pages/ForgotPassword';
 import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
+import HelpPage from './pages/HelpPage';
 import RefundPolicyPage from './pages/RefundPolicyPage';
 
 // Admin pages (Code-Split using React.lazy)
@@ -180,6 +181,7 @@ function AppContent() {
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/help" element={<HelpPage />} />
           <Route path="/refund-policy" element={<RefundPolicyPage />} />
 
           <Route path="/change-password" element={

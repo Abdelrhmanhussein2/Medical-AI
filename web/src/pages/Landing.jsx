@@ -692,6 +692,9 @@ export default function Landing({ setActivePage }) {
                 <li>
                   <Link to="/privacy" className="hover:text-white transition-colors">{isArabic ? 'سياسة الخصوصية' : 'Privacy Policy'}</Link>
                 </li>
+                <li>
+                  <Link to="/help" className="hover:text-white transition-colors">{isArabic ? 'مركز المساعدة' : 'Help Center'}</Link>
+                </li>
               </ul>
             </div>
 
@@ -722,6 +725,7 @@ export default function Landing({ setActivePage }) {
             <div className="flex gap-6">
               <Link to="/terms" className="hover:text-white transition-colors">{isArabic ? 'الشروط والأحكام' : 'Terms of Service'}</Link>
               <Link to="/privacy" className="hover:text-white transition-colors">{isArabic ? 'سياسة الخصوصية' : 'Privacy Policy'}</Link>
+              <Link to="/help" className="hover:text-white transition-colors">{isArabic ? 'مركز المساعدة' : 'Help Center'}</Link>
               <Link to="/refund-policy" className="hover:text-white transition-colors">{isArabic ? 'سياسة الاسترجاع' : 'Refund Policy'}</Link>
             </div>
           </div>

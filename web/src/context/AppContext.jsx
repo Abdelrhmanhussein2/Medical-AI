@@ -64,8 +64,8 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   const mergedPlans = getMergedPlans(bundles);
-  const doctorPlans = mergedPlans;
-  const orgPlans = mergedPlans.filter(p => ['business', 'enterprise'].includes(p.id));
+  const doctorPlans = mergedPlans.filter(p => ['free', 'starter', 'pro'].includes(p.id));
+  const orgPlans = mergedPlans.filter(p => ['free', 'business', 'enterprise'].includes(p.id));
 
   // Generic API fetch helper
   const apiFetch = async (url, options = {}) => {

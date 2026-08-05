@@ -146,7 +146,7 @@ export const PLANS = [
 ];
 
 export const DOCTOR_PLANS = PLANS.filter(p => ['free', 'starter', 'pro'].includes(p.id));
-export const ORG_PLANS    = PLANS.filter(p => ['business', 'enterprise'].includes(p.id));
+export const ORG_PLANS    = PLANS.filter(p => ['free', 'business', 'enterprise'].includes(p.id));
 
 /**
  * Dynamically merges DB-seeded subscription bundles into static plans configuration.

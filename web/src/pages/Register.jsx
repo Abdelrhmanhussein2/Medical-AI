@@ -159,6 +159,17 @@ export default function Register({ setActivePage }) {
             </button>
           </div>
 
+          {/* Floating Back to Home Button */}
+          <div className={`absolute top-6 ${isArabic ? 'right-6' : 'left-6'} z-10`}>
+            <button
+              onClick={() => setActivePage('/')}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-border-subtle bg-white text-secondary hover:text-primary rounded-lg text-xs font-bold shadow-sm transition-all duration-300 active:scale-95 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">home</span>
+              <span>{isArabic ? 'الرئيسية' : 'Home'}</span>
+            </button>
+          </div>
+
           <div className="mx-auto w-full max-w-sm">
             <div className="text-center mb-6 flex flex-col items-center">
               <div className="mb-4 lg:hidden">
@@ -231,7 +242,7 @@ export default function Register({ setActivePage }) {
                   </label>
                   <input
                     type="text" required value={name} onChange={(e) => setName(e.target.value)}
-                    placeholder={role === 'doctor' ? (isArabic ? 'د. أحمد حسن' : 'Dr. Ahmed Hassan') : 'Cairo Medical Group'}
+                    placeholder={role === 'doctor' ? (isArabic ? 'د. أحمد حسن' : 'Dr. Ahmed Hassan') : 'Saudi Medical Group'}
                     className={`w-full px-4 py-2.5 bg-white border border-border-subtle rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
                   />
                 </div>
@@ -242,7 +253,7 @@ export default function Register({ setActivePage }) {
                   </label>
                   <input
                     type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-                    placeholder={role === 'doctor' ? 'doctor@example.com' : 'org@cairomed.com'}
+                    placeholder={role === 'doctor' ? 'doctor@example.com' : 'org@saudimed.com'}
                     className={`w-full px-4 py-2.5 bg-white border border-border-subtle rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary text-on-surface`}
                   />
                 </div>
@@ -253,7 +264,7 @@ export default function Register({ setActivePage }) {
                   </label>
                   <input
                     type="text" required value={phone} onChange={(e) => setPhone(e.target.value)}
-                    placeholder="01012345678"
+                    placeholder="0501234567"
                     className={`w-full px-4 py-2.5 bg-white border border-border-subtle rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary text-on-surface`}
                   />
                 </div>
@@ -398,7 +409,7 @@ export default function Register({ setActivePage }) {
                   </h4>
                   <p className="text-xs text-on-surface-variant leading-relaxed">
                     {isArabic
-                      ? 'يتم تشفير جميع المحادثات الطبية المرفوعة لحظياً. نستخدم معالجة صوتية مشفرة بالكامل ولا يتم تخزين الملفات الصوتية الخام بعد استخراج الملاحظات السريرية SOAP لحماية خصوصية المريض.'
+                      ? 'يتم تشفير جميع المحادثات الطبية المرفوعة لحظياً. نستخدم معالجة صوتية مشفرة بالكامل ولا يتم تخزين الملفات الصوتية الخام بعد استخراج الملاحظات السريرية SOAP لحماية خصوصية المراجع.'
                       : 'All uploaded audio consultations are encrypted. We utilize fully encrypted voice processing, and raw audio files are automatically purged after the clinical SOAP summary is generated.'}
                   </p>
                 </div>
@@ -410,7 +421,7 @@ export default function Register({ setActivePage }) {
                   </h4>
                   <p className="text-xs text-on-surface-variant leading-relaxed">
                     {isArabic
-                      ? 'نحن لا نشارك أو نبيع أي معلومات صحية محمية (PHI). تظل مساحتك السريرية معزولة تماماً ولا يحق لأي جهة خارجية الوصول إلى بيانات المرضى الخاصة بك.'
+                      ? 'نحن لا نشارك أو نبيع أي معلومات صحية محمية (PHI). تظل مساحتك السريرية معزولة تماماً ولا يحق لأي جهة خارجية الوصول إلى بيانات المراجعين الخاصة بك.'
                       : 'We never share or sell Protected Health Information (PHI). Your clinical workspace remains fully isolated, and no third parties have access to your patient records under any circumstances.'}
                   </p>
                 </div>

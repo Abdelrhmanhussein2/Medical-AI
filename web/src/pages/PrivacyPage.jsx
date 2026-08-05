@@ -10,19 +10,19 @@ export default function PrivacyPage() {
     {
       titleAr: '1. معالجة التسجيلات الصوتية',
       titleEn: '1. Processing of Audio Recordings',
-      bodyAr: `يتم تشفير جميع المحادثات الطبية المرفوعة لحظياً. نستخدم معالجة صوتية مشفرة بالكامل ولا يتم تخزين الملفات الصوتية الخام بعد استخراج الملاحظات السريرية لحماية خصوصية المريض.`,
+      bodyAr: `يتم تشفير جميع المحادثات الطبية المرفوعة لحظياً. نستخدم معالجة صوتية مشفرة بالكامل ولا يتم تخزين الملفات الصوتية الخام بعد استخراج الملاحظات السريرية لحماية خصوصية المراجع.`,
       bodyEn: `All uploaded medical conversations are encrypted instantly. We use fully encrypted audio processing and do not store raw audio files after clinical notes are extracted, in order to protect patient privacy.`,
     },
     {
       titleAr: '2. التزام حماية البيانات الطبية',
       titleEn: '2. Commitment to Protecting Medical Data',
-      bodyAr: `نحن لا نشارك أو نبيع أي معلومات طبية للمستخدمين أو المرضى. تظل مساحتك السريرية معزولة تماماً ولا يحق لأي جهة خارجية الوصول إلى بيانات مرضاك دون إذنك الصريح.`,
+      bodyAr: `نحن لا نشارك أو نبيع أي معلومات طبية للمستخدمين أو المراجعين. تظل مساحتك السريرية معزولة تماماً ولا يحق لأي جهة خارجية الوصول إلى بيانات مراجعيك دون إذنك الصريح.`,
       bodyEn: `We do not share or sell any medical information belonging to users or patients. Your clinical workspace remains fully isolated, and no external party has the right to access your patients' data without your explicit permission.`,
     },
     {
       titleAr: '3. الأمان وحماية البيانات',
       titleEn: '3. Security and Data Protection',
-      bodyAr: `تعتمد المنصة بنية تقنية تهدف إلى حماية بيانات المستخدمين والمرضى. يتم تشفير البيانات أثناء النقل وفي حالة السكون.
+      bodyAr: `تعتمد المنصة بنية تقنية تهدف إلى حماية بيانات المستخدمين والمراجعين. يتم تشفير البيانات أثناء النقل وفي حالة السكون.
 
 لا تقوم SBR AI بتخزين بيانات البطاقات البنكية؛ تتم معالجة المدفوعات من خلال مزود خدمة دفع خارجي.`,
       bodyEn: `The platform uses a technical architecture designed to protect user and patient data. Data is encrypted both in transit and at rest.
@@ -32,9 +32,9 @@ SBR AI does not store bank card data; payments are processed through a third-par
     {
       titleAr: '4. ملكية البيانات',
       titleEn: '4. Data Ownership',
-      bodyAr: `لا تكتسب SBR AI ملكية بيانات المستخدم أو بيانات المرضى لمجرد إدخالها أو معالجتها من خلال المنصة.
+      bodyAr: `لا تكتسب SBR AI ملكية بيانات المستخدم أو بيانات المراجعين لمجرد إدخالها أو معالجتها من خلال المنصة.
 
-يجوز لـSBR AI استخدام بيانات محددة لأغراض تطوير وتحسين تقنيات الذكاء الاصطناعي الخاصة بها، وذلك بعد اتخاذ إجراءات مناسبة لإزالة أو إخفاء المعلومات التي يمكن أن تحدد هوية المرضى.`,
+يجوز لـSBR AI استخدام بيانات محددة لأغراض تطوير وتحسين تقنيات الذكاء الاصطناعي الخاصة بها، وذلك بعد اتخاذ إجراءات مناسبة لإزالة أو إخفاء المعلومات التي يمكن أن تحدد هوية المراجعين.`,
       bodyEn: `SBR AI does not acquire ownership of user or patient data merely by virtue of it being entered or processed through the platform.
 
 SBR AI may use specific data for developing and improving its AI technologies, after taking appropriate steps to remove or anonymize information that could identify patients.`,
@@ -50,9 +50,9 @@ SBR AI may use specific data for developing and improving its AI technologies, a
 SBR AI does not sell user data to any external party for marketing or commercial purposes.`,
     },
     {
-      titleAr: '6. موافقة المرضى على التسجيل',
+      titleAr: '6. موافقة المراجعين على التسجيل',
       titleEn: '6. Patient Consent for Recording',
-      bodyAr: `يتحمل المستخدم (الطبيب أو العيادة) المسؤولية الكاملة عن الحصول على موافقة المرضى قبل إجراء أي تسجيل صوتي من خلال المنصة، والالتزام بالأنظمة واللوائح المعمول بها في هذا الشأن.`,
+      bodyAr: `يتحمل المستخدم (الطبيب أو العيادة) المسؤولية الكاملة عن الحصول على موافقة المراجعين قبل إجراء أي تسجيل صوتي من خلال المنصة، والالتزام بالأنظمة واللوائح المعمول بها في هذا الشأن.`,
       bodyEn: `The user (physician or clinic) bears full responsibility for obtaining patient consent prior to any audio recording through the platform, and for complying with applicable regulations in this regard.`,
     },
     {

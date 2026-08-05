@@ -2,7 +2,7 @@ export const translations = {
   ar: {
     // Layout & Navigation
     dashboard: 'لوحة التحكم',
-    patients: 'المرضى',
+    patients: 'المراجعين',
     appointments: 'المواعيد',
     visits: 'الزيارات الطبية',
     aichat: 'SBR AI Chat',
@@ -40,14 +40,14 @@ export const translations = {
     language_select_title: 'اختر لغة البرنامج',
     arabic: 'العربية (RTL)',
     english: 'English (LTR)',
-    privacy_text: 'نحن في SBR AI نلتزم بحماية خصوصية بيانات المرضى والبيانات الطبية. يمتثل برنامجنا لمعايير HIPAA و SOC2 بالكامل. يتم تشفير جميع التسجيلات الصوتية والملخصات الطبية فوراً ولا يتم مشاركتها مع أي جهة خارجية دون إذن مسبق.',
+    privacy_text: 'نحن في SBR AI نلتزم بحماية خصوصية بيانات المراجعين والبيانات الطبية. يمتثل برنامجنا لمعايير HIPAA و SOC2 بالكامل. يتم تشفير جميع التسجيلات الصوتية والملخصات الطبية فوراً ولا يتم مشاركتها مع أي جهة خارجية دون إذن مسبق.',
     privacy_section_1_title: '1. معالجة التسجيلات الصوتية',
-    privacy_section_1_desc: 'يتم تشفير جميع المحادثات الطبية المرفوعة لحظياً. نستخدم معالجة صوتية مشفرة بالكامل ولا يتم تخزين الملفات الصوتية الخام بعد استخراج الملاحظات السريرية SOAP لحماية خصوصية المريض.',
+    privacy_section_1_desc: 'يتم تشفير جميع المحادثات الطبية المرفوعة لحظياً. نستخدم معالجة صوتية مشفرة بالكامل ولا يتم تخزين الملفات الصوتية الخام بعد استخراج الملاحظات السريرية SOAP لحماية خصوصية المراجع.',
     privacy_section_2_title: '2. التزام حماية PHI',
-    privacy_section_2_desc: 'نحن لا نشارك أو نبيع أي معلومات صحية محمية (PHI). تظل مساحتك السريرية معزولة تماماً ولا يحق لأي جهة خارجية الوصول إلى بيانات المرضى الخاصة بك.',
+    privacy_section_2_desc: 'نحن لا نشارك أو نبيع أي معلومات صحية محمية (PHI). تظل مساحتك السريرية معزولة تماماً ولا يحق لأي جهة خارجية الوصول إلى بيانات المراجعين الخاصة بك.',
     privacy_section_3_title: '3. معايير الأمان والامتثال',
-    privacy_section_3_desc: 'تلتزم المنصة بمعايير HIPAA و SOC2 و GDPR. يتم تشفير قاعدة البيانات بالكامل باستخدام بروتوكول AES-256 لحماية خصوصيتك وخصوصية مرضاك.',
-    delete_account_desc: 'بمجرد حذف حسابك، لن تتمكن من استعادة أي بيانات أو ملفات خاصة بمرضاك وزياراتهم.',
+    privacy_section_3_desc: 'تلتزم المنصة بمعايير HIPAA و SOC2 و GDPR. يتم تشفير قاعدة البيانات بالكامل باستخدام بروتوكول AES-256 لحماية خصوصيتك وخصوصية مراجعيك.',
+    delete_account_desc: 'بمجرد حذف حسابك، لن تتمكن من استعادة أي بيانات أو ملفات خاصة بمراجعيك وزياراتهم.',
     delete_account_btn: 'حذف حسابي نهائياً',
     update_success: 'تم تحديث البيانات بنجاح',
     update_error: 'فشل تحديث البيانات',
@@ -66,7 +66,7 @@ export const translations = {
     business_desc: 'مناسب للعيادات ذات الاستخدام المرتفع.',
     enterprise_desc: 'مناسب للمجمعات الطبية والعيادات متعددة الأطباء.',
     feature_minutes: '{mins} دقيقة ذكاء اصطناعي شهرياً',
-    feature_transcribe: 'تحويل محادثة الطبيب والمريض إلى نص',
+    feature_transcribe: 'تحويل محادثة الطبيب والمراجع إلى نص',
     feature_summarize: 'تلخيص الزيارة الطبية تلقائياً',
     feature_soap: 'إنشاء الملاحظات الطبية بنظام SOAP',
     feature_priority: 'أولوية في الدعم الفني',
@@ -78,7 +78,7 @@ export const translations = {
     // Dashboard
     dashboard_welcome: 'مرحباً، د.',
     dashboard_subtitle: 'إليك نظرة سريعة على إحصائيات عيادتك اليوم.',
-    total_patients: 'إجمالي المرضى',
+    total_patients: 'إجمالي المراجعين',
     today_appointments: 'مواعيد اليوم',
     completed_visits: 'الزيارات المكتملة',
     ai_credits: 'رصيد الذكاء الاصطناعي',
@@ -87,10 +87,10 @@ export const translations = {
     view_details: 'عرض التفاصيل',
     
     // Patients Page
-    patient_directory: 'دليل المرضى',
+    patient_directory: 'دليل المراجعين',
     search_placeholder: 'ابحث بالاسم، الهاتف أو كود الملف...',
-    add_patient: 'إضافة مريض جديد',
-    patient_name: 'اسم المريض',
+    add_patient: 'إضافة مراجع جديد',
+    patient_name: 'اسم المراجع',
     phone: 'رقم الهاتف',
     dob: 'تاريخ الميلاد',
     gender: 'النوع',
@@ -100,12 +100,12 @@ export const translations = {
     female: 'أنثى',
     save: 'حفظ',
     loading: 'جاري التحميل...',
-    general_summary: 'الملخص العام للمريض (مستخلص من الزيارات)',
+    general_summary: 'الملخص العام للمراجع (مستخلص من الزيارات)',
     generate_general_summary: 'توليد بالذكاء الاصطناعي من الزيارات 🪄',
-    no_general_summary: 'لا يوجد ملخص عام مسجل للمريض حتى الآن.',
-    patient_visits_history: 'سجل زيارات المريض',
+    no_general_summary: 'لا يوجد ملخص عام مسجل للمراجع حتى الآن.',
+    patient_visits_history: 'سجل زيارات المراجع',
     clinical_summary: 'التلخيص الطبي (SOAP/Clinical):',
-    patient_friendly_summary: 'التلخيص الموجه للمريض (Patient Friendly):',
+    patient_friendly_summary: 'التلخيص الموجه للمراجع (Patient Friendly):',
     
     // Appointments Page
     appointments_title: 'المواعيد والزيارات',
@@ -119,8 +119,8 @@ export const translations = {
     
     // Medical Visits Page
     medical_visits_title: 'الزيارات الطبية المسجلة',
-    select_patient_to_view: 'اختر مريضاً من القائمة الجانبية لعرض وتعديل ملخصاته العامة وزياراته السابقة.',
-    select_patient: 'اختر مريضاً...',
+    select_patient_to_view: 'اختر مراجعاً من القائمة الجانبية لعرض وتعديل ملخصاته العامة وزياراته السابقة.',
+    select_patient: 'اختر مراجعاً...',
     save_general_summary: 'حفظ تعديل الملخص العام',
     updating: 'جاري التحديث...',
     generating: 'جاري التوليد بالذكاء الاصطناعي...',
@@ -130,7 +130,7 @@ export const translations = {
     live_session_title: 'جلسة كول نشطة',
     recording: 'جاري التسجيل...',
     stop_and_summarize: 'إنهاء الجلسة وتوليد الملخص الطبي بالـ AI 🪄',
-    transcription_realtime: 'النص المترجم (حسب حديث الطبيب والمريض):',
+    transcription_realtime: 'النص المترجم (حسب حديث الطبيب والمراجع):',
     listening: 'الـ AI يستمع للمحادثة حالياً...',
     
     // Subscription Page

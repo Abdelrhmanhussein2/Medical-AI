@@ -520,7 +520,7 @@ export const SessionProvider = ({ children }) => {
         // Request AI summary
         const result = await apiFetch(`/sessions/${activeSessionId}/summarize`, {
           method: 'POST',
-          body: JSON.stringify({ patient_name: patient?.name || 'المريض' })
+          body: JSON.stringify({ patient_name: patient?.name || 'المراجع' })
         });
 
         setSummaryText(result.summary_text || '');
@@ -565,7 +565,7 @@ export const SessionProvider = ({ children }) => {
     try {
       const result = await apiFetch(`/sessions/${sessionId}/summarize`, {
         method: 'POST',
-        body: JSON.stringify({ patient_name: patient?.name || 'المريض' })
+        body: JSON.stringify({ patient_name: patient?.name || 'المراجع' })
       });
       setSummaryText(result.summary_text || '');
       setSoapNote(result.soap_note);

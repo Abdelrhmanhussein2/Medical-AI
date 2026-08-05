@@ -82,7 +82,7 @@ export default function Dashboard({ setActivePage }) {
           icon: 'task_alt',
           color: 'text-success',
           bg: 'bg-success/10',
-          textAr: `اكتملت جلسة مع ${p?.name || 'مريض'}`,
+          textAr: `اكتملت جلسة مع ${p?.name || 'مراجع'}`,
           textEn: `Completed session with ${p?.name || 'Patient'}`,
           date: a.updated_at || a.created_at || a.appointment_date,
         });
@@ -98,7 +98,7 @@ export default function Dashboard({ setActivePage }) {
           icon: 'calendar_add_on',
           color: 'text-primary',
           bg: 'bg-primary/10',
-          textAr: `موعد جديد مع ${p?.name || 'مريض'} — ${a.appointment_date || ''}`,
+          textAr: `موعد جديد مع ${p?.name || 'مراجع'} — ${a.appointment_date || ''}`,
           textEn: `New appointment with ${p?.name || 'Patient'} — ${a.appointment_date || ''}`,
           date: a.created_at || a.appointment_date,
         });
@@ -199,7 +199,7 @@ export default function Dashboard({ setActivePage }) {
               <h3 className="text-2xl md:text-3xl text-on-surface font-sans font-black leading-none">{patients.length}</h3>
               <span className="font-body-sm text-xs text-tertiary-container flex items-center hidden sm:flex">
                 <span className={`material-symbols-outlined text-[14px] ${isArabic ? 'ml-0.5' : 'mr-0.5'}`}>group</span>
-                {isArabic ? 'مريض' : 'patients'}
+                {isArabic ? 'مراجع' : 'patients'}
               </span>
             </div>
           </div>
@@ -229,7 +229,7 @@ export default function Dashboard({ setActivePage }) {
             <div className="flex justify-between items-center mb-stack-md pb-stack-sm border-b border-border-subtle">
               <div>
                 <h2 className="font-headline-md text-headline-md text-on-surface font-bold">
-                  {isArabic ? 'المرضى القادمون اليوم' : "Today's Patients"}
+                  {isArabic ? 'المراجعون القادمون اليوم' : "Today's Patients"}
                 </h2>
                 <p className="text-xs text-on-surface-variant mt-0.5 font-semibold">
                   {new Date().toLocaleDateString(isArabic ? 'ar-EG' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric' })}

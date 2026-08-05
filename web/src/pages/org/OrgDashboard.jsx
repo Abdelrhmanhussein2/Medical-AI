@@ -173,7 +173,7 @@ export default function OrgDashboard({ setActivePage }) {
               <thead>
                 <tr className="text-secondary font-semibold uppercase">
                   <th className="py-2">{isArabic ? 'الطبيب' : 'Physician'}</th>
-                  <th className="py-2">{isArabic ? 'المرضى (هذا الشهر)' : 'Patients (Mo)'}</th>
+                  <th className="py-2">{isArabic ? 'المراجعين (هذا الشهر)' : 'Patients (Mo)'}</th>
                   <th className="py-2">{isArabic ? 'معدل تبني الذكاء الاصطناعي' : 'AI Adoption Bar'}</th>
                   <th className="py-2">{isArabic ? 'الحالة' : 'Status'}</th>
                 </tr>
@@ -183,7 +183,7 @@ export default function OrgDashboard({ setActivePage }) {
                   <tr key={doc.id} className="hover:bg-surface-container-low transition-colors">
                     <td className="py-3 font-bold text-on-surface">{doc.name}</td>
                     <td className="py-3 text-secondary font-semibold">
-                      {doc.patients_count} {isArabic ? 'مريض' : 'patients'}
+                      {doc.patients_count} {isArabic ? 'مراجع' : 'patients'}
                     </td>
                     <td className="py-3 w-1/3">
                       <div className="w-full bg-surface-container rounded-full h-2 overflow-hidden">

@@ -21,7 +21,7 @@ export const PLANS = [
     minutes: 60,
     featuresAr: [
       '60 دقيقة ذكاء اصطناعي تجريبية.',
-      'تحويل محادثة الطبيب والمريض إلى نص.',
+      'تحويل محادثة الطبيب والمراجع إلى نص.',
       'تلخيص الزيارة الطبية تلقائياً.',
       'إنشاء الملاحظات الطبية.'
     ],
@@ -48,7 +48,7 @@ export const PLANS = [
     featuresAr: [
       '1285 دقيقة ذكاء اصطناعي شهرياً.',
       'مناسب لطبيب واحد والاستخدام اليومي المتوسط.',
-      'تحويل محادثة الطبيب والمريض إلى نص.',
+      'تحويل محادثة الطبيب والمراجع إلى نص.',
       'تلخيص الزيارة الطبية تلقائياً.',
       'إنشاء الملاحظات الطبية.'
     ],
@@ -174,7 +174,7 @@ export const getMergedPlans = (dbBundles) => {
     });
 
     if (dbBundle) {
-      const allowedMins = dbBundle.allowed_minutes || p.minutes;
+      const allowedMins = p.id === 'free' ? 60 : (dbBundle.allowed_minutes || p.minutes);
       return {
         ...p,
         dbId: dbBundle.id,
@@ -184,13 +184,17 @@ export const getMergedPlans = (dbBundles) => {
         minutes: allowedMins,
         featuresAr: p.featuresAr.map(feat => {
           if (feat.includes('دقيقة') || feat.includes('د ')) {
-            return `${allowedMins.toLocaleString()} دقيقة ذكاء اصطناعي شهرياً.`;
+            return p.id === 'free'
+              ? `${allowedMins.toLocaleString()} دقيقة ذكاء اصطناعي تجريبية.`
+              : `${allowedMins.toLocaleString()} دقيقة ذكاء اصطناعي شهرياً.`;
           }
           return feat;
         }),
         featuresEn: p.featuresEn.map(feat => {
           if (feat.toLowerCase().includes('minutes')) {
-            return `${allowedMins.toLocaleString()} AI minutes per month.`;
+            return p.id === 'free'
+              ? `${allowedMins.toLocaleString()} minutes of AI trial access.`
+              : `${allowedMins.toLocaleString()} AI minutes per month.`;
           }
           return feat;
         })

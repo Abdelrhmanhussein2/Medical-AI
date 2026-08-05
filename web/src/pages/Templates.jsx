@@ -557,7 +557,7 @@ export default function Templates() {
                               setActiveSuggestionIndex(idx);
                             }
                           }}
-                          placeholder={isArabic ? `اسم الحقل ${idx + 1} (مثلاً: شكوى المريض، العلاج)` : `Field name ${idx + 1}`}
+                          placeholder={isArabic ? `اسم الحقل ${idx + 1} (مثلاً: شكوى المراجع، العلاج)` : `Field name ${idx + 1}`}
                           className="w-full bg-surface-container border border-border-subtle px-3 py-2 rounded-xl text-sm focus:outline-none focus:border-primary font-medium"
                           required
                         />

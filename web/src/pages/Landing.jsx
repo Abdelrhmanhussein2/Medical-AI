@@ -7,40 +7,40 @@ import { Link } from 'react-router-dom';
 // ── FAQ Data ──────────────────────────────────────────────────────────────────
 const FAQ_ITEMS = [
   {
-    qAr: 'ما هو SBR AI وكيف يُفيد الأطباء؟',
-    qEn: 'What is SBR AI and how does it benefit clinicians?',
-    aAr: 'SBR AI هو مساعد ذكاء اصطناعي سريري متكامل مصمَّم خصيصاً للأطباء. يقوم بتوثيق مقابلات المرضى تلقائياً عبر الإملاء الصوتي المحيطي، ويُنشئ ملاحظات SOAP دقيقة، ويدير الجداول الزمنية — مما يُتيح للطبيب التركيز الكامل على رعاية المريض بدلاً من الإدخال اليدوي للبيانات.',
-    aEn: 'SBR AI is a comprehensive clinical AI assistant designed specifically for physicians. It automatically documents patient encounters through ambient voice dictation, generates accurate SOAP notes, and manages schedules — allowing clinicians to focus entirely on patient care instead of manual data entry.',
+    qAr: 'ما هو SBR AI (مِسْبَار) وكيف يُفيد الأطباء؟',
+    qEn: 'What is SBR AI (Misbar) and how does it benefit clinicians?',
+    aAr: 'SBR AI هو مساعد ذكاء اصطناعي متكامل مصمَّم خصيصاً للأطباء. يقوم بتوثيق مقابلات المراجعين تلقائياً عبر دوّن، ويُنشئ ملاحظات SOAP دقيقة، ويدير الجداول الزمنية — مما يُتيح للطبيب التركيز الكامل على رعاية المراجع بدلاً من الإدخال اليدوي للبيانات.',
+    aEn: 'SBR AI is a comprehensive AI assistant designed specifically for physicians. It automatically documents patient encounters through Dawwen, generates accurate SOAP notes, and manages schedules — allowing clinicians to focus entirely on patient care instead of manual data entry.',
   },
   {
-    qAr: 'كيف تحمي SBR AI بيانات مرضاي؟',
-    qEn: 'How does SBR AI protect my patients\' data?',
-    aAr: 'تعتمد SBR AI بنية تقنية تهدف إلى حماية بيانات المستخدمين والمرضى. يتم تشفير البيانات أثناء النقل وفي حالة السكون. لا نشارك أو نبيع أي بيانات طبية لجهات خارجية. تتم معالجة المدفوعات عبر بوابة دفع خارجية آمنة ولا نحتفظ ببيانات البطاقات البنكية.',
+    qAr: 'كيف تحمي SBR AI بيانات مراجعي؟',
+    qEn: 'How does SBR AI protect my clients\' data?',
+    aAr: 'تعتمد SBR AI بنية تقنية تهدف إلى حماية بيانات المستخدمين والمراجعين. يتم تشفير البيانات أثناء النقل وفي حالة السكون. لا نشارك أو نبيع أي بيانات طبية لجهات خارجية. تتم معالجة المدفوعات عبر بوابة دفع خارجية آمنة ولا نحتفظ ببيانات البطاقات البنكية.',
     aEn: 'SBR AI uses a technical architecture designed to protect user and patient data. Data is encrypted both in transit and at rest. We do not share or sell any medical data to third parties. Payments are processed through a secure external payment gateway and we do not store bank card data.',
   },
   {
-    qAr: 'كيف يعمل الإملاء الصوتي المحيطي؟',
-    qEn: 'How does ambient voice dictation work?',
-    aAr: 'يستمع النظام إلى محادثة الطبيب والمريض بشكل طبيعي دون الحاجة إلى أي أوامر يدوية. يقوم الذكاء الاصطناعي بتحليل السياق الطبي في الوقت الفعلي وتحويله إلى ملاحظات سريرية منظَّمة جاهزة للمراجعة فور انتهاء الزيارة.',
+    qAr: 'كيف يعمل دوّن؟',
+    qEn: 'How does Dawwen work?',
+    aAr: 'يستمع النظام إلى محادثة الطبيب والمراجع بشكل طبيعي دون الحاجة إلى أي أوامر يدوية. يقوم الذكاء الاصطناعي بتحليل السياق الطبي في الوقت الفعلي وتحويله إلى ملاحظات سريرية منظَّمة جاهزة للمراجعة فور انتهاء الزيارة.',
     aEn: 'The system listens to the doctor-patient conversation naturally without any manual commands. The AI analyzes the medical context in real time and converts it into structured clinical notes ready for review immediately after the visit ends.',
   },
   {
     qAr: 'هل يمكنني تخصيص قوالب التوثيق السريري؟',
     qEn: 'Can I customize clinical documentation templates?',
-    aAr: 'بالتأكيد. يُتيح SBR AI إنشاء قوالب توثيق مخصصة تتناسب مع تخصصك الطبي وأسلوب ممارستك. يمكنك تحديد الحقول السريرية المطلوبة، والاستعانة بالذكاء الاصطناعي لاستخراجها تلقائياً من محادثة المريض.',
+    aAr: 'بالتأكيد. يُتيح SBR AI إنشاء قوالب توثيق مخصصة تتناسب مع تخصصك الطبي وأسلوب ممارستك. يمكنك تحديد الحقول السريرية المطلوبة، والاستعانة بالذكاء الاصطناعي لاستخراجها تلقائياً من محادثة المراجع.',
     aEn: 'Absolutely. SBR AI allows you to create custom documentation templates tailored to your specialty and practice style. You can define the required clinical fields and leverage AI to automatically extract them from patient conversations.',
   },
   {
     qAr: 'ما الفرق بين باقة الطبيب وباقة المنظمة؟',
     qEn: 'What is the difference between the Doctor and Organization plans?',
-    aAr: 'باقة الطبيب مُصمَّمة للممارسين المستقلين وتشمل الميزات الأساسية للإملاء الصوتي وإدارة المرضى. أما باقة المنظمة فتشمل دعماً لعدد متعدد من الأطباء، ولوحة تحكم مركزية، وتقارير إحصائية متقدمة، وتكاملاً مع الأنظمة الطبية الحالية.',
-    aEn: 'The Doctor plan is designed for independent practitioners and includes core features for voice dictation and patient management. The Organization plan includes support for multiple physicians, a centralized dashboard, advanced analytics, and integration with existing medical systems.',
+    aAr: 'باقة الطبيب مُصمَّمة للممارسين المستقلين وتشمل الميزات الأساسية لـ دوّن وإدارة المراجعين. أما باقة المنظمة فتشمل دعماً لعدد متعدد من الأطباء، ولوحة تحكم مركزية، وتقارير إحصائية متقدمة، وتكاملاً مع الأنظمة الطبية الحالية.',
+    aEn: 'The Doctor plan is designed for independent practitioners and includes core features for Dawwen and patient management. The Organization plan includes support for multiple physicians, a centralized dashboard, advanced analytics, and integration with existing medical systems.',
   },
   {
     qAr: 'هل توجد فترة تجريبية مجانية؟',
     qEn: 'Is there a free trial period?',
-    aAr: 'نعم، يمكنك البدء بتجربة مجانية تتيح لك استكشاف كافة ميزات المنصة دون الحاجة إلى بيانات بطاقة ائتمانية. ستتمكن من تجربة الإملاء الصوتي، وإنشاء القوالب، وإدارة المواعيد بشكل كامل خلال فترة التجربة.',
-    aEn: 'Yes, you can start with a free trial that lets you explore all platform features without requiring a credit card. You will be able to test voice dictation, template creation, and appointment management in full during the trial period.',
+    aAr: 'نعم، يمكنك البدء بتجربة مجانية تتيح لك استكشاف كافة ميزات المنصة دون الحاجة إلى بيانات بطاقة ائتمانية. ستتمكن من تجربة دوّن، وإنشاء القوالب، وإدارة المواعيد بشكل كامل خلال فترة التجربة.',
+    aEn: 'Yes, you can start with a free trial that lets you explore all platform features without requiring a credit card. You will be able to test Dawwen, template creation, and appointment management in full during the trial period.',
   },
   {
     qAr: 'كيف تتعامل المنصة مع اللغة العربية؟',
@@ -123,15 +123,15 @@ export default function Landing({ setActivePage }) {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-container opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
                 </span>
-                {isArabic ? 'نقدم لكم مساعد SBR AI 2.0' : 'Introducing SBR AI Assistant 2.0'}
+                {isArabic ? 'نقدم لكم مساعد SBR AI 2.0 (+ مِسْبَار، مساعدك بالذكاء الاصطناعي).' : 'Introducing SBR AI Assistant 2.0 (+ Misbar, your AI assistant)'}
               </div>
               <h1 className="text-2xl sm:text-3xl md:text-4xl lg:font-display-lg lg:text-display-lg text-on-surface font-bold max-w-2xl leading-tight">
                 {isArabic ? 'الذكاء الاصطناعي يصبح مساعد الطبيب 🩺' : "AI becomes the doctor's assistant 🩺"}
               </h1>
               <p className="text-sm md:font-body-lg md:text-body-lg text-on-surface-variant max-w-xl leading-relaxed">
                 {isArabic 
-                  ? 'سهّل سير عملك السريري باستخدام الذكاء الاصطناعي. من الإملاء الصوتي إلى تحليلات المرضى، استعد الوقت للتركيز على مرضاك.'
-                  : 'Streamline your clinical workflow with high-trust AI. From ambient voice dictation to predictive analytics, regain time to focus on what matters most—your patients.'}
+                  ? 'سهّل سير عملك السريري باستخدام الذكاء الاصطناعي. من دوّن إلى تحليلات المراجعين، استعد الوقت للتركيز على مراجعيك.'
+                  : 'Streamline your clinical workflow with high-trust AI. From Dawwen to predictive analytics, regain time to focus on what matters most—your patients.'}
               </p>
               <div className="flex flex-col sm:flex-row gap-stack-md pt-stack-sm">
                 <button 
@@ -241,14 +241,14 @@ export default function Landing({ setActivePage }) {
                   icon: 'account_tree',
                   titleAr: 'سير عمل مبسّط وفعّال',
                   titleEn: 'Streamlined Workflows',
-                  descAr: 'تكامل سلس مع عملياتك الحالية لتقليل النقرات والتركيز الكامل على رعاية المرضى.',
+                  descAr: 'تكامل سلس مع عملياتك الحالية لتقليل النقرات والتركيز الكامل على رعاية المراجعين.',
                   descEn: 'Integrate seamlessly with your existing processes to reduce clicks and keep the focus entirely on patient care.'
                 },
                 {
                   icon: 'lock',
-                  titleAr: 'حماية بيانات المرضى',
+                  titleAr: 'حماية بيانات المراجعين',
                   titleEn: 'Patient Data Protection',
-                  descAr: 'بياناتك وبيانات مرضاك مشفّرة أثناء النقل والتخزين. لا نبيع أو نشارك المعلومات الطبية مع أي جهة خارجية.',
+                  descAr: 'بياناتك وبيانات مراجعيك مشفّرة أثناء النقل والتخزين. لا نبيع أو نشارك المعلومات الطبية مع أي جهة خارجية.',
                   descEn: 'Your data and your patients\' data is encrypted in transit and at rest. We never sell or share medical information with third parties.'
                 }
               ].map(({ icon, titleAr, titleEn, descAr, descEn }) => (
@@ -285,9 +285,9 @@ export default function Landing({ setActivePage }) {
               {[
                 {
                   icon: 'mic',
-                  titleAr: 'الإملاء الصوتي المحيطي',
-                  titleEn: 'Ambient Voice Dictation',
-                  descAr: 'التقط مقابلات المرضى الكاملة بشكل طبيعي. يستمع ذكاؤنا الاصطناعي المحيطي في الخلفية ويهيكل بيانات الاستشارة بذكاء دون تدخل يدوي.',
+                  titleAr: 'دوّن',
+                  titleEn: 'Dawwen (Ambient Dictation)',
+                  descAr: 'سجّل مقابلات المراجعين بشكل طبيعي، والذكاء الاصطناعي يسمع بالخلفية ويحّول تفاصيل المقابلة تلقائيًا إلى بيانات مرتبة وسجل طبي منظم، بدون أي إدخال يدوي.',
                   descEn: 'Capture complete patient encounters naturally. Our ambient AI listens in the background and intelligently structures the consultation data without manual intervention.'
                 },
                 {
@@ -301,14 +301,14 @@ export default function Landing({ setActivePage }) {
                   icon: 'calendar_month',
                   titleAr: 'إدارة الجداول الزمنية',
                   titleEn: 'Schedule Management',
-                  descAr: 'حسّن كفاءة عيادتك بالجدولة الذكية التي تتوقع مدة المواعيد وتقلّل أوقات انتظار المرضى.',
+                  descAr: 'حسّن كفاءة عيادتك بالجدولة الذكية التي تتوقع مدة المواعيد وتقلّل أوقات انتظار المراجعين.',
                   descEn: 'Optimize your organizational efficiency with smart scheduling that anticipates appointment durations and minimizes patient wait times.'
                 },
                 {
                   icon: 'insights',
                   titleAr: 'التحليلات التنبؤية',
                   titleEn: 'Predictive Analytics',
-                  descAr: 'استفد من البيانات التاريخية لتحديد مخاطر المرضى المحتملة مبكراً، ودعم استراتيجيات الرعاية الوقائية الاستباقية.',
+                  descAr: 'استفد من البيانات التاريخية لتحديد مخاطر المراجعين المحتملة مبكراً، ودعم استراتيجيات الرعاية الوقائية الاستباقية.',
                   descEn: 'Leverage historical data to identify potential patient risks early, supporting proactive and preventative care strategies.'
                 }
               ].map(({ icon, titleAr, titleEn, descAr, descEn }) => (
@@ -666,7 +666,7 @@ export default function Landing({ setActivePage }) {
               </h4>
               <ul className="space-y-3 text-white/80 text-xs">
                 {[
-                  { ar: 'الإملاء الصوتي المحيطي', en: 'Ambient Voice Dictation' },
+                  { ar: 'دوّن', en: 'Dawwen (Ambient Dictation)' },
                   { ar: 'ملاحظات SOAP التلقائية', en: 'Automated SOAP Notes' },
                   { ar: 'إدارة المواعيد', en: 'Appointment Management' },
                   { ar: 'التحليلات التنبؤية', en: 'Predictive Analytics' },

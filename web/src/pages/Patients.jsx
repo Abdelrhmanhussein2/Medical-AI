@@ -155,7 +155,7 @@ export default function Patients({ setActivePage }) {
       setSelectedPatient(updated);
       setIsEditMode(false);
     } catch (err) {
-      setEditError(err.message || 'حدث خطأ أثناء تعديل بيانات المريض');
+      setEditError(err.message || 'حدث خطأ أثناء تعديل بيانات المراجع');
     }
   };
 
@@ -222,7 +222,7 @@ export default function Patients({ setActivePage }) {
             {t('patient_directory')}
           </h1>
           <p className="font-body-lg text-body-lg text-on-surface-variant mt-1">
-            {isArabic ? 'إدارة والبحث في سجلات المرضى المسجلين لديك.' : 'Manage and search your registered patients.'}
+            {isArabic ? 'إدارة والبحث في سجلات المراجعين المسجلين لديك.' : 'Manage and search your registered patients.'}
           </p>
         </div>
         <div className="w-full sm:w-auto">
@@ -322,7 +322,7 @@ export default function Patients({ setActivePage }) {
         <div class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div class="bg-white rounded-xl border border-border-subtle shadow-lg max-w-md w-full overflow-hidden">
             <div class="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas">
-              <h3 class="font-headline-md text-base text-primary font-bold">{isArabic ? 'إضافة مريض جديد' : 'Add New Patient'}</h3>
+              <h3 class="font-headline-md text-base text-primary font-bold">{isArabic ? 'إضافة مراجع جديد' : 'Add New Patient'}</h3>
               <button 
                 onClick={() => setShowAddModal(false)}
                 class="p-1 hover:bg-surface-container rounded-full text-secondary"
@@ -441,7 +441,7 @@ export default function Patients({ setActivePage }) {
                   type="submit"
                   class="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-button py-2 rounded-lg text-sm transition-colors shadow-sm"
                 >
-                  {isArabic ? 'حفظ المريض' : 'Save Patient'}
+                  {isArabic ? 'حفظ المراجع' : 'Save Patient'}
                 </button>
               </div>
             </form>
@@ -455,7 +455,7 @@ export default function Patients({ setActivePage }) {
           <div class="bg-white rounded-xl border border-border-subtle shadow-lg max-w-3xl w-full overflow-hidden">
             <div class="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas">
               <h3 class="font-headline-md text-base text-primary font-bold">
-                {isEditMode ? (isArabic ? 'تعديل بيانات المريض' : 'Edit Patient Profile') : (isArabic ? 'الملف الطبي للمريض' : 'Patient Medical Profile')}
+                {isEditMode ? (isArabic ? 'تعديل بيانات المراجع' : 'Edit Patient Profile') : (isArabic ? 'الملف الطبي للمراجع' : 'Patient Medical Profile')}
               </h3>
               <button 
                 onClick={() => setSelectedPatient(null)}
@@ -559,7 +559,7 @@ export default function Patients({ setActivePage }) {
                           </div>
                         ) : (
                           <p className="text-[10px] text-on-surface-variant italic font-semibold">
-                            {isArabic ? 'لا توجد ملاحظات سريعة مسجلة لهذا المريض.' : 'No clinical note fills recorded.'}
+                            {isArabic ? 'لا توجد ملاحظات سريعة مسجلة لهذا المراجع.' : 'No clinical note fills recorded.'}
                           </p>
                         )}
                       </div>
@@ -661,7 +661,7 @@ export default function Patients({ setActivePage }) {
                     </div>
 
                     <div>
-                      <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">{isArabic ? 'الملخص العام للمريض' : 'General Patient Summary'}</label>
+                      <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">{isArabic ? 'الملخص العام للمراجع' : 'General Patient Summary'}</label>
                       <textarea
                         value={editGeneralSummary}
                         onChange={(e) => setEditGeneralSummary(e.target.value)}
@@ -701,7 +701,7 @@ export default function Patients({ setActivePage }) {
                 ) : patientVisits.length === 0 ? (
                   <div class="text-center py-12 bg-bg-canvas border border-border-subtle rounded-lg text-xs text-secondary">
                     <span class="material-symbols-outlined text-[32px] text-outline-variant block mb-1">history</span>
-                    {isArabic ? 'لا توجد زيارات طبية مسجلة لهذا المريض.' : 'No recorded medical visits for this patient yet.'}
+                    {isArabic ? 'لا توجد زيارات طبية مسجلة لهذا المراجع.' : 'No recorded medical visits for this patient yet.'}
                   </div>
                 ) : (
                   <div class="space-y-4 max-h-[45vh] overflow-y-auto pr-1">
@@ -759,7 +759,7 @@ export default function Patients({ setActivePage }) {
                               {/* Patient-friendly sessional summary */}
                               {visit.patient_summary && (
                                 <div class="space-y-1">
-                                  <span class="text-[10px] font-bold text-primary block">{isArabic ? 'الملخص العام للزيارة (الموجه للمريض):' : 'Visit Summary (Patient Friendly):'}</span>
+                                  <span class="text-[10px] font-bold text-primary block">{isArabic ? 'الملخص العام للزيارة (الموجه للمراجع):' : 'Visit Summary (Patient Friendly):'}</span>
                                   <p class="text-xs text-on-surface leading-relaxed bg-primary-light/10 p-3 rounded-lg border border-primary/10">{visit.patient_summary}</p>
                                 </div>
                               )}

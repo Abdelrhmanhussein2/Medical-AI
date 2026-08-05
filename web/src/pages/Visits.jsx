@@ -111,7 +111,7 @@ export default function Visits({ initialPatientId }) {
       await updatePatient(selectedPatientId, {
         general_summary: generalSummary
       });
-      setSuccessMsg(isArabic ? 'تم حفظ وتحديث الملخص العام للمريض بنجاح.' : 'Patient general summary saved successfully.');
+      setSuccessMsg(isArabic ? 'تم حفظ وتحديث الملخص العام للمراجع بنجاح.' : 'Patient general summary saved successfully.');
     } catch (err) {
       console.error("Failed to update general summary:", err);
       setErrorMsg(err.message || (isArabic ? 'حدث خطأ أثناء حفظ الملخص العام.' : 'Error saving the general summary.'));
@@ -133,7 +133,7 @@ export default function Visits({ initialPatientId }) {
             {t('medical_visits_title')}
           </h1>
           <p className="font-body-lg text-body-lg text-on-surface-variant mt-1">
-            {isArabic ? 'مراجعة السجلات الطبية للمرضى وتحديث الملخصات العامة.' : 'Review patient medical records and update general summaries.'}
+            {isArabic ? 'مراجعة السجلات الطبية للمراجعين وتحديث الملخصات العامة.' : 'Review patient medical records and update general summaries.'}
           </p>
         </div>
       </header>
@@ -151,14 +151,14 @@ export default function Visits({ initialPatientId }) {
 
             <div className="mb-4">
               <label className="block text-xs font-semibold text-on-surface-variant mb-1">
-                {isArabic ? 'اختر المريض *' : 'Select Patient *'}
+                {isArabic ? 'اختر المراجع *' : 'Select Patient *'}
               </label>
               <select
                 value={selectedPatientId}
                 onChange={(e) => setSelectedPatientId(e.target.value)}
                 className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
               >
-                <option value="">{isArabic ? '-- اختر مريضاً من القائمة --' : '-- Select Patient from list --'}</option>
+                <option value="">{isArabic ? '-- اختر مراجعاً من القائمة --' : '-- Select Patient from list --'}</option>
                 {patients.map(p => (
                   <option key={p.id} value={p.id}>{p.name} {p.file_id ? `(File ID: ${p.file_id})` : ''}</option>
                 ))}
@@ -207,7 +207,7 @@ export default function Visits({ initialPatientId }) {
                     value={generalSummary}
                     onChange={(e) => setGeneralSummary(e.target.value)}
                     placeholder={isArabic 
-                      ? 'اكتب هنا الملخص العام والتاريخ المرضي الأساسي للمريض (مثال: مريض يعاني من السكري والضغط منذ 5 سنوات، لديه حساسية من البنسلين...)' 
+                      ? 'اكتب هنا الملخص العام والتاريخ المرضي الأساسي للمراجع (مثال: مراجع يعاني من السكري والضغط منذ 5 سنوات، لديه حساسية من البنسلين...)' 
                       : 'Type here patient\'s chronic diseases, surgical history, family medical history, allergies...'}
                     rows={12}
                     className="w-full flex-1 px-4 py-3 bg-surface-container-low border border-border-subtle rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface resize-none leading-relaxed"
@@ -243,7 +243,7 @@ export default function Visits({ initialPatientId }) {
                 <span class="material-symbols-outlined text-[48px] mb-2 text-outline-variant">
                   history
                 </span>
-                <p>{isArabic ? 'اختر مريضاً لعرض تاريخ زياراته الطبية وجلساته السابقة.' : 'Select a patient to view their medical visit history.'}</p>
+                <p>{isArabic ? 'اختر مراجعاً لعرض تاريخ زياراته الطبية وجلساته السابقة.' : 'Select a patient to view their medical visit history.'}</p>
               </div>
             ) : loadingHistory ? (
               <div class="flex-1 flex flex-col items-center justify-center text-secondary text-sm">
@@ -255,7 +255,7 @@ export default function Visits({ initialPatientId }) {
                 <span class="material-symbols-outlined text-[48px] mb-2 text-outline-variant">
                   assignment_late
                 </span>
-                <p class="text-center">{isArabic ? 'لا توجد زيارات مسجلة للمريض مسبقاً.' : 'No recorded visits for this patient yet.'}</p>
+                <p class="text-center">{isArabic ? 'لا توجد زيارات مسجلة للمراجع مسبقاً.' : 'No recorded visits for this patient yet.'}</p>
               </div>
             ) : (
               <div class="space-y-4 overflow-y-auto max-h-[550px] pr-1">
@@ -316,7 +316,7 @@ export default function Visits({ initialPatientId }) {
                           {/* Patient General Summary of the session */}
                           {visit.patient_summary && (
                             <div class="space-y-1">
-                              <span class="text-[10px] font-black text-primary block">{isArabic ? 'الملخص العام للزيارة (الموجه للمريض):' : 'Visit Summary (Patient Friendly):'}</span>
+                              <span class="text-[10px] font-black text-primary block">{isArabic ? 'الملخص العام للزيارة (الموجه للمراجع):' : 'Visit Summary (Patient Friendly):'}</span>
                               <p class="text-xs text-on-surface-variant leading-relaxed bg-primary-light/10 p-3 rounded-lg border border-primary/10">{visit.patient_summary}</p>
                             </div>
                           )}

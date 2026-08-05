@@ -121,6 +121,17 @@ export default function ForgotPassword({ setActivePage }) {
         </button>
       </div>
 
+      {/* Floating Back to Home Button */}
+      <div className={`absolute top-6 ${isArabic ? 'right-6' : 'left-6'} z-10`}>
+        <button
+          onClick={() => setActivePage('/')}
+          className="flex items-center gap-1.5 px-3 py-1.5 border border-border-subtle bg-white text-secondary hover:text-primary rounded-lg text-xs font-bold shadow-sm transition-all duration-300 active:scale-95 cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[16px]">home</span>
+          <span>{isArabic ? 'الرئيسية' : 'Home'}</span>
+        </button>
+      </div>
+
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8 flex flex-col items-center">
           <div className="mb-4">

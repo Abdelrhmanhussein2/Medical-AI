@@ -264,7 +264,7 @@ export default function Appointments({ setActivePage }) {
 
     if (isCreatingNewPatient) {
       if (!newPatientName.trim() || !newPatientPhone.trim()) {
-        setError('يرجى كتابة الاسم ورقم الهاتف للمريض الجديد');
+        setError('يرجى كتابة الاسم ورقم الهاتف للمراجع الجديد');
         return;
       }
       try {
@@ -275,12 +275,12 @@ export default function Appointments({ setActivePage }) {
         finalPatientId = created.id;
         finalPhone = created.phone;
       } catch (err) {
-        setError('تعذر إنشاء المريض الجديد');
+        setError('تعذر إنشاء المراجع الجديد');
         return;
       }
     } else {
       if (!selectedPatient) {
-        setError('يرجى تحديد مريض أو إضافة مريض جديد من القائمة');
+        setError('يرجى تحديد مراجع أو إضافة مراجع جديد من القائمة');
         return;
       }
       finalPatientId = selectedPatient.id;
@@ -401,7 +401,7 @@ export default function Appointments({ setActivePage }) {
             </span>
             <input 
               type="text" 
-              placeholder={isArabic ? 'ابحث عن مريض...' : 'Search patient...'}
+              placeholder={isArabic ? 'ابحث عن مراجع...' : 'Search patient...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className={`w-full ${isArabic ? 'pr-10 pl-4 text-right' : 'pl-10 pr-4 text-left'} py-2 border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-sm`}
@@ -585,7 +585,7 @@ export default function Appointments({ setActivePage }) {
 
               {/* Patient Autocomplete Input */}
               <div class="relative">
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'اختر المريض *' : 'Select Patient *'}</label>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'اختر المراجع *' : 'Select Patient *'}</label>
                 
                 {!isCreatingNewPatient ? (
                   <>
@@ -633,7 +633,7 @@ export default function Appointments({ setActivePage }) {
                           class="w-full px-4 py-2.5 text-left text-xs text-primary font-bold hover:bg-primary-light transition-colors flex items-center gap-1.5"
                         >
                           <span class="material-symbols-outlined text-[16px]">person_add</span>
-                          {isArabic ? `إضافة "و${patientQuery}" كمريض جديد وحجز موعد` : `Add "${patientQuery}" as a New Patient & Book`}
+                          {isArabic ? `إضافة "${patientQuery}" كمراجع جديد وحجز موعد` : `Add "${patientQuery}" as a New Patient & Book`}
                         </button>
                       </div>
                     )}
@@ -643,7 +643,7 @@ export default function Appointments({ setActivePage }) {
                     <div class="flex justify-between items-center pb-2 border-b border-primary/10">
                       <span class="text-xs font-bold text-primary flex items-center gap-1">
                         <span class="material-symbols-outlined text-[16px]">person_add</span>
-                        {isArabic ? 'بيانات المريض الجديد' : 'New Patient Details'}
+                        {isArabic ? 'بيانات المراجع الجديد' : 'New Patient Details'}
                       </span>
                       <button 
                         type="button"
@@ -653,13 +653,13 @@ export default function Appointments({ setActivePage }) {
                         }}
                         class="text-[10px] text-secondary hover:underline"
                       >
-                        {isArabic ? 'إلغاء إضافة مريض' : 'Cancel new patient'}
+                        {isArabic ? 'إلغاء إضافة مراجع' : 'Cancel new patient'}
                       </button>
                     </div>
                     
                     <div class="grid grid-cols-1 gap-2">
                       <div>
-                        <label class="block text-[10px] font-bold text-secondary mb-1">{isArabic ? 'اسم المريض كاملاً *' : 'Patient Full Name *'}</label>
+                        <label class="block text-[10px] font-bold text-secondary mb-1">{isArabic ? 'اسم المراجع كاملاً *' : 'Patient Full Name *'}</label>
                         <input
                           type="text"
                           required
@@ -670,7 +670,7 @@ export default function Appointments({ setActivePage }) {
                         />
                       </div>
                       <div>
-                        <label class="block text-[10px] font-bold text-secondary mb-1">{isArabic ? 'رقم هاتف المريض *' : 'Patient Phone Number *'}</label>
+                        <label class="block text-[10px] font-bold text-secondary mb-1">{isArabic ? 'رقم هاتف المراجع *' : 'Patient Phone Number *'}</label>
                         <input
                           type="text"
                           required

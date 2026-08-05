@@ -283,7 +283,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
           <div class="lg:col-span-3 space-y-6">
             <div class="bg-white rounded-2xl p-6 shadow-sm border border-border-subtle text-center flex flex-col items-center gap-3">
               <div class="w-full">
-                <h2 className="text-xl font-bold text-on-surface">{patient ? patient.name : (isArabic ? 'مريض غير معروف' : 'Unknown Patient')}</h2>
+                <h2 className="text-xl font-bold text-on-surface">{patient ? patient.name : (isArabic ? 'مراجع غير معروف' : 'Unknown Patient')}</h2>
                 <p className="text-xs text-secondary mt-1 font-mono">{patient?.phone || (isArabic ? 'بدون هاتف' : 'No phone')}</p>
                 {patient?.file_id && (
                   <p className="mt-2 text-xs bg-primary-light text-primary font-bold px-2.5 py-0.5 rounded-full inline-block font-mono">
@@ -322,7 +322,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                         className="w-full mt-2 border border-border-subtle text-secondary hover:text-primary hover:bg-primary-light py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-[16px]">edit</span>
-                        <span>تعديل الملف الطبي للمريض</span>
+                        <span>تعديل الملف الطبي للمراجع</span>
                       </button>
 
                       {/* Note Templates Section */}
@@ -330,7 +330,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                         <div className="flex items-center gap-1.5 mb-2.5">
                           <span className="material-symbols-outlined text-[18px] text-primary">assignment</span>
                           <span className="text-xs font-bold text-secondary">
-                            {isArabic ? 'ملاحظات الكشف السريعة للمريض' : 'Patient Quick Note Templates'}
+                            {isArabic ? 'ملاحظات الكشف السريعة للمراجع' : 'Patient Quick Note Templates'}
                           </span>
                         </div>
 
@@ -355,7 +355,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                           </div>
                         ) : (
                           <p className="text-[10px] text-secondary font-semibold mb-3">
-                            {isArabic ? 'لا توجد ملاحظات سريعة مسجلة لهذا المريض.' : 'No quick note templates saved for this patient.'}
+                            {isArabic ? 'لا توجد ملاحظات سريعة مسجلة لهذا المراجع.' : 'No quick note templates saved for this patient.'}
                           </p>
                         )}
 
@@ -368,7 +368,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                           className="w-full bg-primary/10 hover:bg-primary/20 text-primary font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-[14px]">add</span>
-                          <span>{isArabic ? 'ملء قالب جديد للمريض' : 'Fill New Template'}</span>
+                          <span>{isArabic ? 'ملء قالب جديد للمراجع' : 'Fill New Template'}</span>
                         </button>
                       </div>
                     </>
@@ -429,7 +429,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
               </div>
               <div class="p-4 space-y-3 max-h-[250px] overflow-y-auto pr-1">
                 {pastSessions.length === 0 ? (
-                  <p class="text-xs text-secondary text-center py-6">لا توجد سجلات جلسات سابقة للمريض.</p>
+                  <p class="text-xs text-secondary text-center py-6">لا توجد سجلات جلسات سابقة للمراجع.</p>
                 ) : (
                   pastSessions.map(session => {
                     const sessionDate = new Date(session.created_at).toLocaleDateString('ar-EG', {
@@ -658,7 +658,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                     <span className={`material-symbols-outlined text-[18px] ${patientSummary ? 'text-secondary' : 'text-secondary'}`}>medical_information</span>
                   </div>
                   <div className="flex-1">
-                    <span className="text-sm font-semibold text-on-surface block">{isArabic ? 'ملخص المريض' : 'Patient Summary'}</span>
+                    <span className="text-sm font-semibold text-on-surface block">{isArabic ? 'ملخص المراجع' : 'Patient Summary'}</span>
                     <span className="text-xs text-secondary">{patientSummary ? (isArabic ? 'جاهز — اضغط للعرض' : 'Ready — click to view') : (isArabic ? 'يتم توليده بعد الجلسة' : 'Generated after session')}</span>
                   </div>
                   {patientSummary && <span className="material-symbols-outlined text-[16px] text-secondary">arrow_forward</span>}
@@ -870,7 +870,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
             <div className="flex items-center gap-2 border-b border-border-subtle pb-3 mb-4">
               <span className="material-symbols-outlined text-primary text-[20px]">assignment</span>
               <h3 className="text-sm font-bold text-secondary">
-                {isArabic ? 'ملء ملاحظات الكشف السريعة للمريض' : 'Fill Patient Note Template'}
+                {isArabic ? 'ملء ملاحظات الكشف السريعة للمراجع' : 'Fill Patient Note Template'}
               </h3>
             </div>
 

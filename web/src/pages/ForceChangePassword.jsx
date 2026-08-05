@@ -94,7 +94,7 @@ export default function ForceChangePassword({ setActivePage }) {
               </h2>
               <p className="text-sm text-secondary leading-relaxed">
                 {isArabic
-                  ? 'يرجى تغيير كلمة المرور المؤقتة التي استلمتها على البريد الإلكتروني للحفاظ على سرية السجلات وبيانات المرضى الخاصة بك.'
+                  ? 'يرجى تغيير كلمة المرور المؤقتة التي استلمتها على البريد الإلكتروني للحفاظ على سرية السجلات وبيانات المراجعين الخاصة بك.'
                   : 'Please update the temporary password you received via email to protect patient confidentiality and secure your workflow.'}
               </p>
             </div>

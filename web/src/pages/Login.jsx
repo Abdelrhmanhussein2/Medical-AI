@@ -52,7 +52,7 @@ export default function Login({ setActivePage, isPortal = false }) {
               </h2>
               <p className="text-sm text-secondary leading-relaxed">
                 {isArabic
-                  ? 'التقط استشارات المرضى بشكل طبيعي، وولّد تلقائياً ملاحظات SOAP عالية الجودة، وأدر جداولك بسلاسة مع SBR AI.'
+                  ? 'التقط استشارات المراجعين بشكل طبيعي، وولّد تلقائياً ملاحظات SOAP عالية الجودة، وأدر جداولك بسلاسة مع SBR AI.'
                   : 'Capture patient consultations naturally, auto-generate high-quality SOAP notes, and manage your schedules seamlessly with SBR AI.'}
               </p>
             </div>
@@ -66,7 +66,7 @@ export default function Login({ setActivePage, isPortal = false }) {
               </div>
               <p className="text-sm text-secondary leading-relaxed">
                 {isArabic
-                  ? 'يستمع الذكاء الاصطناعي في الخلفية ويهيكل بيانات الاستشارة دون تدخل يدوي، مما يتيح لك التركيز على مرضاك.'
+                  ? 'يستمع الذكاء الاصطناعي في الخلفية ويهيكل بيانات الاستشارة دون تدخل يدوي، مما يتيح لك التركيز على مراجعيك.'
                   : 'Our ambient AI listens in the background and structures the consultation data without manual intervention, allowing you to focus entirely on your patients.'}
               </p>
             </div>
@@ -83,6 +83,17 @@ export default function Login({ setActivePage, isPortal = false }) {
             >
               <span className="material-symbols-outlined text-[16px]">language</span>
               <span>{lang === 'ar' ? 'English' : 'العربية'}</span>
+            </button>
+          </div>
+
+          {/* Floating Back to Home Button */}
+          <div className={`absolute top-6 ${isArabic ? 'right-6' : 'left-6'} z-10`}>
+            <button
+              onClick={() => setActivePage('/')}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-border-subtle bg-white text-secondary hover:text-primary rounded-lg text-xs font-bold shadow-sm transition-all duration-300 active:scale-95 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">home</span>
+              <span>{isArabic ? 'الرئيسية' : 'Home'}</span>
             </button>
           </div>
 

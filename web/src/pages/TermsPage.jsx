@@ -40,41 +40,41 @@ Any information, suggestions, or outputs produced by the platform's AI technolog
 Final responsibility for reviewing and using outputs rests with the user.`,
     },
     {
-      titleAr: '3. التسجيل الصوتي وموافقة المرضى',
+      titleAr: '3. التسجيل الصوتي وموافقة المراجعين',
       titleEn: '3. Audio Recording and Patient Consent',
       bodyAr: `قد تتيح المنصة للمستخدم تسجيل المحادثات الصوتية لأغراض التوثيق والتحليل وإنشاء المخرجات المدعومة بالذكاء الاصطناعي.
-
-يتحمل الطبيب أو العيادة أو المستخدم المسؤولية الكاملة عن الحصول على الموافقات والتصاريح اللازمة من المرضى أو الأشخاص الذين يتم تسجيلهم قبل استخدام خاصية التسجيل، والالتزام بالأنظمة واللوائح المعمول بها.`,
+ 
+يتحمل الطبيب أو العيادة أو المستخدم المسؤولية الكاملة عن الحصول على الموافقات والتصاريح اللازمة من المراجعين أو الأشخاص الذين يتم تسجيلهم قبل استخدام خاصية التسجيل، والالتزام بالأنظمة واللوائح المعمول بها.`,
       bodyEn: `The platform may allow users to record audio conversations for documentation, analysis, and AI-powered output generation.
-
+ 
 The physician, clinic, or user bears full responsibility for obtaining the necessary consents and permissions from patients or persons being recorded prior to using the recording feature, and for complying with applicable regulations.`,
     },
     {
       titleAr: '4. المحتوى والمدخلات',
       titleEn: '4. Content and Inputs',
       bodyAr: `تتيح SBR AI حاليًا معالجة التسجيلات الصوتية التي يتم إنشاؤها من خلال المنصة.
-
+ 
 ولا تتيح المنصة للمستخدم رفع ملفات أو صور أو مستندات أخرى إلى الخدمة، ما لم يتم توفير هذه الوظائف مستقبلًا.
-
+ 
 يتحمل المستخدم مسؤولية المحتوى والبيانات التي يقوم بإدخالها أو تسجيلها من خلال المنصة، والتأكد من أن استخدامه للمنصة لا ينتهك حقوق الآخرين أو الأنظمة المعمول بها.`,
       bodyEn: `SBR AI currently supports processing of audio recordings created through the platform.
-
+ 
 The platform does not allow users to upload files, images, or other documents to the service unless such features are provided in the future.
-
+ 
 The user is responsible for the content and data they input or record through the platform, and for ensuring that their use of the platform does not violate the rights of others or applicable regulations.`,
     },
     {
-      titleAr: '5. بيانات المستخدم والمرضى',
+      titleAr: '5. بيانات المستخدم والمراجعين',
       titleEn: '5. User and Patient Data',
-      bodyAr: `لا تكتسب SBR AI ملكية بيانات المستخدم أو بيانات المرضى لمجرد إدخالها أو معالجتها من خلال المنصة.
-
+      bodyAr: `لا تكتسب SBR AI ملكية بيانات المستخدم أو بيانات المراجعين لمجرد إدخالها أو معالجتها من خلال المنصة.
+ 
 تظل البيانات المقدمة من المستخدم خاضعة للحقوق والالتزامات الموضحة في سياسة الخصوصية الخاصة بـ SBR AI.
-
-يجوز لـSBR AI استخدام بيانات محددة لأغراض تطوير وتحسين تقنيات الذكاء الاصطناعي الخاصة بها، وذلك بعد اتخاذ إجراءات مناسبة لإزالة أو إخفاء المعلومات التي يمكن أن تحدد هوية المرضى، وفقًا لما توضحه سياسة الخصوصية.`,
+ 
+يجوز لـSBR AI استخدام بيانات محددة لأغراض تطوير وتحسين تقنيات الذكاء الاصطناعي الخاصة بها، وذلك بعد اتخاذ إجراءات مناسبة لإزالة أو إخفاء المعلومات التي يمكن أن تحدد هوية المراجعين، وفقًا لما توضحه سياسة الخصوصية.`,
       bodyEn: `SBR AI does not acquire ownership of user or patient data merely by virtue of it being entered or processed through the platform.
-
+ 
 Data submitted by the user remains subject to the rights and obligations described in SBR AI's Privacy Policy.
-
+ 
 SBR AI may use specific data for the purpose of developing and improving its AI technologies, after taking appropriate steps to remove or anonymize information that could identify patients, as outlined in the Privacy Policy.`,
     },
     {

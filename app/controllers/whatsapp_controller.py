@@ -129,7 +129,8 @@ async def get_qr_page(service: WhatsAppService = Depends(get_whatsapp_service)):
             create_url = f"{service.evolution_client.base_url}/instance/create"
             payload = {
                 "instanceName": service.evolution_client.instance,
-                "qrcode": True
+                "qrcode": True,
+                "integration": "WHATSAPP-BAILEYS"
             }
             async with httpx.AsyncClient() as client:
                 create_response = await client.post(create_url, json=payload, headers=headers, timeout=15.0)

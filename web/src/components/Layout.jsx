@@ -24,8 +24,7 @@ export default function Layout({ children, activePage, setActivePage }) {
     menuItems = [
       { id: 'admin-overview', name: t('dashboard'), icon: 'grid_view' },
       { id: 'admin-users', name: t('department'), icon: 'corporate_fare' },
-      { id: 'admin-subscriptions', name: t('subscription'), icon: 'credit_card' },
-      { id: 'admin-aichat', name: t('aichat'), icon: 'smart_toy' }
+      { id: 'admin-subscriptions', name: t('subscription'), icon: 'credit_card' }
     ];
   } else if (currentUser.role === 'org') {
     suiteSub = t('org_suite');
@@ -59,7 +58,7 @@ export default function Layout({ children, activePage, setActivePage }) {
   // Adjust sidebar fixed positioning class
   const sideNavPosClass = isArabic ? 'right-0 border-l' : 'left-0 border-r';
   const mainMarginClass = isArabic ? 'md:mr-64 md:ml-0' : 'md:ml-64 md:mr-0';
-  const isAiChat = activePage === 'aichat' || activePage === 'admin-aichat';
+  const isAiChat = activePage === 'aichat';
 
   // Mobile side drawer state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

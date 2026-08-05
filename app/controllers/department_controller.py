@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List, Optional
 from uuid import UUID
 from pydantic import BaseModel
 from app.schemes.doctor_schema import DoctorResponse
 from app.schemes.department_schema import DepartmentDashboardStats, DepartmentResponse, DepartmentCreate
 from app.services.department_service import department_service
+from app.core.dependencies import get_current_user
 
 router = APIRouter(prefix="/departments", tags=["Departments"])
 
@@ -19,25 +20,37 @@ async def create_department(dept: DepartmentCreate):
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/{department_id}/dashboard/stats", response_model=DepartmentDashboardStats)
-async def get_department_stats(department_id: UUID):
+async def get_department_stats(department_id: UUID, current_user: dict = Depends(get_current_user)):
     """
     Get statistics for the department dashboard (total doctors, appointments, best doctor).
     """
+    if current_user.get("role") == "department" and str(current_user["id"]) != str(department_id):
+        raise HTTPException(status_code=403, detail="غير مصرح لك بالوصول لبيانات قسم آخر.")
+    if current_user.get("role") not in ("admin", "department"):
+        raise HTTPException(status_code=403, detail="غير مصرح لك بالوصول.")
     stats = await department_service.get_department_dashboard_stats(department_id)
     return stats
 
 @router.get("/{department_id}/doctors", response_model=List[DoctorResponse])
-async def get_department_doctors(department_id: UUID):
+async def get_department_doctors(department_id: UUID, current_user: dict = Depends(get_current_user)):
     """
     Get a list of all registered doctors in the department.
     """
+    if current_user.get("role") == "department" and str(current_user["id"]) != str(department_id):
+        raise HTTPException(status_code=403, detail="غير مصرح لك بالوصول لبيانات قسم آخر.")
+    if current_user.get("role") not in ("admin", "department"):
+        raise HTTPException(status_code=403, detail="غير مصرح لك بالوصول.")
     return await department_service.get_department_doctors(department_id)
 
 @router.patch("/{department_id}/doctors/{doctor_id}/toggle-status")
-async def toggle_department_doctor_status(department_id: UUID, doctor_id: UUID):
+async def toggle_department_doctor_status(department_id: UUID, doctor_id: UUID, current_user: dict = Depends(get_current_user)):
     """
     Toggle a doctor's status (approved/disabled) by their department.
     """
+    if current_user.get("role") == "department" and str(current_user["id"]) != str(department_id):
+        raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل أطباء قسم آخر.")
+    if current_user.get("role") not in ("admin", "department"):
+        raise HTTPException(status_code=403, detail="غير مصرح لك بالوصول.")
     from app.core.database import db
     try:
         async with db.pool.acquire() as conn:
@@ -71,8 +84,6 @@ async def toggle_department_doctor_status(department_id: UUID, doctor_id: UUID):
             if row and not row['is_active']:
                 # Delete from subscription_doctors to free up the seat
                 await conn.execute("DELETE FROM subscription_doctors WHERE doctor_id = $1", doctor_id)
-                # Clear subscription fields on the doctor record
-                await conn.execute("UPDATE doctors SET subscription_plan = NULL, subscription_expiry = NULL WHERE id = $1", doctor_id)
                 
             return dict(row)
     except HTTPException:

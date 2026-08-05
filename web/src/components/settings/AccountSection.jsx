@@ -141,11 +141,6 @@ export default function AccountSection() {
         })
       });
       
-      // Update access token in session storage
-      if (response && response.access_token) {
-        sessionStorage.setItem("accessToken", response.access_token);
-      }
-      
       // Update locally
       const updatedUser = { ...currentUser, email: newEmail };
       setCurrentUser(updatedUser);

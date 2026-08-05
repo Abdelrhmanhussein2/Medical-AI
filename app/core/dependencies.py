@@ -1,16 +1,51 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
 from app.core.config import settings
 from app.core.database import db
+from app.core.redis import redis_client
+from typing import Optional
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+async def is_token_blacklisted(token: str) -> bool:
+    if not redis_client.redis:
+        await redis_client.connect()
+    exists = await redis_client.redis.exists(f"bl:{token}")
+    return exists > 0
+
+async def blacklist_token(token: str, expire_seconds: int):
+    if not redis_client.redis:
+        await redis_client.connect()
+    await redis_client.redis.set(f"bl:{token}", "1", ex=expire_seconds)
+
+async def get_current_user(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+) -> dict:
     """
-    Dependency to validate the JWT bearer token and return the logged in user's details.
+    Dependency to validate the JWT bearer token (from Authorization header or access_token cookie)
+    and return the logged in user's details.
     """
-    token = credentials.credentials
+    token = None
+    if credentials and credentials.credentials and credentials.credentials not in ("null", "undefined", ""):
+        token = credentials.credentials
+    else:
+        token = request.cookies.get("access_token")
+
+    if not token or token in ("null", "undefined", ""):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="تسجيل الدخول مطلوب للوصول إلى هذا المورد.",
+        )
+
+    # Check Redis Blacklist
+    if await is_token_blacklisted(token):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="تم إلغاء صلاحية هذا التوكن بسبب تسجيل الخروج.",
+        )
+
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         email: str = payload.get("sub")
@@ -72,4 +107,9 @@ def require_role(allowed_role: str):
             )
         return current_user
     return dependency
+
+# Helper dependencies
+require_admin = require_role("admin")
+require_doctor = require_role("doctor")
+require_department = require_role("department")
 

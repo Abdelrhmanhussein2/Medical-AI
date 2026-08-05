@@ -5,6 +5,7 @@ const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
   const [patients, setPatients] = useState([]);
   const [organizations, setOrganizations] = useState([]);
   const [doctors, setDoctors] = useState([]);
@@ -16,14 +17,37 @@ export const AppProvider = ({ children }) => {
 
   // Load user and bundles on mount
   useEffect(() => {
-    const userJson = sessionStorage.getItem("currentUser");
-    if (userJson) {
+    sessionStorage.removeItem("accessToken"); // Securely clear any legacy token stored in sessionStorage
+    
+    const verifySession = async () => {
       try {
-        setCurrentUser(JSON.parse(userJson));
+        const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.user) {
+            if (data.user.role === 'department') {
+              data.user.role = 'org';
+            }
+            setCurrentUser(data.user);
+            sessionStorage.setItem("currentUser", JSON.stringify(data.user));
+          } else {
+            setCurrentUser(null);
+            sessionStorage.removeItem("currentUser");
+          }
+        } else {
+          // Cookie expired or invalid — clear local session
+          setCurrentUser(null);
+          sessionStorage.removeItem("currentUser");
+        }
       } catch (e) {
-        console.error("Failed to parse user from session storage", e);
+        console.error("Failed to verify session on mount", e);
+        setCurrentUser(null);
+        sessionStorage.removeItem("currentUser");
+      } finally {
+        setSessionLoading(false);
       }
-    }
+    };
+    verifySession();
 
     const loadBundles = async () => {
       try {
@@ -57,9 +81,15 @@ export const AppProvider = ({ children }) => {
     }
     const response = await fetch(`/api/v1${url}`, {
       ...options,
-      headers
+      headers,
+      credentials: 'include'
     });
     if (!response.ok) {
+      if (response.status === 403) {
+        sessionStorage.clear();
+        window.location.href = '/login';
+        return null;
+      }
       const err = await response.json().catch(() => ({}));
       let errorMessage = 'An error occurred';
       if (Array.isArray(err.detail)) {
@@ -128,7 +158,6 @@ export const AppProvider = ({ children }) => {
       if (res.user && res.user.role === 'department') {
         res.user.role = 'org';
       }
-      sessionStorage.setItem("accessToken", res.access_token);
       sessionStorage.setItem("currentUser", JSON.stringify(res.user));
       setCurrentUser(res.user);
       return true;
@@ -140,16 +169,13 @@ export const AppProvider = ({ children }) => {
   const logout = async () => {
     // Notify the backend before clearing the local session
     try {
-      const token = sessionStorage.getItem("accessToken");
-      if (token) {
-        await fetch('/api/v1/auth/logout', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-      }
+      await fetch('/api/v1/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      });
     } catch (err) {
       // Even if the backend call fails, proceed with local logout
       console.warn("Backend logout notification failed:", err.message);
@@ -466,7 +492,8 @@ export const AppProvider = ({ children }) => {
       bundles,
       mergedPlans,
       doctorPlans,
-      orgPlans
+      orgPlans,
+      sessionLoading
     }}>
       {children}
     </AppContext.Provider>

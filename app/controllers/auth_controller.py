@@ -1,25 +1,36 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Request, Response
 from pydantic import EmailStr
 from app.schemes.auth_schema import LoginRequest, Token, OTPRequest, OTPVerify, PasswordReset
 from app.services.auth_service import auth_service
 from app.services.otp_service import otp_service
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, blacklist_token
 import logging
+import time
+from jose import jwt
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+@router.get("/me", response_model=Token)
+async def get_me(current_user: dict = Depends(get_current_user)):
+    """
+    Get logged-in user profile from secure cookie.
+    """
+    role = current_user.get("role")
+    return auth_service.create_token(current_user, role)
+
 @router.post("/login", response_model=Token)
-async def login(request: LoginRequest, role: str = "doctor"):
+async def login(login_data: LoginRequest, response: Response, role: str = "doctor"):
     """
     Login endpoint. Role can be 'admin', 'doctor', or 'patient'.
     """
     from app.core.rate_limiter import login_rate_limiter
 
     # 1. Check if user is blocked
-    if await login_rate_limiter.is_blocked(request.email):
-        seconds_left = await login_rate_limiter.get_remaining_seconds(request.email)
+    if await login_rate_limiter.is_blocked(login_data.email):
+        seconds_left = await login_rate_limiter.get_remaining_seconds(login_data.email)
         minutes_left = (seconds_left + 59) // 60
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -27,10 +38,10 @@ async def login(request: LoginRequest, role: str = "doctor"):
         )
 
     # 2. Authenticate
-    user = await auth_service.authenticate_user(request.email, request.password, role)
+    user = await auth_service.authenticate_user(login_data.email, login_data.password, role)
     if not user:
         # Record failed attempt
-        remaining = await login_rate_limiter.record_failed_attempt(request.email)
+        remaining = await login_rate_limiter.record_failed_attempt(login_data.email)
         if remaining == 0:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -44,19 +55,52 @@ async def login(request: LoginRequest, role: str = "doctor"):
             )
     
     # 3. Successful login - reset attempts
-    await login_rate_limiter.reset_attempts(request.email)
-    return auth_service.create_token(user=user, role=role)
+    await login_rate_limiter.reset_attempts(login_data.email)
+    
+    token_dict = auth_service.create_token(user=user, role=role)
+    
+    # Set HttpOnly, Secure, Lax cookie
+    response.set_cookie(
+        key="access_token",
+        value=token_dict.access_token,
+        httponly=True,
+        samesite="lax",
+        secure=True,
+        max_age=1800  # 30 mins
+    )
+    
+    return token_dict
 
 @router.post("/logout")
-async def logout(current_user: dict = Depends(get_current_user)):
+async def logout(request: Request, response: Response, current_user: dict = Depends(get_current_user)):
     """
-    Logout endpoint. Validates the Bearer token and registers a logout event.
-    The frontend is responsible for discarding the token after calling this endpoint.
-    Since JWTs are stateless, this endpoint serves as an audit trail for sign-out events.
+    Logout endpoint. Validates the bearer token, blacklists it in Redis, clears the HttpOnly cookie, and registers logout.
     """
     user_email = current_user.get("email", "unknown")
     user_role = current_user.get("role", "unknown")
     user_name = current_user.get("name", "unknown")
+
+    # Extract raw token
+    token = None
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+    else:
+        token = request.cookies.get("access_token")
+
+    if token:
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            exp = payload.get("exp")
+            if exp:
+                remaining = int(exp - time.time())
+                if remaining > 0:
+                    await blacklist_token(token, remaining)
+        except Exception as e:
+            logger.warning(f"Error blacklisting token on logout: {e}")
+
+    # Delete access token cookie
+    response.delete_cookie("access_token")
 
     # Log the logout event server-side
     logger.info(

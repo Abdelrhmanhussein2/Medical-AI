@@ -81,7 +81,7 @@ async def send_clinic_report(
             detail="فقط الأطباء مصرح لهم باستخدام هذه الخدمة."
         )
         
-    doctor_id = UUID(current_user["id"])
+    doctor_id = UUID(str(current_user["id"]))
     success = await service.send_report_to_doctor(doctor_id, req.report_text)
     
     if not success:

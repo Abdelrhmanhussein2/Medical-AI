@@ -58,10 +58,20 @@ async def register_doctor(
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @router.patch("/{doctor_id}/activate-subscription", response_model=DoctorResponse)
-async def activate_doctor_subscription(doctor_id: UUID, body: SubscriptionActivate):
+async def activate_doctor_subscription(
+    doctor_id: UUID,
+    body: SubscriptionActivate,
+    current_user: dict = Depends(get_current_user)
+):
     """
     Activate a doctor's subscription and set status to approved.
     """
+    role = current_user.get("role")
+    if role not in ("admin", "department"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="غير مصرح لك بتفعيل اشتراك الطبيب."
+        )
     try:
         async with db.pool.acquire() as conn:
             # 1. Verify doctor exists and check if they belong to a department
@@ -73,6 +83,11 @@ async def activate_doctor_subscription(doctor_id: UUID, body: SubscriptionActiva
                 raise HTTPException(status_code=404, detail="Doctor not found")
             
             dept_id = doctor["department_id"]
+            if role == "department" and (not dept_id or str(current_user["id"]) != str(dept_id)):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="غير مصرح لك بتفعيل اشتراك طبيب لا ينتمي لقسمك."
+                )
             
             if dept_id:
                 # Handle department-affiliated doctor

@@ -1,11 +1,12 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List, Optional
 from uuid import UUID
 from pydantic import BaseModel
 from app.schemes.doctor_schema import DoctorResponse
 from app.services.admin_service import admin_service
+from app.core.dependencies import require_admin
 
-router = APIRouter(prefix="/admins", tags=["Admins"])
+router = APIRouter(prefix="/admins", tags=["Admins"], dependencies=[Depends(require_admin)])
 
 @router.get("/dashboard/stats")
 async def get_dashboard_stats():

@@ -883,32 +883,7 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
               </div>
             )}
 
-            {isUploadingFile && (
-              <div className="flex items-center gap-2 bg-primary-light/60 border border-primary/20 px-4 py-2 rounded-xl text-primary animate-pulse">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                <span className="text-xs font-semibold">
-                  {isArabic ? 'جاري رفع الملف السريري وحفظه في سجلات العيادة...' : 'Uploading clinical attachment...'}
-                </span>
-              </div>
-            )}
-
             <div className="relative flex items-end gap-2 bg-bg-canvas rounded-xl border border-border-subtle p-2 shadow-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileUpload} 
-                className="hidden" 
-                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.txt"
-              />
-              <button 
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={!activeThreadId || isUploadingFile || isUploadingAudio}
-                className="p-2.5 text-secondary hover:text-primary transition-colors rounded-lg hover:bg-primary-light mb-0.5 disabled:opacity-40" 
-                title={isArabic ? "إرفاق ملف طبي أو تقرير" : "Attach Medical File"}
-              >
-                <span className="material-symbols-outlined text-[20px]">attach_file</span>
-              </button>
               <textarea 
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}

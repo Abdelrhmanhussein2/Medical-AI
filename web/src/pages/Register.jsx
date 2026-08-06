@@ -208,9 +208,12 @@ export default function Register({ setActivePage }) {
 
               {error && (() => {
                 const parts = error.split(' / ');
-                const displayError = parts.length > 1
+                let displayError = parts.length > 1
                   ? (isArabic ? parts[0] : parts[1])
                   : error;
+                if (displayError.includes('المحاولات المتبقية') || displayError.includes('Remaining attempts')) {
+                  displayError = displayError.split('.')[0].trim() + '.';
+                }
                 return (
                   <div className="mb-4 bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2 text-start" dir={isArabic ? 'rtl' : 'ltr'}>
                     <span className="material-symbols-outlined text-[18px] shrink-0">error</span>

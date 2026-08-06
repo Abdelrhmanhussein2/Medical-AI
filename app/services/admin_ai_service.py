@@ -133,7 +133,7 @@ class AdminAIEngineService:
                         else:
                             executed_calls.add(call_key)
                             # Dispatch to ToolExecutor which handles mapping the tools
-                            result_data = await tool_executor.dispatch(fn_name, fn_args, admin_id, conn)
+                            result_data = await tool_executor.dispatch(fn_name, fn_args, admin_id, conn, role="admin")
 
                         # Append tool response
                         messages.append({

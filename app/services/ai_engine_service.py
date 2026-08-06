@@ -393,7 +393,7 @@ class AIEngineService:
                                         executed_calls.add(call_key)
 
                                         _dbg(f"   ⚡ Executing (recovered): {fn_name} | Args: {fn_args}")
-                                        result_data = await tool_executor.dispatch(fn_name, fn_args, owner_id, conn)
+                                        result_data = await tool_executor.dispatch(fn_name, fn_args, owner_id, conn, role=owner_type)
                                         _dbg(f"      Result: {str(result_data)[:200]}")
                                         if isinstance(result_data, dict) and result_data.get("status") == "error":
                                             has_error = True
@@ -481,7 +481,7 @@ class AIEngineService:
                                 continue
                             executed_calls.add(call_key)
 
-                            result_data = await tool_executor.dispatch(fn_name, fn_args, owner_id, conn)
+                            result_data = await tool_executor.dispatch(fn_name, fn_args, owner_id, conn, role=owner_type)
                             logger.info(f"    Result: {result_data}")
                             _dbg(f"      Result: {str(result_data)[:200]}")
 

@@ -47,6 +47,7 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
   const [isUploadingAudio, setIsUploadingAudio] = useState(false);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const audioMimeTypeRef = useRef('');
   const timerRef = useRef(null);
 
   // 1. Fetch threads on mount
@@ -279,7 +280,21 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunksRef.current = [];
-      const mediaRecorder = new MediaRecorder(stream);
+
+      // Detect the best MIME type supported by this browser
+      const mimeTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/ogg;codecs=opus',
+        'audio/ogg',
+        'audio/mp4',
+      ];
+      const supportedMime = mimeTypes.find(m => MediaRecorder.isTypeSupported(m)) || '';
+      audioMimeTypeRef.current = supportedMime;
+
+      const mediaRecorder = supportedMime
+        ? new MediaRecorder(stream, { mimeType: supportedMime })
+        : new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (e) => {
@@ -289,12 +304,14 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const mimeType = audioMimeTypeRef.current || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         stream.getTracks().forEach(track => track.stop());
-        await sendAudioMessage(audioBlob);
+        await sendAudioMessage(audioBlob, mimeType);
       };
 
-      mediaRecorder.start();
+      // Request a chunk every 250ms so ondataavailable fires reliably
+      mediaRecorder.start(250);
       setIsRecording(true);
       setRecordingTime(0);
       recordingTimeRef.current = 0;
@@ -332,7 +349,7 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
   };
 
   // Send Audio File to Backend
-  const sendAudioMessage = async (audioBlob) => {
+  const sendAudioMessage = async (audioBlob, mimeType = 'audio/webm') => {
     if (!activeThreadId) return;
     setIsUploadingAudio(true);
     try {
@@ -340,7 +357,18 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
       const formData = new FormData();
       const elapsedSecs = startTimeRef.current ? Math.max(1, Math.round((Date.now() - startTimeRef.current) / 1000)) : (recordingTimeRef.current || 1);
       const durationStr = formatDuration(elapsedSecs);
-      formData.append("file", audioBlob, "voice_message.webm");
+
+      // Pick a file extension matching the actual MIME type
+      const extMap = {
+        'audio/webm': '.webm',
+        'audio/webm;codecs=opus': '.webm',
+        'audio/ogg': '.ogg',
+        'audio/ogg;codecs=opus': '.ogg',
+        'audio/mp4': '.mp4',
+        'audio/mpeg': '.mp3',
+      };
+      const ext = extMap[mimeType] || extMap[mimeType.split(';')[0]] || '.webm';
+      formData.append("file", audioBlob, `voice_message${ext}`);
       formData.append("audio_duration", durationStr);
 
       const res = await fetch(`/api/v1/chat/threads/${activeThreadId}/audio`, {
@@ -383,9 +411,16 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
         } finally {
           setIsTyping(false);
         }
+      } else {
+        // Show error from backend
+        const errData = await res.json().catch(() => ({}));
+        const detail = errData.detail || (isArabic ? 'فشل إرسال الرسالة الصوتية.' : 'Failed to send audio message.');
+        console.error('Audio upload failed:', res.status, detail);
+        alert(detail);
       }
     } catch (err) {
       console.error("Failed to upload audio message", err);
+      alert(isArabic ? 'حدث خطأ في الاتصال أثناء إرسال التسجيل.' : 'Connection error while sending the recording.');
     } finally {
       setIsUploadingAudio(false);
       setRecordingTime(0);

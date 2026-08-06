@@ -13,7 +13,7 @@ from groq import AsyncGroq
 logger = logging.getLogger(__name__)
 
 # Constants for security & maintainability
-ALLOWED_EXTENSIONS = {".webm", ".mp3", ".wav", ".m4a", ".ogg"}
+ALLOWED_EXTENSIONS = {".webm", ".mp3", ".wav", ".m4a", ".ogg", ".mp4"}
 MAX_AUDIO_SIZE = 25 * 1024 * 1024  # 25 MB
 
 class AudioService:
@@ -112,7 +112,6 @@ class AudioService:
                 transcription = await client.audio.transcriptions.create(
                     file=(unique_name, audio_file.read()),
                     model="whisper-large-v3",
-                    language="ar",
                     response_format="text"
                 )
                 transcription_text = str(transcription).strip()

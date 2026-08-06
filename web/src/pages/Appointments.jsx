@@ -676,7 +676,7 @@ export default function Appointments({ setActivePage }) {
                           required
                           value={newPatientPhone}
                           onChange={(e) => setNewPatientPhone(e.target.value)}
-                          placeholder="e.g. 01012345678"
+                          placeholder="0501234567"
                           class="w-full px-3 py-1.5 bg-white border border-border-subtle rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                         />
                       </div>

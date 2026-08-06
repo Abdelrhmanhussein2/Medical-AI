@@ -117,7 +117,7 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
                         },
                         "phone": {
                             "type": "string",
-                            "description": "رقم هاتف المريض المكون من أرقام فقط (مثال: 01012345678)"
+                            "description": "رقم هاتف المريض المكون من أرقام فقط (مثال: 0501234567)"
                         },
                         "date_of_birth": {
                             "type": "string",

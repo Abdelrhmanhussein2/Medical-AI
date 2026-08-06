@@ -357,7 +357,7 @@ export default function Patients({ setActivePage }) {
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="01012345678"
+                  placeholder="0501234567"
                   class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>

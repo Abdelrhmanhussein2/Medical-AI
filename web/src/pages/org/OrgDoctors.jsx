@@ -367,7 +367,7 @@ export default function OrgDoctors() {
                 </label>
                 <input
                   type="text" required value={phone} onChange={(e) => setPhone(e.target.value)}
-                  placeholder="e.g. 01012345678"
+                  placeholder="0501234567"
                   className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
                 />
               </div>

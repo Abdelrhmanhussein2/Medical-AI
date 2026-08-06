@@ -208,38 +208,48 @@ class TemplateService:
         # 1. Transcribe audio if provided
         if file:
             try:
-                from groq import AsyncGroq
                 from app.core.config import settings
                 import os
                 from uuid import uuid4
 
-                api_key = settings.GROQ_API_KEY or os.environ.get("GROQ_API_KEY", "")
-                if not api_key:
-                    logger.error("Groq API Key is not configured for Whisper.")
-                else:
-                    filename = getattr(file, "filename", None) or "recording.webm"
-                    ext = os.path.splitext(filename)[1].lower() or ".webm"
-                    contents = await file.read()
-                    
-                    upload_dir = os.path.join(os.getcwd(), "app", "uploads", "audio")
-                    os.makedirs(upload_dir, exist_ok=True)
-                    unique_name = f"template_suggest_{uuid4()}{ext}"
-                    saved_file_path = os.path.join(upload_dir, unique_name)
-                    
-                    with open(saved_file_path, "wb") as f:
-                        f.write(contents)
-                        
-                    client = AsyncGroq(api_key=api_key.strip())
+                use_openai = settings.OPENAI_API_KEY and not settings.OPENAI_API_KEY.startswith("sk-your")
+                filename = getattr(file, "filename", None) or "recording.webm"
+                ext = os.path.splitext(filename)[1].lower() or ".webm"
+                contents = await file.read()
+                
+                upload_dir = os.path.join(os.getcwd(), "app", "uploads", "audio")
+                os.makedirs(upload_dir, exist_ok=True)
+                unique_name = f"template_suggest_{uuid4()}{ext}"
+                saved_file_path = os.path.join(upload_dir, unique_name)
+                
+                with open(saved_file_path, "wb") as f:
+                    f.write(contents)
+
+                transcribed = ""
+                if use_openai:
+                    from openai import AsyncOpenAI
+                    client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.strip())
                     with open(saved_file_path, "rb") as audio_file:
                         transcription = await client.audio.transcriptions.create(
                             file=(unique_name, audio_file.read()),
-                            model="whisper-large-v3",
-                            language="ar",
+                            model="whisper-1",
                             response_format="text"
                         )
                         transcribed = str(transcription).strip()
-                        if transcribed:
-                            input_text = transcribed
+                else:
+                    api_key = settings.GROQ_API_KEY or os.environ.get("GROQ_API_KEY", "")
+                    if api_key:
+                        from groq import AsyncGroq
+                        client = AsyncGroq(api_key=api_key.strip())
+                        with open(saved_file_path, "rb") as audio_file:
+                            transcription = await client.audio.transcriptions.create(
+                                file=(unique_name, audio_file.read()),
+                                model="whisper-large-v3",
+                                response_format="text"
+                            )
+                            transcribed = str(transcription).strip()
+                if transcribed:
+                    input_text = transcribed
             except Exception as e:
                 logger.error(f"Error transcribing template helper audio: {e}")
 

@@ -87,7 +87,7 @@ class PatientService:
             query = """
                 SELECT * FROM patients
                 WHERE
-                    ($2::uuid IS NULL OR doctor_id = $2::uuid OR doctor_id IS NULL)
+                    ($2::uuid IS NULL OR doctor_id = $2::uuid)
                     AND (phone ILIKE $1 OR name ILIKE $1)
                 ORDER BY created_at DESC
                 LIMIT 20
@@ -99,7 +99,7 @@ class PatientService:
         else:
             query = """
                 SELECT * FROM patients
-                WHERE ($1::uuid IS NULL OR doctor_id = $1::uuid OR doctor_id IS NULL)
+                WHERE ($1::uuid IS NULL OR doctor_id = $1::uuid)
                 ORDER BY created_at DESC
                 LIMIT 50
             """

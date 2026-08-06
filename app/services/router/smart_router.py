@@ -212,9 +212,18 @@ class SmartRouter:
             tool_manifest=cls._get_tool_manifest(),
             max_tools=MAX_TOOLS,
         )
-        client = AsyncGroq(api_key=api_key.strip())
+        
+        use_openai = settings.OPENAI_API_KEY and not settings.OPENAI_API_KEY.startswith("sk-your")
+        if use_openai:
+            from openai import AsyncOpenAI
+            client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.strip())
+            model_to_use = settings.OPENAI_MODEL or "gpt-4o-mini"
+        else:
+            client = AsyncGroq(api_key=api_key.strip())
+            model_to_use = ROUTER_MODEL
+
         response = await client.chat.completions.create(
-            model=ROUTER_MODEL,
+            model=model_to_use,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": routing_context},
@@ -342,8 +351,9 @@ class SmartRouter:
             Returns empty list when confidence is below threshold.
         """
         api_key = settings.GROQ_API_KEY or os.environ.get("GROQ_API_KEY", "")
-        if not api_key:
-            logger.warning("[SMART ROUTER] No GROQ_API_KEY — returning all tools as fallback.")
+        has_openai = bool(settings.OPENAI_API_KEY and not settings.OPENAI_API_KEY.startswith("sk-your"))
+        if not api_key and not has_openai:
+            logger.warning("[SMART ROUTER] Neither GROQ_API_KEY nor OPENAI_API_KEY configured — returning all tools as fallback.")
             return ToolRegistry.get_all_schemas()
 
         # ── Step 1: Build routing context ──────────────────────────────────

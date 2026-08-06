@@ -49,6 +49,39 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
   const audioChunksRef = useRef([]);
   const audioMimeTypeRef = useRef('');
   const timerRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeThreadId) return;
+    setIsUploadingFile(true);
+    try {
+      const token = sessionStorage.getItem("accessToken");
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch(`/api/v1/chat/threads/${activeThreadId}/attachment`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+
+      if (res.ok) {
+        const fileMsg = await res.json();
+        setMessages(prev => [...prev, fileMsg]);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.detail || (isArabic ? 'فشل رفع الملف المرفق.' : 'Failed to upload attachment.'));
+      }
+    } catch (err) {
+      console.error('Failed to upload file attachment:', err);
+      alert(isArabic ? 'حدث خطأ أثناء رفع الملف.' : 'Error uploading file.');
+    } finally {
+      setIsUploadingFile(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   // 1. Fetch threads on mount
   useEffect(() => {
@@ -535,7 +568,7 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
             className="w-full bg-primary hover:bg-primary-hover text-on-primary font-bold text-xs py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 mb-4 transition-colors duration-300 active:scale-95 shadow-sm"
           >
             <span className="material-symbols-outlined text-[16px]">add</span>
-            {isArabic ? 'جلسة ذكاء اصطناعي جديدة' : 'New AI Session'}
+            {isArabic ? 'محادثة جديدة' : 'New Conversation'}
           </button>
           <div className="relative">
             <span className={`material-symbols-outlined absolute ${isArabic ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 text-secondary text-[18px]`}>search</span>
@@ -636,9 +669,22 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                 </div>
               </div>
             ) : (
-              <span className="text-xs text-secondary">Select or create a conversation to start</span>
+              <span className="text-xs text-secondary">
+                {isArabic ? 'اختر أو أنشئ محادثة للبدء' : 'Select or create a conversation to start'}
+              </span>
             )}
           </div>
+
+          {activeThread && (
+            <button
+              onClick={(e) => handleDeleteThread(e, activeThread.id)}
+              className="p-2 text-secondary hover:text-error hover:bg-error/10 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-semibold"
+              title={isArabic ? "حذف المحادثة" : "Delete Conversation"}
+            >
+              <span className="material-symbols-outlined text-[18px]">delete</span>
+              <span>{isArabic ? 'حذف المحادثة' : 'Delete Chat'}</span>
+            </button>
+          )}
         </div>
 
         {/* Chat History (Scrollable) */}
@@ -646,7 +692,9 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
           {!activeThreadId ? (
             <div className="flex flex-col items-center justify-center h-full text-secondary">
               <span className="material-symbols-outlined text-5xl text-outline-variant mb-2">chat</span>
-              <p className="text-xs">اضغط على "New AI Session" لبدء محادثة سريرية مشفرة جديدة.</p>
+              <p className="text-xs">
+                {isArabic ? 'اضغط على "محادثة جديدة" لبدء محادثة سريرية مشفرة جديدة.' : 'Click "New Conversation" to start a new encrypted clinical chat.'}
+              </p>
             </div>
           ) : loadingMessages ? (
             <div className="flex flex-col items-center justify-center h-full text-secondary">
@@ -829,12 +877,36 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
             {isUploadingAudio && (
               <div className="flex items-center gap-2 bg-primary-light/60 border border-primary/20 px-4 py-2 rounded-xl text-primary animate-pulse">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                <span className="text-xs font-semibold">جاري تحويل وتشفير الرسالة الصوتية بواسطة Groq Whisper AI...</span>
+                <span className="text-xs font-semibold">
+                  {isArabic ? 'جاري تحويل وتشفير الرسالة الصوتية بواسطة الذكاء الاصطناعي...' : 'Converting and encrypting voice message with AI...'}
+                </span>
+              </div>
+            )}
+
+            {isUploadingFile && (
+              <div className="flex items-center gap-2 bg-primary-light/60 border border-primary/20 px-4 py-2 rounded-xl text-primary animate-pulse">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                <span className="text-xs font-semibold">
+                  {isArabic ? 'جاري رفع الملف السريري وحفظه في سجلات العيادة...' : 'Uploading clinical attachment...'}
+                </span>
               </div>
             )}
 
             <div className="relative flex items-end gap-2 bg-bg-canvas rounded-xl border border-border-subtle p-2 shadow-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
-              <button className="p-2.5 text-secondary hover:text-primary transition-colors rounded-lg hover:bg-primary-light mb-0.5" title="Attach Medical File">
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileUpload} 
+                className="hidden" 
+                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.txt"
+              />
+              <button 
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={!activeThreadId || isUploadingFile || isUploadingAudio}
+                className="p-2.5 text-secondary hover:text-primary transition-colors rounded-lg hover:bg-primary-light mb-0.5 disabled:opacity-40" 
+                title={isArabic ? "إرفاق ملف طبي أو تقرير" : "Attach Medical File"}
+              >
                 <span className="material-symbols-outlined text-[20px]">attach_file</span>
               </button>
               <textarea 

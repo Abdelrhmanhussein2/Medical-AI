@@ -172,3 +172,80 @@ class AudioService:
                     res["bento_data"] = AudioService._parse_json(res.get("bento_data"))
                     res["insight_data"] = AudioService._parse_json(res.get("insight_data"))
                 return res
+
+    @staticmethod
+    async def process_attachment_message(
+        thread_id: str,
+        owner_id: str,
+        owner_type: str,
+        file: Any
+    ) -> dict:
+        ALLOWED_DOC_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".doc", ".docx", ".txt"}
+        MAX_DOC_SIZE = 25 * 1024 * 1024
+
+        filename = getattr(file, "filename", None) or "attachment"
+        ext = os.path.splitext(filename)[1].lower() if filename else ""
+        if not ext or ext not in ALLOWED_DOC_EXTENSIONS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"نوع الملف غير مدعوم. الأنواع المدعومة هي: {', '.join(ALLOWED_DOC_EXTENSIONS)}"
+            )
+
+        contents = await file.read()
+        if len(contents) > MAX_DOC_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="حجم الملف كبير جداً. الحد الأقصى هو 25 ميجابايت."
+            )
+
+        upload_dir = os.path.join(os.getcwd(), "app", "uploads", "attachments")
+        os.makedirs(upload_dir, exist_ok=True)
+        unique_name = f"{uuid4()}{ext}"
+        saved_file_path = os.path.join(upload_dir, unique_name)
+
+        try:
+            with open(saved_file_path, "wb") as f:
+                f.write(contents)
+        except Exception as e:
+            logger.exception(f"Failed to save attachment file: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="حدث خطأ أثناء حفظ الملف."
+            )
+
+        relative_path = f"/uploads/attachments/{unique_name}"
+        display_text = f"📄 [ملف مرفق]: {filename}"
+
+        async with db.pool.acquire() as connection:
+            await AudioService._assert_thread_owner(connection, thread_id, owner_id, owner_type)
+            encrypted_content = encrypt_text(display_text)
+
+            async with connection.transaction():
+                query = """
+                    INSERT INTO chat_messages (
+                        thread_id, sender_type, content, audio_file_path
+                    )
+                    VALUES ($1, $2, $3, $4)
+                    RETURNING *
+                """
+                row = await connection.fetchrow(
+                    query,
+                    UUID(thread_id),
+                    "user",
+                    encrypted_content,
+                    relative_path
+                )
+
+                update_thread_query = """
+                    UPDATE chat_threads
+                    SET message_count = message_count + 1, updated_at = now()
+                    WHERE id = $1
+                """
+                await connection.execute(update_thread_query, UUID(thread_id))
+
+                res = dict(row) if row else None
+                if res:
+                    res["content"] = display_text
+                    res["bento_data"] = AudioService._parse_json(res.get("bento_data"))
+                    res["insight_data"] = AudioService._parse_json(res.get("insight_data"))
+                return res

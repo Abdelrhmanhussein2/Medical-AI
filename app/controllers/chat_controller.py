@@ -114,6 +114,21 @@ async def upload_audio_message(
         )
     return message
 
+@router.post("/threads/{thread_id}/attachment", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
+async def upload_attachment(
+    thread_id: UUID,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    owner_id, owner_type = _verify_chat_user(current_user)
+    message = await ChatService.process_attachment_message(str(thread_id), owner_id, owner_type, file)
+    if not message:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="فشل معالجة ورفع الملف السريري."
+        )
+    return message
+
 @router.get("/threads/{thread_id}/messages", response_model=List[MessageResponse])
 async def get_messages(
     thread_id: UUID,

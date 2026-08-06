@@ -180,6 +180,21 @@ class ChatService:
         )
 
     @staticmethod
+    async def process_attachment_message(
+        thread_id: str,
+        owner_id: str,
+        owner_type: str,
+        file: Any
+    ) -> dict:
+        from app.services.audio_service import AudioService
+        return await AudioService.process_attachment_message(
+            thread_id=thread_id,
+            owner_id=owner_id,
+            owner_type=owner_type,
+            file=file
+        )
+
+    @staticmethod
     async def get_messages(thread_id: str, owner_id: str, owner_type: str, limit: int = 50, before: Optional[datetime] = None) -> List[dict]:
         async with db.pool.acquire() as connection:
             # 1. التحقق من الملكية

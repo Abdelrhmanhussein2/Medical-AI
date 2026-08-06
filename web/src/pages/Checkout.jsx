@@ -7,7 +7,7 @@ import { useApp } from '../context/AppContext';
 export default function Checkout() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { currentUser, activateSubscription, mergedPlans } = useApp();
+  const { currentUser, apiFetch, renewSubscription, mergedPlans } = useApp();
   const { lang, setLang, t, isArabic } = useLanguage();
   let planId = searchParams.get('plan') || 'starter';
   if (currentUser && currentUser.role === 'doctor' && planId === 'free') {
@@ -78,20 +78,41 @@ export default function Checkout() {
       setTimeout(() => {
         setProcessStep(3);
         
-        // Check if user is logged in
+        // Check if user is logged in as doctor
         if (currentUser && currentUser.role === 'doctor') {
-          const planMap = {
-            'free': 'Free Trial',
+          // 1. Resolve the bundle_id for the selected plan name
+          const planNameMap = {
             'starter': 'SBR AI Starter',
             'pro': 'SBR AI Pro',
             'business': 'SBR AI Business',
-            'enterprise': 'SBR AI Enterprise'
+            'enterprise': 'SBR AI Enterprise',
+            'free': 'Free Trial',
           };
-          const planName = planMap[selectedPlan.id] || 'SBR AI Starter';
-          const expiryDate = new Date();
-          expiryDate.setDate(expiryDate.getDate() + 30);
-          
-          activateSubscription(currentUser.id, planName, expiryDate.toISOString().split('T')[0])
+          const targetBundleName = planNameMap[selectedPlan.id] || 'SBR AI Starter';
+
+          apiFetch(`/subscriptions/bundles?target_type=doctor`)
+            .then(async (bundles) => {
+              const targetBundle = (bundles || []).find(b => b.name === targetBundleName);
+              if (!targetBundle) throw new Error(isArabic ? 'لم يتم العثور على الباقة المطلوبة.' : 'Target bundle not found.');
+
+              // 2. Check if doctor already has an active subscription
+              let existingSubId = null;
+              try {
+                const mySub = await apiFetch(`/subscriptions/my`);
+                if (mySub && mySub.id) existingSubId = mySub.id;
+              } catch (_) {}
+
+              if (existingSubId) {
+                // Renew existing subscription with new bundle
+                return renewSubscription(existingSubId, { bundle_id: targetBundle.id });
+              } else {
+                // Create a brand new subscription
+                return apiFetch(`/subscriptions/subscribe`, {
+                  method: 'POST',
+                  body: JSON.stringify({ bundle_id: targetBundle.id })
+                });
+              }
+            })
             .then(() => {
               setTimeout(() => {
                 navigate('/subscription');
@@ -99,7 +120,7 @@ export default function Checkout() {
             })
             .catch((err) => {
               console.error(err);
-              alert(isArabic ? 'حدث خطأ أثناء تجديد الاشتراك.' : 'Failed to renew subscription.');
+              alert(isArabic ? ('حدث خطأ أثناء تجديد الاشتراك: ' + (err.message || '')) : ('Failed to renew subscription: ' + (err.message || '')));
               setIsProcessing(false);
               setProcessStep(0);
             });

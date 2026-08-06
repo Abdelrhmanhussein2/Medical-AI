@@ -231,6 +231,10 @@ SQL_STATEMENTS = [
     
     "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS allowed_minutes INTEGER;",
     "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS allowed_messages INTEGER;",
+    "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS rolled_over_minutes INTEGER NOT NULL DEFAULT 0;",
+    "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS rolled_over_messages INTEGER NOT NULL DEFAULT 0;",
+    "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS used_minutes INTEGER NOT NULL DEFAULT 0;",
+    "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS used_messages INTEGER NOT NULL DEFAULT 0;",
     
     # Subscription Doctors
     """CREATE TABLE IF NOT EXISTS subscription_doctors (

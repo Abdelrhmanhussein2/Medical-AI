@@ -302,30 +302,46 @@ class SubscriptionService:
             tb_minutes = target_bundle["allowed_minutes"] if target_bundle else None
             tb_messages = target_bundle["allowed_messages"] if target_bundle else None
             
-            # Use requested allowed_minutes or fallback to bundle value
-            final_minutes = allowed_minutes if allowed_minutes is not None else tb_minutes
-            
-            # Update end_date, bundle_id, total_seats, allowed_minutes, allowed_messages
+            # --- Rollover: carry remaining balance from old subscription ---
+            old_allowed_minutes = sub_dict.get("allowed_minutes") or (target_bundle["allowed_minutes"] if target_bundle else 0) or 0
+            old_allowed_messages = sub_dict.get("allowed_messages") or (target_bundle["allowed_messages"] if target_bundle else 0) or 0
+            old_used_minutes = sub_dict.get("used_minutes") or 0
+            old_used_messages = sub_dict.get("used_messages") or 0
+            rolled_over_minutes = max(0, old_allowed_minutes - old_used_minutes)
+            rolled_over_messages = max(0, old_allowed_messages - old_used_messages)
+
+            # Use requested allowed_minutes or fallback to bundle value, then add rollover
+            base_minutes = allowed_minutes if allowed_minutes is not None else (tb_minutes or 0)
+            final_minutes = base_minutes + rolled_over_minutes
+            final_messages = (tb_messages or 0) + rolled_over_messages
+
+            # Update end_date, bundle_id, total_seats, allowed_minutes, allowed_messages, reset used counters
             update_query = """
             UPDATE subscriptions
             SET bundle_id = $1,
                 end_date = GREATEST(end_date, now()) + $2 * INTERVAL '1 day',
                 status = 'active',
                 total_seats = COALESCE($4, total_seats),
-                allowed_minutes = COALESCE($5, allowed_minutes),
-                allowed_messages = COALESCE($6, allowed_messages),
+                allowed_minutes = $5,
+                allowed_messages = $6,
+                used_minutes = 0,
+                used_messages = 0,
+                rolled_over_minutes = $7,
+                rolled_over_messages = $8,
                 updated_at = now()
             WHERE id = $3
             RETURNING *
             """
             updated_sub = await connection.fetchrow(
-                update_query, 
-                target_bundle_id, 
-                extension_days, 
+                update_query,
+                target_bundle_id,
+                extension_days,
                 subscription_id,
                 tb_seats,
                 final_minutes,
-                tb_messages
+                final_messages,
+                rolled_over_minutes,
+                rolled_over_messages
             )
             updated_sub_dict = dict(updated_sub)
             

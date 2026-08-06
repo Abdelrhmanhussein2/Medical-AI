@@ -53,6 +53,8 @@ class SubscriptionResponse(BaseModel):
     used_messages: Optional[int] = 0
     allowed_minutes: Optional[int] = 60
     allowed_messages: Optional[int] = 100
+    rolled_over_minutes: Optional[int] = 0
+    rolled_over_messages: Optional[int] = 0
     max_doctors: Optional[int] = None
 
     class Config:

@@ -205,6 +205,51 @@ export default function DoctorSubscription() {
                     </button>
                   </div>
                 )}
+
+                {/* Rollover Balance Card */}
+                {((subscription.rolled_over_minutes > 0) || (subscription.rolled_over_messages > 0)) && (
+                  <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+                    <span className="material-symbols-outlined text-amber-600 text-[22px] shrink-0 mt-0.5">savings</span>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-bold text-amber-800 mb-1">
+                        {isArabic ? 'رصيد محوّل من الباقة السابقة' : 'Balance Carried Over from Previous Plan'}
+                      </h4>
+                      <p className="text-xs text-amber-700 mb-3">
+                        {isArabic
+                          ? 'الرصيد المتبقي من اشتراكك السابق تم إضافته تلقائياً إلى باقتك الجديدة.'
+                          : 'Your unused balance from the previous subscription was automatically added to your new plan.'}
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {subscription.rolled_over_minutes > 0 && (
+                          <div className="bg-white rounded-lg p-3 border border-amber-200 text-center">
+                            <p className="text-[10px] text-amber-600 font-semibold uppercase tracking-wide mb-1">
+                              {isArabic ? 'دقائق محوّلة' : 'Carried Minutes'}
+                            </p>
+                            <p className="text-lg font-black text-amber-700">
+                              +{subscription.rolled_over_minutes.toLocaleString()}
+                            </p>
+                            <p className="text-[10px] text-amber-500 mt-0.5">
+                              {isArabic ? 'دقيقة ترحّلت' : 'min rolled over'}
+                            </p>
+                          </div>
+                        )}
+                        {subscription.rolled_over_messages > 0 && (
+                          <div className="bg-white rounded-lg p-3 border border-amber-200 text-center">
+                            <p className="text-[10px] text-amber-600 font-semibold uppercase tracking-wide mb-1">
+                              {isArabic ? 'رسائل محوّلة' : 'Carried Messages'}
+                            </p>
+                            <p className="text-lg font-black text-amber-700">
+                              +{subscription.rolled_over_messages.toLocaleString()}
+                            </p>
+                            <p className="text-[10px] text-amber-500 mt-0.5">
+                              {isArabic ? 'رسالة ترحّلت' : 'msgs rolled over'}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -268,6 +313,15 @@ export default function DoctorSubscription() {
                               ? `${remainingMinutes.toLocaleString()} دقيقة متبقية`
                               : `${remainingMinutes.toLocaleString()} min left`)}
                       </span>
+                      {/* Rollover breakdown */}
+                      {subscription.rolled_over_minutes > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-amber-100 text-amber-700">
+                          <span className="material-symbols-outlined text-[13px]">savings</span>
+                          {isArabic
+                            ? `${(totalMinutes - subscription.rolled_over_minutes).toLocaleString()} + ${subscription.rolled_over_minutes.toLocaleString()} محوّلة = ${totalMinutes.toLocaleString()}`
+                            : `${(totalMinutes - subscription.rolled_over_minutes).toLocaleString()} new + ${subscription.rolled_over_minutes.toLocaleString()} carried = ${totalMinutes.toLocaleString()}`}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -320,6 +374,15 @@ export default function DoctorSubscription() {
                               ? `~${remainingMessages.toLocaleString()} رسالة متبقية`
                               : `~${remainingMessages.toLocaleString()} msgs left`)}
                       </span>
+                      {/* Rollover breakdown */}
+                      {subscription.rolled_over_messages > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-amber-100 text-amber-700">
+                          <span className="material-symbols-outlined text-[13px]">savings</span>
+                          {isArabic
+                            ? `${(totalMessages - subscription.rolled_over_messages).toLocaleString()} + ${subscription.rolled_over_messages.toLocaleString()} محوّلة = ${totalMessages.toLocaleString()}`
+                            : `${(totalMessages - subscription.rolled_over_messages).toLocaleString()} new + ${subscription.rolled_over_messages.toLocaleString()} carried = ${totalMessages.toLocaleString()}`}
+                        </span>
+                      )}
                     </div>
                   </div>
 

@@ -206,12 +206,18 @@ export default function Register({ setActivePage }) {
                 ))}
               </div>
 
-              {error && (
-                <div className="mb-4 bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px]">error</span>
-                  <span>{error}</span>
-                </div>
-              )}
+              {error && (() => {
+                const parts = error.split(' / ');
+                const displayError = parts.length > 1
+                  ? (isArabic ? parts[0] : parts[1])
+                  : error;
+                return (
+                  <div className="mb-4 bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2 text-start" dir={isArabic ? 'rtl' : 'ltr'}>
+                    <span className="material-symbols-outlined text-[18px] shrink-0">error</span>
+                    <span className="leading-relaxed font-semibold">{displayError}</span>
+                  </div>
+                );
+              })()}
 
               {role === 'doctor' && paidPlan && (() => {
                 const plan = PLANS.find(p => p.id === paidPlan);

@@ -148,12 +148,18 @@ export default function ForgotPassword({ setActivePage }) {
         </div>
 
         <div className="bg-white border border-border-subtle rounded-xl p-8 shadow-sm">
-          {error && (
-            <div className="mb-4 bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px]">error</span>
-              <span>{error}</span>
-            </div>
-          )}
+          {error && (() => {
+            const parts = error.split(' / ');
+            const displayError = parts.length > 1
+              ? (isArabic ? parts[0] : parts[1])
+              : error;
+            return (
+              <div className="mb-4 bg-error-container text-error text-xs p-3 rounded-lg flex items-center gap-2 text-start" dir={isArabic ? 'rtl' : 'ltr'}>
+                <span className="material-symbols-outlined text-[18px] shrink-0">error</span>
+                <span className="leading-relaxed font-semibold">{displayError}</span>
+              </div>
+            );
+          })()}
 
           {success && (
             <div className="mb-4 bg-primary-light/30 text-primary text-xs p-3 rounded-lg flex items-center gap-2">

@@ -120,13 +120,13 @@ export default function DoctorSubscription() {
         // We map plan minutes to a rough message budget: starter=1000min→$1.71 budget
         // For simplicity we use a flat approximation based on plan tier
         const messageLimitByPlan = {
-          free:       350,
+          free:       100,
           starter:   1169,
           pro:       2339,
           business:  4678,
           enterprise: 8187,
         };
-        const totalMessages = matchedPlan.messagesApprox || messageLimitByPlan[matchedPlan.id] || 2631;
+        const totalMessages = subscription.allowed_messages || matchedPlan.messagesApprox || messageLimitByPlan[matchedPlan.id] || 2631;
         const usedMessages = subscription.used_messages || 0;
         const remainingMessages = Math.max(totalMessages - usedMessages, 0);
         const percentMessages = Math.min(Math.round((usedMessages / totalMessages) * 100), 100);

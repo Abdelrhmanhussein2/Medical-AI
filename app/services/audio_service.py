@@ -8,7 +8,6 @@ from fastapi import HTTPException, status
 from app.core.database import db
 from app.core.encryption import encrypt_text
 from app.core.config import settings
-from groq import AsyncGroq
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +18,7 @@ MAX_AUDIO_SIZE = 25 * 1024 * 1024  # 25 MB
 class AudioService:
     """
     Service responsible for handling audio uploading, validation,
-    and transcription using Groq Whisper.
+    and transcription using OpenAI Whisper.
     """
 
     @staticmethod
@@ -57,12 +56,13 @@ class AudioService:
         file: Any,
         audio_duration: Optional[Any] = 0.0
     ) -> dict:
-        api_key = settings.GROQ_API_KEY or os.environ.get("GROQ_API_KEY", "")
+        # Use OpenAI API key (same as session_service.py)
+        api_key = settings.OPENAI_API_KEY or os.environ.get("OPENAI_API_KEY", "")
         if not api_key:
-            logger.error("Groq API Key is not configured.")
+            logger.error("OpenAI API Key is not configured.")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Groq API Key is not configured."
+                detail="خدمة تحويل الصوت إلى نص غير مهيأة. يرجى التواصل مع الدعم."
             )
 
         # 1. Security check: Validate filename and extension
@@ -75,13 +75,19 @@ class AudioService:
                 detail=f"نوع الملف غير مدعوم. الأنواع المدعومة هي: {', '.join(ALLOWED_EXTENSIONS)}"
             )
 
-        # 2. Security check: Validate file size (read up to MAX_AUDIO_SIZE + 1)
+        # 2. Security check: Validate file size
         contents = await file.read()
         if len(contents) > MAX_AUDIO_SIZE:
             logger.warning(f"Rejected upload exceeding size limit: {len(contents)} bytes")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="حجم الملف الصوتي كبير جداً. الحد الأقصى هو 25 ميجابايت."
+            )
+
+        if len(contents) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="الملف الصوتي فارغ. يرجى المحاولة مرة أخرى."
             )
 
         # 3. Create upload directory and generate unique filename safely
@@ -105,18 +111,19 @@ class AudioService:
         relative_audio_path = f"/uploads/audio/{unique_name}"
         transcription_text = ""
 
-        # 4. Perform Groq Whisper transcription
+        # 4. Perform OpenAI Whisper transcription
         try:
-            client = AsyncGroq(api_key=api_key.strip())
+            from openai import AsyncOpenAI
+            client = AsyncOpenAI(api_key=api_key.strip())
             with open(saved_file_path, "rb") as audio_file:
                 transcription = await client.audio.transcriptions.create(
                     file=(unique_name, audio_file.read()),
-                    model="whisper-large-v3",
+                    model="whisper-1",
                     response_format="text"
                 )
                 transcription_text = str(transcription).strip()
         except Exception as e:
-            logger.exception(f"Error transcribing audio with Groq Whisper: {e}")
+            logger.exception(f"Error transcribing audio with OpenAI Whisper: {e}")
             transcription_text = "[تسجيل صوتي]"
 
         if not transcription_text:

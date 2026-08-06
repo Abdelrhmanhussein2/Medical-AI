@@ -14,7 +14,7 @@ export default function PrivacySection() {
       <div className="p-4 bg-primary-light/50 border border-primary/20 rounded-xl">
         <div className="flex gap-2 items-center text-primary font-bold text-xs uppercase tracking-wider mb-2">
           <span className="material-symbols-outlined text-sm">shield_locked</span>
-          <span>HIPAA & SOC2 SECURED Workspace</span>
+          <span>{isArabic ? 'بيئة عمل مشفرة وآمنة' : 'Encrypted & Secured Workspace'}</span>
         </div>
         <p className="text-xs text-on-surface-variant leading-relaxed">
           {t('privacy_text')}

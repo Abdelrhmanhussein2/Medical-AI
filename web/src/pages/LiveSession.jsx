@@ -26,7 +26,11 @@ export default function LiveSession({ appointmentId, setActivePage }) {
     endSessionAndSummarize,
     retrySummary,
     forceCloseSession,
-    getPatientSessions
+    getPatientSessions,
+    setTranscriptText,
+    startManualSession,
+    isManualMode,
+    setIsManualMode
   } = useSession();
 
   // Find appointment & patient
@@ -262,7 +266,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
           {!summaryDone && (
             <button
               onClick={endSessionAndSummarize}
-              disabled={isSummarizing || duration < 3}
+              disabled={isSummarizing || (duration < 3 && !isManualMode && !transcriptText)}
               className="bg-error text-white px-5 py-2 rounded-lg font-bold text-sm shadow-sm hover:bg-error-hover transition-colors flex items-center gap-2 disabled:opacity-50"
             >
               {isSummarizing ? (
@@ -293,28 +297,28 @@ export default function LiveSession({ appointmentId, setActivePage }) {
               </div>
               
               {patient && (
-                <div class="w-full mt-2 pt-4 border-t border-border-subtle space-y-3 text-right animate-fade-in" dir="rtl">
+                <div class={`w-full mt-2 pt-4 border-t border-border-subtle space-y-3 animate-fade-in ${isArabic ? 'text-right' : 'text-left'}`} dir={isArabic ? 'rtl' : 'ltr'}>
                   {!isEditingMedicalInfo ? (
                     <>
                       <div class="space-y-1">
                         <div class="flex justify-between items-center">
-                          <span class="text-[10px] font-bold text-secondary">الأمراض المزمنة:</span>
+                          <span class="text-[10px] font-bold text-secondary">{isArabic ? 'الأمراض المزمنة:' : 'Chronic Diseases:'}</span>
                           <button 
                             onClick={startEditingMedicalInfo}
                             className="p-1 hover:text-primary text-secondary transition-colors"
-                            title="تعديل البيانات الطبية"
+                            title={isArabic ? 'تعديل البيانات الطبية' : 'Edit Medical Info'}
                           >
                             <span className="material-symbols-outlined text-[14px]">edit</span>
                           </button>
                         </div>
                         <p class="text-xs text-on-surface bg-surface-container-low p-2 rounded-lg border border-border-subtle whitespace-pre-wrap min-h-[32px]">
-                          {patient.diseases || 'لا يوجد'}
+                          {patient.diseases || (isArabic ? 'لا يوجد' : 'None')}
                         </p>
                       </div>
                       <div class="space-y-1">
-                        <span class="text-[10px] font-bold text-secondary block">العادات والأسلوب:</span>
+                        <span class="text-[10px] font-bold text-secondary block">{isArabic ? 'العادات والأسلوب:' : 'Habits & Lifestyle:'}</span>
                         <p class="text-xs text-on-surface bg-surface-container-low p-2 rounded-lg border border-border-subtle min-h-[32px]">
-                          {patient.habits || 'لا يوجد'}
+                          {patient.habits || (isArabic ? 'لا يوجد' : 'None')}
                         </p>
                       </div>
                       <button
@@ -322,11 +326,11 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                         className="w-full mt-2 border border-border-subtle text-secondary hover:text-primary hover:bg-primary-light py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-[16px]">edit</span>
-                        <span>تعديل الملف الطبي للمراجع</span>
+                        <span>{isArabic ? 'تعديل الملف الطبي للمراجع' : 'Edit Patient Medical File'}</span>
                       </button>
 
                       {/* Note Templates Section */}
-                      <div className="mt-4 pt-4 border-t border-border-subtle/60 text-right" dir="rtl">
+                      <div className={`mt-4 pt-4 border-t border-border-subtle/60 ${isArabic ? 'text-right' : 'text-left'}`} dir={isArabic ? 'rtl' : 'ltr'}>
                         <div className="flex items-center gap-1.5 mb-2.5">
                           <span className="material-symbols-outlined text-[18px] text-primary">assignment</span>
                           <span className="text-xs font-bold text-secondary">
@@ -375,22 +379,22 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                   ) : (
                     <div class="space-y-3">
                       <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-primary block">الأمراض المزمنة:</label>
+                        <label class="text-[10px] font-bold text-primary block">{isArabic ? 'الأمراض المزمنة:' : 'Chronic Diseases:'}</label>
                         <textarea
                           value={tempDiseases}
                           onChange={(e) => setTempDiseases(e.target.value)}
-                          placeholder="اكتب الأمراض المزمنة..."
+                          placeholder={isArabic ? 'اكتب الأمراض المزمنة...' : 'Type chronic diseases...'}
                           rows="2"
                           className="w-full px-3 py-2 bg-white text-on-surface border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none outline-none"
                         />
                       </div>
                       <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-primary block">العادات والأسلوب:</label>
+                        <label class="text-[10px] font-bold text-primary block">{isArabic ? 'العادات والأسلوب:' : 'Habits & Lifestyle:'}</label>
                         <input
                           type="text"
                           value={tempHabits}
                           onChange={(e) => setTempHabits(e.target.value)}
-                          placeholder="اكتب العادات والأسلوب..."
+                          placeholder={isArabic ? 'اكتب العادات والأسلوب...' : 'Type habits and lifestyle...'}
                           className="w-full px-3 py-2 bg-white text-on-surface border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                         />
                       </div>
@@ -406,7 +410,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                           ) : (
                             <span className="material-symbols-outlined text-[14px]">save</span>
                           )}
-                          <span>حفظ</span>
+                          <span>{isArabic ? 'حفظ' : 'Save'}</span>
                         </button>
                         <button
                           type="button"
@@ -414,7 +418,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                           onClick={() => setIsEditingMedicalInfo(false)}
                           className="flex-1 bg-white border border-border-subtle text-secondary py-2 rounded-lg text-xs hover:bg-surface-container font-bold transition-all active:scale-95 cursor-pointer"
                         >
-                          إلغاء
+                          {isArabic ? 'إلغاء' : 'Cancel'}
                         </button>
                       </div>
                     </div>
@@ -429,10 +433,12 @@ export default function LiveSession({ appointmentId, setActivePage }) {
               </div>
               <div class="p-4 space-y-3 max-h-[250px] overflow-y-auto pr-1">
                 {pastSessions.length === 0 ? (
-                  <p class="text-xs text-secondary text-center py-6">لا توجد سجلات جلسات سابقة للمراجع.</p>
+                  <p class="text-xs text-secondary text-center py-6">
+                    {isArabic ? 'لا توجد سجلات جلسات سابقة للمراجع.' : 'No past session records for this patient.'}
+                  </p>
                 ) : (
                   pastSessions.map(session => {
-                    const sessionDate = new Date(session.created_at).toLocaleDateString('ar-EG', {
+                    const sessionDate = new Date(session.created_at).toLocaleDateString(isArabic ? 'ar-EG' : 'en-US', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric'
@@ -441,8 +447,8 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                       <div
                         key={session.id}
                         onClick={() => setSelectedPastSession(session)}
-                        class="bg-surface-container-high hover:bg-surface-container-highest cursor-pointer rounded-xl p-4 flex justify-between items-center transition-colors border border-border-subtle/40 text-right"
-                        dir="rtl"
+                        class={`bg-surface-container-high hover:bg-surface-container-highest cursor-pointer rounded-xl p-4 flex justify-between items-center transition-colors border border-border-subtle/40 ${isArabic ? 'text-right' : 'text-left'}`}
+                        dir={isArabic ? 'rtl' : 'ltr'}
                       >
                         <div>
                           <h4 className="text-xs font-bold text-on-surface">{sessionDate}</h4>
@@ -451,7 +457,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                           </p>
                         </div>
                         <span class="bg-success/15 text-success text-[10px] font-bold px-2 py-1 rounded">
-                          الملخص جاهز
+                          {isArabic ? 'الملخص جاهز' : 'Summary Ready'}
                         </span>
                       </div>
                     );
@@ -469,25 +475,25 @@ export default function LiveSession({ appointmentId, setActivePage }) {
               {/* Mic Icon Button */}
               <button
                 onClick={handleMicToggle}
-                disabled={isSummarizing || summaryDone}
+                disabled={isSummarizing || summaryDone || isManualMode}
                 class="relative w-28 h-28 flex items-center justify-center mb-6 group focus:outline-none disabled:opacity-40"
                 title={isRecording ? 'Stop Recording' : 'Start Recording'}
               >
-                {isRecording && (
+                {isRecording && !isManualMode && (
                   <>
                     <div class="absolute inset-0 bg-[#3A9E95] rounded-full opacity-20 animate-ping"></div>
                     <div class="absolute inset-2 bg-[#3A9E95] rounded-full opacity-30 animate-pulse"></div>
                   </>
                 )}
                 <div class={`relative z-10 w-20 h-20 rounded-full flex items-center justify-center shadow-inner transition-all duration-300 ${
-                  isRecording 
+                  isRecording && !isManualMode
                     ? 'bg-[#1e484a] border border-[#3A9E95]' 
                     : 'bg-white/10 group-hover:bg-white/20'
                 }`}>
                   <span class={`material-symbols-outlined text-[36px] transition-colors ${
-                    isRecording ? 'text-[#52D2C8]' : 'text-white/60 group-hover:text-white'
+                    isRecording && !isManualMode ? 'text-[#52D2C8]' : 'text-white/60 group-hover:text-white'
                   }`}>
-                    {isRecording ? 'mic' : 'mic_off'}
+                    {isManualMode ? 'edit_note' : isRecording ? 'mic' : 'mic_off'}
                   </span>
                 </div>
               </button>
@@ -496,12 +502,37 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                 {isSummarizing 
                   ? (isArabic ? 'جاري تحليل الجلسة بواسطة الذكاء الاصطناعي...' : 'AI is analyzing the session...') 
                   : isRecording 
-                    ? (isArabic ? 'تسجيل الصوت وكتابة النص الفورية نشطة...' : 'Voice Recording & Transcription Active...') 
+                    ? (isManualMode
+                        ? (isArabic ? 'جلسة إدخال يدوي نشطة — اكتب نص الاستشارة في الحقل أدناه' : 'Manual input session active — type the consultation below')
+                        : (isArabic ? 'تسجيل الصوت وكتابة النص الفورية نشطة...' : 'Voice Recording & Transcription Active...')) 
                     : summaryDone 
                       ? (isArabic ? 'اكتمل الملخص الطبي ✓' : 'Session Summarized ✓') 
                       : (isArabic ? 'اضغط على المايك لبدء جلسة الكشف الطبي' : 'Click Mic to Start Consultation Session')
                 }
               </h3>
+
+              {!isRecording && !summaryDone && (
+                <button
+                  onClick={() => {
+                    if (isManualMode) {
+                      forceCloseSession();
+                    } else {
+                      startManualSession(appointmentId, patient);
+                    }
+                  }}
+                  className="mt-4 text-xs font-bold text-[#52D2C8] hover:underline flex items-center gap-1.5 cursor-pointer bg-white/5 hover:bg-white/10 px-3.5 py-2 rounded-lg border border-white/10 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[16px]">
+                    {isManualMode ? 'cancel' : 'edit_document'}
+                  </span>
+                  <span>
+                    {isManualMode 
+                      ? (isArabic ? 'إلغاء وضع الإدخال اليدوي' : 'Cancel Manual Input') 
+                      : (isArabic ? 'أو اكتب نص الاستشارة يدوياً' : 'Or type consultation transcript manually')
+                    }
+                  </span>
+                </button>
+              )}
             </div>
 
             {/* Transcription Feed */}
@@ -510,36 +541,51 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                 <h3 className="text-xs font-black tracking-widest text-secondary uppercase">
                   {isArabic ? 'النص الطبي الفوري' : 'Session Transcript'}
                 </h3>
-                <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded">{isArabic ? 'لغة تلقائية' : 'AUTOMATIC LANG'}</span>
+                <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded">
+                  {isManualMode 
+                    ? (isArabic ? 'إدخال يدوي' : 'MANUAL INPUT') 
+                    : (isArabic ? 'لغة تلقائية' : 'AUTOMATIC LANG')
+                  }
+                </span>
               </div>
 
-              <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-surface-container-low">
-                {transcriptLines.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center text-secondary">
-                    <span className="material-symbols-outlined text-3xl mb-2 text-outline-variant">transcribe</span>
-                    <p className="text-sm">
-                      {isArabic ? 'سيظهر النص المترجم المحول من المحادثة هنا مباشرة...' : 'Real-time transcription will appear here in chunks...'}
-                    </p>
-                  </div>
+              <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-surface-container-low flex flex-col">
+                {isRecording ? (
+                  <textarea
+                    value={transcriptText}
+                    onChange={(e) => setTranscriptText(e.target.value)}
+                    disabled={isSummarizing || summaryDone}
+                    placeholder={
+                      isArabic 
+                        ? 'اكتب أو الصق نص الاستشارة أو حوار الجلسة هنا بالتفصيل للبدء في تلخيصه...' 
+                        : 'Type or paste the consultation details or patient dialog here to summarize...'
+                    }
+                    className="w-full h-full flex-1 p-4 bg-white border border-border-subtle rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface resize-none leading-relaxed"
+                  />
                 ) : (
-                  transcriptLines.map(line => (
-                    <div key={line.id} className="flex gap-4 animate-fade-in bg-white p-4 rounded-xl border border-border-subtle shadow-xs">
-                      <div className="w-8 h-8 rounded-lg bg-primary-light text-primary flex items-center justify-center font-bold text-xs shrink-0">
-                        <span className="material-symbols-outlined text-[16px]">chat_bubble</span>
+                  <>
+                    {transcriptLines.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-full text-center text-secondary">
+                        <span className="material-symbols-outlined text-3xl mb-2 text-outline-variant">transcribe</span>
+                        <p className="text-sm">
+                          {isArabic ? 'سيظهر النص المترجم المحول من المحادثة هنا مباشرة...' : 'Real-time transcription will appear here in chunks...'}
+                        </p>
                       </div>
-                      <div className="flex-1 pt-0.5 text-sm text-on-surface leading-relaxed">
-                        {line.text}
-                      </div>
-                    </div>
-                  ))
+                    ) : (
+                      transcriptLines.map(line => (
+                        <div key={line.id} className="flex gap-4 animate-fade-in bg-white p-4 rounded-xl border border-border-subtle shadow-xs">
+                          <div className="w-8 h-8 rounded-lg bg-primary-light text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                            <span className="material-symbols-outlined text-[16px]">chat_bubble</span>
+                          </div>
+                          <div className="flex-1 pt-0.5 text-sm text-on-surface leading-relaxed">
+                            {line.text}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    <div ref={transcriptEndRef} />
+                  </>
                 )}
-                {isRecording && transcriptLines.length > 0 && (
-                  <div className={`flex items-center gap-2 text-xs text-secondary italic animate-pulse ${isArabic ? 'pr-12 pl-0' : 'pl-12 pr-0'}`}>
-                    <span className="w-1.5 h-1.5 bg-secondary rounded-full"></span>
-                    <span>{isArabic ? 'جاري الاستماع وتدوين الجملة القادمة...' : 'Listening & transcribing next chunk...'}</span>
-                  </div>
-                )}
-                <div ref={transcriptEndRef} />
               </div>
             </div>
           </div>
@@ -644,7 +690,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                     <span className={`material-symbols-outlined text-[18px] ${soapNote ? 'text-primary' : 'text-secondary'}`}>description</span>
                   </div>
                   <div className="flex-1">
-                    <span className="text-sm font-semibold text-on-surface block">{isArabic ? 'ملاحظة SOAP' : 'SOAP Note'}</span>
+                    <span className="text-sm font-semibold text-on-surface block">{isArabic ? 'الملخص الطبي' : 'SOAP Note'}</span>
                     <span className="text-xs text-secondary">{soapNote ? (isArabic ? 'جاهز — اضغط للعرض' : 'Ready — click to view') : (isArabic ? 'يتم توليده بعد الجلسة' : 'Generated after session')}</span>
                   </div>
                   {soapNote && <span className="material-symbols-outlined text-[16px] text-primary">arrow_forward</span>}
@@ -663,24 +709,6 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                   </div>
                   {patientSummary && <span className="material-symbols-outlined text-[16px] text-secondary">arrow_forward</span>}
                 </button>
-
-                <button
-                  onClick={() => prescriptions.length > 0 && setActiveDoc('prescriptions')}
-                  className={`w-full flex items-center gap-4 group text-left p-3 rounded-xl transition-colors ${prescriptions.length > 0 ? 'hover:bg-surface-container-low cursor-pointer' : 'opacity-40 cursor-not-allowed'}`}
-                >
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${prescriptions.length > 0 ? 'bg-error/10' : 'bg-surface-container'}`}>
-                    <span className={`material-symbols-outlined text-[18px] ${prescriptions.length > 0 ? 'text-error' : 'text-secondary'}`}>prescriptions</span>
-                  </div>
-                  <div className="flex-1">
-                    <span className="text-sm font-semibold text-on-surface block">{isArabic ? 'الروشتة العلاجية' : 'Prescriptions'}</span>
-                    <span className="text-xs text-secondary">
-                      {prescriptions.length > 0 
-                        ? (isArabic ? `${prescriptions.length} دواء (أدوية) — اضغط للعرض` : `${prescriptions.length} medication(s) — click to view`)
-                        : (isArabic ? 'يتم توليدها بعد الجلسة' : 'Generated after session')}
-                    </span>
-                  </div>
-                  {prescriptions.length > 0 && <span className="material-symbols-outlined text-[16px] text-error">arrow_forward</span>}
-                </button>
               </div>
             </div>
           </div>
@@ -696,9 +724,9 @@ export default function LiveSession({ appointmentId, setActivePage }) {
             <div class="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas rounded-t-2xl">
               <h3 class="font-bold text-on-surface text-lg flex items-center gap-2">
                 <span class="material-symbols-outlined text-primary text-[22px]">
-                  {activeDoc === 'soap' ? 'description' : activeDoc === 'patient_summary' ? 'medical_information' : 'prescriptions'}
+                  {activeDoc === 'soap' ? 'description' : 'medical_information'}
                 </span>
-                {activeDoc === 'soap' ? 'SOAP Note' : activeDoc === 'patient_summary' ? 'Patient Summary' : 'Prescriptions'}
+                {activeDoc === 'soap' ? (isArabic ? 'الملخص الطبي' : 'SOAP Note') : (isArabic ? 'ملخص المراجع' : 'Patient Summary')}
               </h3>
               <button onClick={() => setActiveDoc(null)} class="p-2 hover:bg-surface-container rounded-lg text-secondary">
                 <span class="material-symbols-outlined text-[20px]">close</span>
@@ -729,27 +757,6 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                 </div>
               )}
 
-              {activeDoc === 'prescriptions' && (
-                <div class="space-y-4">
-                  {prescriptions.length === 0 ? (
-                    <p class="text-secondary text-center py-8">No prescriptions generated.</p>
-                  ) : (
-                    prescriptions.map((rx, i) => (
-                      <div key={i} class="bg-surface-container-low rounded-xl p-5 border border-border-subtle">
-                        <h4 class="font-bold text-on-surface text-base mb-3 flex items-center gap-2">
-                          <span class="material-symbols-outlined text-[18px] text-primary">medication</span>
-                          {rx.medication}
-                        </h4>
-                        <div class="grid grid-cols-3 gap-3 text-sm text-secondary">
-                          <div><span class="font-bold text-on-surface block">Dose</span>{rx.dose}</div>
-                          <div><span class="font-bold text-on-surface block">Frequency</span>{rx.frequency}</div>
-                          <div><span class="font-bold text-on-surface block">Duration</span>{rx.duration}</div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
             </div>
 
             <div class="px-6 py-4 border-t border-border-subtle rounded-b-2xl bg-bg-canvas">
@@ -790,7 +797,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
               {/* SOAP Note */}
               {selectedPastSession.soap_note && (
                 <div class="space-y-4">
-                  <strong class="text-xs font-bold text-secondary block border-b border-border-subtle pb-1">SOAP Note الطبية:</strong>
+                  <strong class="text-xs font-bold text-secondary block border-b border-border-subtle pb-1">{isArabic ? 'الملخص الطبي:' : 'SOAP Note:'}</strong>
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {[['S', 'Subjective (الشكوى المرضية)'], ['O', 'Objective (الفحص الإكلينيكي)'], ['A', 'Assessment (التشخيص الطبي)'], ['P', 'Plan (الخطة العلاجية)']].map(([key, label]) => (
                       <div key={key} class="bg-surface-container-low p-4 rounded-xl border border-border-subtle/50">

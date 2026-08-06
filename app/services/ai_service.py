@@ -35,9 +35,7 @@ Return ONLY valid JSON with this exact structure:
     "P": "Plan - treatment and follow-up"
   },
   "patient_summary": "Simple summary written for patient understanding (avoid medical jargon)",
-  "prescriptions": [
-    {"medication": "name", "dose": "dose", "frequency": "frequency", "duration": "duration"}
-  ],
+  "prescriptions": [],
   "tasks": [
     "Follow up task 1",
     "Follow up task 2"
@@ -46,9 +44,7 @@ Return ONLY valid JSON with this exact structure:
   "extracted_habits": "Any lifestyle habits mentioned in this session (e.g., 'التدخين'، 'الرياضة') or null if none mentioned"
 }
 
-PRESCRIPTIONS GUIDELINE:
-- If the doctor prescribes specific medications in the transcript, list them accurately in the "prescriptions" array.
-- If the doctor does NOT prescribe any specific medications, you MUST suggest 1-3 general therapeutic recommendations/options suitable for the case (e.g., medication: 'مسكن ألم عام عند الحاجة / General painkiller', dose: 'توصية مقترحة / Suggested option', frequency: 'عند اللزوم / As needed', duration: '-'). Avoid writing specific brand names or strict dosages unless mentioned in the text.
+- Do NOT extract or recommend any prescriptions. Keep the "prescriptions" array completely empty [].
 """
 
                 user_prompt = f"""Patient Name: {patient_name}
@@ -123,9 +119,7 @@ Return ONLY valid JSON with this exact structure:
     "P": "Plan - treatment and follow-up"
   },
   "patient_summary": "Simple summary written for patient understanding (avoid medical jargon)",
-  "prescriptions": [
-    {"medication": "name", "dose": "dose", "frequency": "frequency", "duration": "duration"}
-  ],
+  "prescriptions": [],
   "tasks": [
     "Follow up task 1",
     "Follow up task 2"
@@ -134,9 +128,7 @@ Return ONLY valid JSON with this exact structure:
   "extracted_habits": "Any lifestyle habits mentioned in this session (e.g., 'التدخين'، 'الرياضة') or null if none mentioned"
 }
 
-PRESCRIPTIONS GUIDELINE:
-- If the doctor prescribes specific medications in the transcript, list them accurately in the "prescriptions" array.
-- If the doctor does NOT prescribe any specific medications, you MUST suggest 1-3 general therapeutic recommendations/options suitable for the case (e.g., medication: 'مسكن ألم عام عند الحاجة / General painkiller', dose: 'توصية مقترحة / Suggested option', frequency: 'عند اللزوم / As needed', duration: '-'). Avoid writing specific brand names or strict dosages unless mentioned in the text.
+- Do NOT extract or recommend any prescriptions. Keep the "prescriptions" array completely empty [].
 """
 
         user_prompt = f"""Patient Name: {patient_name}

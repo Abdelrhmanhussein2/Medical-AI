@@ -35,7 +35,7 @@ You can begin by following these simple steps:
       titleAr: '2. ميزة التدوين الذكي (دوّن)',
       titleEn: '2. Smart Dictation (Dawwen)',
       bodyAr: `تتيح لك ميزة "دوّن" تسجيل الاستشارة الطبية بشكل طبيعي ومحيطي دون تدخل يدوي. 
-يستمع الذكاء الاصطناعي في الخلفية ويحلل الحوار بينك وبين المراجع، ثم يقوم تلقائياً بصياغة ملخص طبي كامل، ملخص موجه للمراجع، وملاحظات SOAP طبية منظمة.`,
+يستمع الذكاء الاصطناعي في الخلفية ويحلل الحوار بينك وبين المراجع، ثم يقوم تلقائياً بصياغة ملخص طبي كامل، ملخص موجه للمراجع، وملاحظات طبية منظمة.`,
       bodyEn: `The "Dawwen" feature allows you to record medical consultations ambiently and naturally without manual entry.
 The AI listens in the background and analyzes the dialogue between you and the reviewer, automatically drafting a complete medical summary, a patient-friendly summary, and structured SOAP notes.`,
     },
@@ -118,7 +118,7 @@ The platform allows you to:
             {isArabic ? 'مركز الدعم والمساعدة' : 'Help & Support Center'}
           </p>
           <h1 className="text-3xl font-display-lg font-black text-on-surface leading-tight">
-            {isArabic ? 'مركز المساعدة SBR AI' : 'SBR AI Help Center'}
+            {isArabic ? 'مركز مساعدة مِسْبَار' : 'SBR AI Help Center'}
           </h1>
           <p className="text-secondary text-sm mt-3 leading-relaxed">
             {isArabic

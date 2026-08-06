@@ -11,7 +11,7 @@
 export const PLANS = [
   {
     id: 'free',
-    nameAr: 'تجربة مجانية',
+    nameAr: 'الباقة التجريبية',
     nameEn: 'Free Trial',
     price: 0,
     priceAr: 'مجاناً',
@@ -37,7 +37,7 @@ export const PLANS = [
   },
   {
     id: 'starter',
-    nameAr: 'SBR AI Starter',
+    nameAr: 'الباقة الأساسية',
     nameEn: 'SBR AI Starter',
     price: 149,
     priceAr: '149',
@@ -65,7 +65,7 @@ export const PLANS = [
   },
   {
     id: 'pro',
-    nameAr: 'SBR AI Pro',
+    nameAr: 'الباقة المتقدمة',
     nameEn: 'SBR AI Pro',
     price: 279,
     priceAr: '279',
@@ -91,7 +91,7 @@ export const PLANS = [
   },
   {
     id: 'business',
-    nameAr: 'SBR AI Business',
+    nameAr: 'باقة الأعمال',
     nameEn: 'SBR AI Business',
     price: 549,
     priceAr: '549',
@@ -119,7 +119,7 @@ export const PLANS = [
   },
   {
     id: 'enterprise',
-    nameAr: 'SBR AI Enterprise',
+    nameAr: 'باقة المؤسسات',
     nameEn: 'SBR AI Enterprise',
     price: 799,
     priceAr: '799',

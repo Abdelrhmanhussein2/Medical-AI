@@ -24,7 +24,8 @@ export default function Layout({ children, activePage, setActivePage }) {
     menuItems = [
       { id: 'admin-overview', name: t('dashboard'), icon: 'grid_view' },
       { id: 'admin-users', name: t('department'), icon: 'corporate_fare' },
-      { id: 'admin-subscriptions', name: t('subscription'), icon: 'credit_card' }
+      { id: 'admin-subscriptions', name: t('subscription'), icon: 'credit_card' },
+      { id: 'aichat', name: t('aichat'), icon: 'smart_toy' }
     ];
   } else if (currentUser.role === 'org') {
     suiteSub = t('org_suite');

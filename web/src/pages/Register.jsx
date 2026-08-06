@@ -101,20 +101,17 @@ export default function Register({ setActivePage }) {
 
           <div className={`max-w-md space-y-8 relative z-10 ${isArabic ? 'text-right' : 'text-left'}`}>
             <SbrLogo size={56} color="#24564C" showText={true} textClass="text-primary" />
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-white border border-border-subtle rounded-full text-xs font-semibold text-primary shadow-sm">
-              <span className="material-symbols-outlined text-[16px]">shield_locked</span>
-              HIPAA Compliant &amp; SOC2 Certified
-            </div>
+
             <div className="space-y-4">
               <h2 className="text-4xl font-bold text-primary font-headline-lg leading-tight">
                 {role === 'doctor'
                   ? (isArabic ? 'انضم لمجتمع أطباء SBR AI' : 'Join the SBR AI Clinician Community')
-                  : (isArabic ? 'مكّن فرقك السريرية' : 'Empower Your Clinical Teams')}
+                  : (isArabic ? 'مكّن فرقك' : 'Empower Your Clinical Teams')}
               </h2>
               <p className="text-sm text-secondary leading-relaxed">
                 {role === 'doctor'
                   ? (isArabic
-                    ? 'سجّل مساحة عملك لتبدأ استخدام مساعدي الذكاء الاصطناعي السريري، وتوثيق الزيارات الطبية تلقائياً.'
+                    ? 'سجّل مساحة عملك لتبدأ استخدام مساعدي الذكاء الاصطناعي، وتوثيق الزيارات الطبية تلقائياً.'
                     : 'Register your workspace to start utilizing high-trust clinical AI assistants, ambient SOAP notes, and modern scheduler boards.')
                   : (isArabic
                     ? 'أنشئ مساحة إدارية. خصّص أطباء متعددين وراقب أداءهم وأدر الاشتراكات المؤسسية.'
@@ -136,10 +133,10 @@ export default function Register({ setActivePage }) {
               <p className="text-sm text-secondary leading-relaxed">
                 {role === 'doctor'
                   ? (isArabic
-                    ? 'نتحقق من بيانات الاعتماد الطبية للتحقق من المستخدمين السريريين وتأمين مساحة العمل.'
+                    ? 'نتحقق من بيانات الاعتماد الطبية للتحقق من المستخدمين وتأمين مساحة العمل.'
                     : 'We require medical credential checks to verify clinical users and secure the workspace.')
                   : (isArabic
-                    ? 'إدارة الأقسام السريرية وتوزيع المقاعد وتحليلات تحويل الكلام إلى نص الخاصة بالذكاء الاصطناعي.'
+                    ? 'إدارة الأقسام وتوزيع المقاعد وتحليلات تحويل الكلام إلى نص الخاصة بالذكاء الاصطناعي.'
                     : 'Easily manage clinical departments, seat distributions, and AI transcription analytics.')}
               </p>
             </div>
@@ -282,7 +279,7 @@ export default function Register({ setActivePage }) {
                   <label className={`block text-sm font-semibold text-on-surface-variant mb-1.5 ${isArabic ? 'text-right' : 'text-left'}`}>
                     {role === 'doctor'
                       ? (isArabic ? 'التخصص الطبي' : 'Specialization')
-                      : (isArabic ? 'التخصص / القسم السريري' : 'Specialty / Clinical Department')}
+                      : (isArabic ? 'التخصص / القسم' : 'Specialty / Clinical Department')}
                   </label>
                   <select
                     value={specialty} onChange={(e) => setSpecialty(e.target.value)}
@@ -418,7 +415,7 @@ export default function Register({ setActivePage }) {
                   </h4>
                   <p className="text-xs text-on-surface-variant leading-relaxed">
                     {isArabic
-                      ? 'يتم تشفير جميع المحادثات الطبية المرفوعة لحظياً. نستخدم معالجة صوتية مشفرة بالكامل ولا يتم تخزين الملفات الصوتية الخام بعد استخراج الملاحظات السريرية SOAP لحماية خصوصية المراجع.'
+                      ? 'يتم تشفير جميع المحادثات الطبية المرفوعة لحظياً. نستخدم معالجة صوتية مشفرة بالكامل ولا يتم تخزين الملفات الصوتية الخام بعد استخراج الملاحظات لحماية خصوصية المراجع.'
                       : 'All uploaded audio consultations are encrypted. We utilize fully encrypted voice processing, and raw audio files are automatically purged after the clinical SOAP summary is generated.'}
                   </p>
                 </div>
@@ -430,7 +427,7 @@ export default function Register({ setActivePage }) {
                   </h4>
                   <p className="text-xs text-on-surface-variant leading-relaxed">
                     {isArabic
-                      ? 'نحن لا نشارك أو نبيع أي معلومات صحية محمية (PHI). تظل مساحتك السريرية معزولة تماماً ولا يحق لأي جهة خارجية الوصول إلى بيانات المراجعين الخاصة بك.'
+                      ? 'نحن لا نشارك أو نبيع أي معلومات صحية محمية (PHI). تظل مساحة عملك معزولة تماماً ولا يحق لأي جهة خارجية الوصول إلى بيانات المراجعين الخاصة بك.'
                       : 'We never share or sell Protected Health Information (PHI). Your clinical workspace remains fully isolated, and no third parties have access to your patient records under any circumstances.'}
                   </p>
                 </div>
@@ -442,8 +439,8 @@ export default function Register({ setActivePage }) {
                   </h4>
                   <p className="text-xs text-on-surface-variant leading-relaxed">
                     {isArabic
-                      ? 'تلتزم المنصة بمعايير HIPAA و SOC2 و GDPR. يتم تشفير قاعدة البيانات بالكامل باستخدام بروتوكول AES-256 لحماية خصوصيتك وخصوصية مرضاك.'
-                      : 'Our platform is strictly compliant with HIPAA, SOC2, and GDPR standards. All database records are fully encrypted using AES-256 protocols to safeguard you and your patients.'}
+                      ? 'يتم تشفير قاعدة البيانات بالكامل باستخدام بروتوكول AES-256 لحماية خصوصيتك وخصوصية مرضاك.'
+                      : 'All database records are fully encrypted using AES-256 protocols to safeguard you and your patients.'}
                   </p>
                 </div>
               </div>

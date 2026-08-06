@@ -10,13 +10,13 @@ export default function PrivacyPage() {
     {
       titleAr: '1. معالجة التسجيلات الصوتية',
       titleEn: '1. Processing of Audio Recordings',
-      bodyAr: `يتم تشفير جميع المحادثات الطبية المرفوعة لحظياً. نستخدم معالجة صوتية مشفرة بالكامل ولا يتم تخزين الملفات الصوتية الخام بعد استخراج الملاحظات السريرية لحماية خصوصية المراجع.`,
+      bodyAr: `يتم تشفير جميع المحادثات الطبية المرفوعة لحظياً. نستخدم معالجة صوتية مشفرة بالكامل ولا يتم تخزين الملفات الصوتية الخام بعد استخراج الملاحظات لحماية خصوصية المراجع.`,
       bodyEn: `All uploaded medical conversations are encrypted instantly. We use fully encrypted audio processing and do not store raw audio files after clinical notes are extracted, in order to protect patient privacy.`,
     },
     {
       titleAr: '2. التزام حماية البيانات الطبية',
       titleEn: '2. Commitment to Protecting Medical Data',
-      bodyAr: `نحن لا نشارك أو نبيع أي معلومات طبية للمستخدمين أو المراجعين. تظل مساحتك السريرية معزولة تماماً ولا يحق لأي جهة خارجية الوصول إلى بيانات مراجعيك دون إذنك الصريح.`,
+      bodyAr: `نحن لا نشارك أو نبيع أي معلومات طبية للمستخدمين أو المراجعين. تظل مساحة عملك معزولة تماماً ولا يحق لأي جهة خارجية الوصول إلى بيانات مراجعيك دون إذنك الصريح.`,
       bodyEn: `We do not share or sell any medical information belonging to users or patients. Your clinical workspace remains fully isolated, and no external party has the right to access your patients' data without your explicit permission.`,
     },
     {

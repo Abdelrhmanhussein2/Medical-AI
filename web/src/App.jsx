@@ -241,21 +241,21 @@ function AppContent() {
             </ProtectedRoute>
           } />
           <Route path="/aichat" element={
-            <ProtectedRoute role="doctor">
+            <ProtectedRoute>
               <LayoutWrapper activePage="aichat" handleNavigation={handleNavigation}>
                 <AiChat />
               </LayoutWrapper>
             </ProtectedRoute>
           } />
           <Route path="/aichat-patient/:patientId" element={
-            <ProtectedRoute role="doctor">
+            <ProtectedRoute>
               <LayoutWrapper activePage="aichat" handleNavigation={handleNavigation}>
                 <AiChatRouteWrapper />
               </LayoutWrapper>
             </ProtectedRoute>
           } />
           <Route path="/aichat-thread/:threadId" element={
-            <ProtectedRoute role="doctor">
+            <ProtectedRoute>
               <LayoutWrapper activePage="aichat" handleNavigation={handleNavigation}>
                 <AiChatThreadRouteWrapper />
               </LayoutWrapper>

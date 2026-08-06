@@ -40,19 +40,16 @@ export default function Login({ setActivePage, isPortal = false }) {
             <div className="flex items-center gap-3">
               <SbrLogo size={56} color="#24564C" showText={true} textClass="text-primary" />
             </div>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-white border border-border-subtle rounded-full text-xs font-semibold text-primary shadow-sm">
-              <span className="material-symbols-outlined text-[16px]">shield_locked</span>
-              HIPAA Compliant &amp; SOC2 Certified
-            </div>
+
             <div className="space-y-4">
               <h2 className="text-4xl font-bold text-primary font-headline-lg leading-tight">
                 {isArabic
-                  ? 'رفع دقة التوثيق السريري بالذكاء الاصطناعي'
+                  ? 'رفع دقة التوثيق بالذكاء الاصطناعي'
                   : 'Elevating Clinical Precision with Generative AI'}
               </h2>
               <p className="text-sm text-secondary leading-relaxed">
                 {isArabic
-                  ? 'التقط استشارات المراجعين بشكل طبيعي، وولّد تلقائياً ملاحظات SOAP عالية الجودة، وأدر جداولك بسلاسة مع SBR AI.'
+                  ? 'التقط استشارات المراجعين بشكل طبيعي، وولّد تلقائياً ملاحظات عالية الجودة، وأدر جداولك بسلاسة مع مِسْبَار.'
                   : 'Capture patient consultations naturally, auto-generate high-quality SOAP notes, and manage your schedules seamlessly with SBR AI.'}
               </p>
             </div>
@@ -61,7 +58,7 @@ export default function Login({ setActivePage, isPortal = false }) {
               <div className="flex items-center gap-3 mb-3">
                 <span className="material-symbols-outlined text-primary bg-primary-light p-2 rounded-lg text-lg">auto_awesome</span>
                 <span className="text-xs font-bold text-on-surface uppercase tracking-wider font-label-caps">
-                  {isArabic ? 'محرك الذكاء السريري' : 'Clinical Engine'}
+                  {isArabic ? 'محرك الذكاء المتكامل' : 'Clinical Engine'}
                 </span>
               </div>
               <p className="text-sm text-secondary leading-relaxed">

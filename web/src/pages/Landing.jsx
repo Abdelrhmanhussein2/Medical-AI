@@ -7,27 +7,27 @@ import { Link } from 'react-router-dom';
 // ── FAQ Data ──────────────────────────────────────────────────────────────────
 const FAQ_ITEMS = [
   {
-    qAr: 'ما هو SBR AI (مِسْبَار) وكيف يُفيد الأطباء؟',
-    qEn: 'What is SBR AI (Misbar) and how does it benefit clinicians?',
-    aAr: 'SBR AI هو مساعد ذكاء اصطناعي متكامل مصمَّم خصيصاً للأطباء. يقوم بتوثيق مقابلات المراجعين تلقائياً عبر دوّن، ويُنشئ ملاحظات SOAP دقيقة، ويدير الجداول الزمنية — مما يُتيح للطبيب التركيز الكامل على رعاية المراجع بدلاً من الإدخال اليدوي للبيانات.',
+    qAr: 'ما هو مِسْبَار وكيف يُفيد الأطباء؟',
+    qEn: 'What is SBR AI and how does it benefit clinicians?',
+    aAr: 'مِسْبَار هو مساعد ذكاء اصطناعي متكامل مصمَّم خصيصاً للأطباء. يقوم بتوثيق مقابلات المراجعين تلقائياً عبر دوّن، ويُنشئ ملاحظات دقيقة، ويدير الجداول الزمنية — مما يُتيح للطبيب التركيز الكامل على رعاية المراجع بدلاً من الإدخال اليدوي للبيانات.',
     aEn: 'SBR AI is a comprehensive AI assistant designed specifically for physicians. It automatically documents patient encounters through Dawwen, generates accurate SOAP notes, and manages schedules — allowing clinicians to focus entirely on patient care instead of manual data entry.',
   },
   {
-    qAr: 'كيف تحمي SBR AI بيانات مراجعي؟',
+    qAr: 'كيف يحمي مِسْبَار بيانات مراجعي؟',
     qEn: 'How does SBR AI protect my clients\' data?',
-    aAr: 'تعتمد SBR AI بنية تقنية تهدف إلى حماية بيانات المستخدمين والمراجعين. يتم تشفير البيانات أثناء النقل وفي حالة السكون. لا نشارك أو نبيع أي بيانات طبية لجهات خارجية. تتم معالجة المدفوعات عبر بوابة دفع خارجية آمنة ولا نحتفظ ببيانات البطاقات البنكية.',
+    aAr: 'تعتمد منصة مِسْبَار بنية تقنية تهدف إلى حماية بيانات المستخدمين والمراجعين. يتم تشفير البيانات أثناء النقل وفي حالة السكون. لا نشارك أو نبيع أي بيانات طبية لجهات خارجية. تتم معالجة المدفوعات عبر بوابة دفع خارجية آمنة ولا نحتفظ ببيانات البطاقات البنكية.',
     aEn: 'SBR AI uses a technical architecture designed to protect user and patient data. Data is encrypted both in transit and at rest. We do not share or sell any medical data to third parties. Payments are processed through a secure external payment gateway and we do not store bank card data.',
   },
   {
     qAr: 'كيف يعمل دوّن؟',
     qEn: 'How does Dawwen work?',
-    aAr: 'يستمع النظام إلى محادثة الطبيب والمراجع بشكل طبيعي دون الحاجة إلى أي أوامر يدوية. يقوم الذكاء الاصطناعي بتحليل السياق الطبي في الوقت الفعلي وتحويله إلى ملاحظات سريرية منظَّمة جاهزة للمراجعة فور انتهاء الزيارة.',
+    aAr: 'يستمع النظام إلى محادثة الطبيب والمراجع بشكل طبيعي دون الحاجة إلى أي أوامر يدوية. يقوم الذكاء الاصطناعي بتحليل السياق الطبي في الوقت الفعلي وتحويله إلى ملاحظات منظَّمة جاهزة للمراجعة فور انتهاء الزيارة.',
     aEn: 'The system listens to the doctor-patient conversation naturally without any manual commands. The AI analyzes the medical context in real time and converts it into structured clinical notes ready for review immediately after the visit ends.',
   },
   {
-    qAr: 'هل يمكنني تخصيص قوالب التوثيق السريري؟',
+    qAr: 'هل يمكنني تخصيص قوالب التوثيق؟',
     qEn: 'Can I customize clinical documentation templates?',
-    aAr: 'بالتأكيد. يُتيح SBR AI إنشاء قوالب توثيق مخصصة تتناسب مع تخصصك الطبي وأسلوب ممارستك. يمكنك تحديد الحقول السريرية المطلوبة، والاستعانة بالذكاء الاصطناعي لاستخراجها تلقائياً من محادثة المراجع.',
+    aAr: 'بالتأكيد. يُتيح مِسْبَار إنشاء قوالب توثيق مخصصة تتناسب مع تخصصك الطبي وأسلوب ممارستك. يمكنك تحديد الحقول المطلوبة، والاستعانة بالذكاء الاصطناعي لاستخراجها تلقائياً من محادثة المراجع.',
     aEn: 'Absolutely. SBR AI allows you to create custom documentation templates tailored to your specialty and practice style. You can define the required clinical fields and leverage AI to automatically extract them from patient conversations.',
   },
   {
@@ -45,7 +45,7 @@ const FAQ_ITEMS = [
   {
     qAr: 'كيف تتعامل المنصة مع اللغة العربية؟',
     qEn: 'How does the platform handle the Arabic language?',
-    aAr: 'تم تصميم SBR AI مع دعم كامل للغة العربية من الألف إلى الياء. يشمل ذلك التعرف على الكلام الطبي باللغة العربية، وإنشاء التقارير السريرية بالعربية، وواجهة مستخدم متكيّفة مع اتجاه الكتابة من اليمين إلى اليسار.',
+    aAr: 'تم تصميم مِسْبَار مع دعم كامل للغة العربية من الألف إلى الياء. يشمل ذلك التعرف على الكلام الطبي باللغة العربية، وإنشاء التقارير بالعربية، وواجهة مستخدم متكيّفة مع اتجاه الكتابة من اليمين إلى اليسار.',
     aEn: 'SBR AI was designed with full Arabic language support from the ground up. This includes Arabic medical speech recognition, clinical report generation in Arabic, and a UI fully adapted to right-to-left text direction.',
   },
   {
@@ -123,14 +123,14 @@ export default function Landing({ setActivePage }) {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-container opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
                 </span>
-                {isArabic ? 'نقدم لكم مساعد SBR AI 2.0 (+ مِسْبَار، مساعدك بالذكاء الاصطناعي).' : 'Introducing SBR AI Assistant 2.0 (+ Misbar, your AI assistant)'}
+                {isArabic ? 'نقدم لكم مِسْبَار 2.0' : 'Introducing SBR AI 2.0'}
               </div>
               <h1 className="text-2xl sm:text-3xl md:text-4xl lg:font-display-lg lg:text-display-lg text-on-surface font-bold max-w-2xl leading-tight">
                 {isArabic ? 'الذكاء الاصطناعي يصبح مساعد الطبيب 🩺' : "AI becomes the doctor's assistant 🩺"}
               </h1>
               <p className="text-sm md:font-body-lg md:text-body-lg text-on-surface-variant max-w-xl leading-relaxed">
                 {isArabic 
-                  ? 'سهّل سير عملك السريري باستخدام الذكاء الاصطناعي. من دوّن إلى تحليلات المراجعين، استعد الوقت للتركيز على مراجعيك.'
+                  ? 'سهّل سير عملك باستخدام الذكاء الاصطناعي. من دوّن إلى تحليلات المراجعين، استعد الوقت للتركيز على مراجعيك.'
                   : 'Streamline your clinical workflow with high-trust AI. From Dawwen to predictive analytics, regain time to focus on what matters most—your patients.'}
               </p>
               <div className="flex flex-col sm:flex-row gap-stack-md pt-stack-sm">
@@ -220,11 +220,11 @@ export default function Landing({ setActivePage }) {
           <div className="max-w-container-max mx-auto">
             <div className="text-center max-w-3xl mx-auto mb-16">
               <h2 className="font-headline-lg text-headline-lg text-on-surface font-bold mb-stack-md">
-                {isArabic ? 'محرك الذكاء السريري المتكامل' : 'Intelligent Clinical Engine'}
+                {isArabic ? 'محرك الذكاء المتكامل' : 'Intelligent Clinical Engine'}
               </h2>
               <p className="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
                 {isArabic
-                  ? 'SBR AI هو محرك سريري مدعوم بالذكاء الاصطناعي مُصمَّم من الأساس لأتمتة التوثيق المعقد، وتبسيط سير العمل اليومي، وتمكين الأطباء من التركيز الكامل على رعاية مرضاهم.'
+                  ? 'SBR AI هو محرك مدعوم بالذكاء الاصطناعي مُصمَّم من الأساس لأتمتة التوثيق المعقد، وتبسيط سير العمل اليومي، وتمكين الأطباء من التركيز الكامل على رعاية مرضاهم.'
                   : 'SBR AI is an AI-powered clinical engine designed from the ground up to automate complex documentation, intuitively streamline your daily workflows, and free clinicians to focus entirely on patient care.'}
               </p>
             </div>
@@ -292,9 +292,9 @@ export default function Landing({ setActivePage }) {
                 },
                 {
                   icon: 'description',
-                  titleAr: 'ملاحظات SOAP تلقائية',
+                  titleAr: 'ملاحظات تلقائية',
                   titleEn: 'Automated SOAP Notes',
-                  descAr: 'أنشئ على الفور ملاحظات SOAP دقيقة وشاملة جاهزة للمراجعة فور انتهاء الزيارة.',
+                  descAr: 'أنشئ على الفور ملاحظات دقيقة وشاملة جاهزة للمراجعة فور انتهاء الزيارة.',
                   descEn: 'Instantly generate accurate, comprehensive SOAP notes ready for review immediately after the patient visit concludes.'
                 },
                 {
@@ -565,6 +565,25 @@ export default function Landing({ setActivePage }) {
                     </div>
                   </a>
 
+                  <a
+                    href="tel:0552060316"
+                    className={`flex items-center gap-4 p-4 rounded-xl border border-border-subtle bg-bg-canvas hover:border-primary/30 hover:shadow-sm transition-all group ${
+                      isArabic ? 'flex-row-reverse text-right' : ''
+                    }`}
+                  >
+                    <div className="w-11 h-11 rounded-full bg-primary-light text-primary flex items-center justify-center shrink-0">
+                      <span className="material-symbols-outlined text-xl">phone</span>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-on-surface-variant font-semibold uppercase tracking-wider mb-0.5">
+                        {isArabic ? 'الهاتف' : 'Phone'}
+                      </p>
+                      <p className="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">
+                        0552060316
+                      </p>
+                    </div>
+                  </a>
+
                   <div className={`flex items-center gap-4 p-4 rounded-xl border border-border-subtle bg-bg-canvas ${
                     isArabic ? 'flex-row-reverse text-right' : ''
                   }`}>
@@ -647,16 +666,30 @@ export default function Landing({ setActivePage }) {
               <SbrLogo size={32} color="#fff" showText={true} textClass="text-white" />
               <p className="text-white/80 text-xs leading-relaxed mt-4">
                 {isArabic
-                  ? 'منصة الذكاء الاصطناعي السريري المتكاملة. نُساعد الأطباء على تقديم رعاية أفضل بوقت أقل.'
+                  ? 'منصة الذكاء الاصطناعي المتكاملة. نُساعد الأطباء على تقديم رعاية أفضل بوقت أقل.'
                   : 'The integrated clinical AI platform. We help physicians deliver better care in less time.'}
               </p>
-              <a
-                href="mailto:contact@sbr-ai.com"
-                className="inline-flex items-center gap-2 mt-4 text-white/90 hover:text-white text-xs font-semibold transition-colors"
-              >
-                <span className="material-symbols-outlined text-[15px]">mail</span>
-                contact@sbr-ai.com
-              </a>
+              <div className="flex flex-col gap-2 mt-4">
+                <a
+                  href="mailto:contact@sbr-ai.com"
+                  className="inline-flex items-center gap-2 text-white/90 hover:text-white text-xs font-semibold transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[15px]">mail</span>
+                  contact@sbr-ai.com
+                </a>
+                <a
+                  href="tel:0552060316"
+                  className="inline-flex items-center gap-2 text-white/90 hover:text-white text-xs font-semibold transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[15px]">phone</span>
+                  0552060316
+                </a>
+                <div className="text-white/70 text-[10px] mt-1 font-semibold leading-relaxed">
+                  {isArabic 
+                    ? 'موثق بموجب وثيقة العمل الحر رقم: FL-927832795' 
+                    : 'Licensed under Freelance Certificate: FL-927832795'}
+                </div>
+              </div>
             </div>
 
             {/* Platform */}
@@ -667,7 +700,7 @@ export default function Landing({ setActivePage }) {
               <ul className="space-y-3 text-white/80 text-xs">
                 {[
                   { ar: 'دوّن', en: 'Dawwen (Ambient Dictation)' },
-                  { ar: 'ملاحظات SOAP التلقائية', en: 'Automated SOAP Notes' },
+                  { ar: 'الملاحظات التلقائية', en: 'Automated SOAP Notes' },
                   { ar: 'إدارة المواعيد', en: 'Appointment Management' },
                   { ar: 'التحليلات التنبؤية', en: 'Predictive Analytics' },
                 ].map((l, i) => (

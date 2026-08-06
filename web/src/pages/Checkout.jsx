@@ -194,7 +194,7 @@ export default function Checkout() {
                     </h4>
                     <p className="text-xs text-on-surface-variant leading-relaxed">
                       {isArabic 
-                        ? 'لن يتم محاسبتك أو طلب أي وسيلة دفع طوال فترة التجربة المجانية. ستحصل على 60 دقيقة من الذكاء الاصطناعي السريري لتجربة النظام بالكامل.'
+                        ? 'لن يتم محاسبتك أو طلب أي وسيلة دفع طوال فترة التجربة المجانية. ستحصل على 60 دقيقة من الذكاء الاصطناعي لتجربة النظام بالكامل.'
                         : 'You will not be billed or asked for any payment method during the free trial. You will receive 60 minutes of clinical AI credit to fully explore the system.'}
                     </p>
                   </div>
@@ -228,7 +228,7 @@ export default function Checkout() {
 
                 <div className="mt-6 pt-6 border-t border-border-subtle flex items-center justify-center gap-2 text-[10px] text-secondary font-semibold uppercase tracking-wider">
                   <span className="material-symbols-outlined text-[16px] text-green-600">security</span>
-                  {isArabic ? 'نظام آمن ومتوافق بالكامل مع HIPAA' : 'Fully secure & HIPAA compliant environment'}
+                  {isArabic ? 'نظام مشفر وآمن بالكامل' : 'Fully encrypted & secure environment'}
                 </div>
               </div>
             </div>
@@ -520,8 +520,8 @@ export default function Checkout() {
       {/* Footer copyright */}
       <footer className="max-w-6xl mx-auto w-full text-center text-xs text-secondary mt-8">
         {isArabic 
-          ? '© 2026 مساعد SBR الذكي. جميع الحقوق محفوظة. متوافق مع نظام الحماية HIPAA ولائحة GDPR.'
-          : '© 2026 SBR AI Assistant. All rights reserved. HIPAA Secure & GDPR Compliant.'}
+          ? '© 2026 مساعد SBR الذكي. جميع الحقوق محفوظة. نظام آمن ومشفر بالكامل.'
+          : '© 2026 SBR AI Assistant. All rights reserved. Fully secure and encrypted system.'}
       </footer>
 
       {/* Payment Processing overlay modal */}
@@ -563,7 +563,7 @@ export default function Checkout() {
                 </h3>
                 <p className="text-xs text-secondary">
                   {selectedPlan.id === 'free'
-                    ? (isArabic ? 'جاري إعداد صلاحيات الأمان والامتثال لـ HIPAA.' : 'Setting up security permissions and HIPAA compliance.')
+                    ? (isArabic ? 'جاري إعداد صلاحيات الحساب والأمان.' : 'Setting up account security permissions.')
                     : (isArabic ? 'جاري تشفير بيانات الدفع والتحقق من جلسة SSL الآمنة.' : 'Tokenizing payment tokens and verifying secure SSL session.')
                   }
                 </p>

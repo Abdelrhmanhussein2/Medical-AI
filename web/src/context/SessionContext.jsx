@@ -80,7 +80,7 @@ const deleteChunkFromDB = async (id) => {
 
 // --- SessionProvider Component ---
 export const SessionProvider = ({ children }) => {
-  const { refreshPatients } = useApp();
+  const { refreshPatients, updateAppointmentStatus } = useApp();
   const [isRecording, setIsRecording] = useState(false);
   const [duration, setDuration] = useState(0);
   const [sessionId, setSessionId] = useState(null);
@@ -89,6 +89,7 @@ export const SessionProvider = ({ children }) => {
   const [transcriptText, setTranscriptText] = useState('');
   const [syncStatus, setSyncStatus] = useState('synced'); // 'synced' | 'pending' | 'syncing' | 'error'
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isManualMode, setIsManualMode] = useState(false);
 
   // Summary states
   const [isSummarizing, setIsSummarizing] = useState(false);
@@ -122,6 +123,7 @@ export const SessionProvider = ({ children }) => {
         setDuration(data.duration);
         setTranscriptText(data.transcriptText || '');
         setIsRecording(data.isRecording);
+        setIsManualMode(data.isManualMode || false);
         setSummaryDone(data.summaryDone || false);
         setSummaryText(data.summaryText || '');
         setSoapNote(data.soapNote || null);
@@ -131,8 +133,8 @@ export const SessionProvider = ({ children }) => {
         setAiModelUsed(data.aiModelUsed || '');
         setAiTokensUsed(data.aiTokensUsed || 0);
         
-        // If it was recording, we attempt to re-initialize mediaRecorder
-        if (data.isRecording) {
+        // If it was recording and not manual, we attempt to re-initialize mediaRecorder
+        if (data.isRecording && !data.isManualMode) {
           resumeRecording(data.sessionId);
         }
       } catch (err) {
@@ -151,6 +153,7 @@ export const SessionProvider = ({ children }) => {
         duration,
         transcriptText,
         isRecording,
+        isManualMode,
         summaryDone,
         summaryText,
         soapNote,
@@ -164,7 +167,7 @@ export const SessionProvider = ({ children }) => {
     } else {
       localStorage.removeItem("active_bg_recording_session");
     }
-  }, [sessionId, appointmentId, patient, duration, transcriptText, isRecording, summaryDone, summaryText, soapNote, patientSummary, prescriptions, tasks]);
+  }, [sessionId, appointmentId, patient, duration, transcriptText, isRecording, isManualMode, summaryDone, summaryText, soapNote, patientSummary, prescriptions, tasks]);
 
   // Online / Offline monitor
   useEffect(() => {
@@ -225,6 +228,7 @@ export const SessionProvider = ({ children }) => {
       setPrescriptions([]);
       setTasks([]);
       setShowSummaryError(false);
+      setIsManualMode(false);
 
       let currentSessionId = null;
 
@@ -288,6 +292,50 @@ export const SessionProvider = ({ children }) => {
     } catch (err) {
       console.error("Failed to start session recording:", err);
       const errMsg = err.message || "تعذر الوصول إلى الميكروفون أو تهيئة الجلسة.";
+      alert(errMsg);
+    }
+  };
+
+  // --- Start Manual Session ---
+  const startManualSession = async (appId, patientObj) => {
+    try {
+      setAppointmentId(appId);
+      setPatient(patientObj);
+      setDuration(0);
+      setTranscriptText('');
+      setSummaryDone(false);
+      setSoapNote(null);
+      setSummaryText('');
+      setPatientSummary('');
+      setPrescriptions([]);
+      setTasks([]);
+      setShowSummaryError(false);
+      setIsManualMode(true);
+
+      let currentSessionId = null;
+
+      // 1. Initialize backend session
+      if (isOnline) {
+        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
+        const session = await apiFetch('/sessions/', {
+          method: 'POST',
+          body: JSON.stringify({
+            doctor_id: currentUser.id,
+            appointment_id: appId || null,
+            patient_id: patientObj?.id || null
+          })
+        });
+        setSessionId(session.id);
+        currentSessionId = session.id;
+      }
+
+      isRecordingRef.current = true;
+      setIsRecording(true);
+
+      return currentSessionId;
+    } catch (err) {
+      console.error("Failed to start manual session:", err);
+      const errMsg = err.message || "تعذر تهيئة الجلسة اليدوية.";
       alert(errMsg);
     }
   };
@@ -509,6 +557,15 @@ export const SessionProvider = ({ children }) => {
         // Sync any remaining chunks in IndexedDB
         await syncPendingChunks(activeSessionId);
 
+        // Save the compiled/edited transcript text to the database first
+        await apiFetch(`/sessions/${activeSessionId}/transcript`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            transcript_raw: transcriptText,
+            duration_seconds: duration
+          })
+        });
+
         // Update the duration on server first
         await apiFetch(`/sessions/${activeSessionId}/complete`, {
           method: 'PATCH',
@@ -543,12 +600,7 @@ export const SessionProvider = ({ children }) => {
 
       // Mark appointment as completed
       if (appointmentId) {
-        const token = sessionStorage.getItem('accessToken');
-        await fetch(`/api/v1/appointments/${appointmentId}/status`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ status: 'completed' })
-        });
+        await updateAppointmentStatus(appointmentId, 'completed');
       }
     } catch (err) {
       console.error("Failed to complete and summarize session:", err);
@@ -599,6 +651,7 @@ export const SessionProvider = ({ children }) => {
     setTranscriptText('');
     setIsRecording(false);
     isRecordingRef.current = false;
+    setIsManualMode(false);
   };
 
   const getPatientSessions = async (patientId) => {
@@ -614,6 +667,7 @@ export const SessionProvider = ({ children }) => {
   const forceCloseSession = () => {
     stopRecording();
     clearActiveSession();
+    setIsManualMode(false);
     setSummaryDone(false);
     setSoapNote(null);
     setSummaryText('');
@@ -651,7 +705,11 @@ export const SessionProvider = ({ children }) => {
       retrySummary,
       clearActiveSession,
       forceCloseSession,
-      getPatientSessions
+      getPatientSessions,
+      setTranscriptText,
+      startManualSession,
+      isManualMode,
+      setIsManualMode
     }}>
       {children}
     </SessionContext.Provider>

@@ -134,7 +134,9 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
       }
     };
     fetchThreads();
-    fetchPatients();
+    if (currentUser?.role !== 'admin') {
+      fetchPatients();
+    }
   }, []);
 
   // Auto-open thread for a specific thread ID
@@ -558,18 +560,35 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
   );
 
   return (
-    <div className="flex h-screen bg-bg-card overflow-hidden relative animate-fade-in text-start">
+    <div className="flex h-[calc(100vh-3.5rem)] md:h-screen bg-bg-card overflow-hidden relative animate-fade-in text-start">
+      {/* Mobile Backdrop */}
+      {isSidebarOpen && (
+        <div 
+          onClick={() => setIsSidebarOpen(false)}
+          className="md:hidden fixed inset-0 bg-black/35 z-20 transition-opacity"
+        />
+      )}
+
       {/* Left Sidebar: Conversations List */}
-      <div className={`flex flex-col border-r border-border-subtle bg-white flex-shrink-0 transition-all duration-300 ${isSidebarOpen ? 'w-80' : 'w-0 overflow-hidden border-r-0'}`}>
-        {/* Search & Filter Header */}
+      <div className={`flex flex-col bg-white flex-shrink-0 transition-all duration-300 z-30 md:relative fixed inset-y-0 ${isArabic ? 'right-0 border-l' : 'left-0 border-r'} border-border-subtle ${isSidebarOpen ? 'w-72 md:w-80' : 'w-0 overflow-hidden border-0'}`}>
         <div className="p-4 border-b border-border-subtle bg-bg-canvas/50">
-          <button 
-            onClick={() => setShowNewModal(true)}
-            className="w-full bg-primary hover:bg-primary-hover text-on-primary font-bold text-xs py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 mb-4 transition-colors duration-300 active:scale-95 shadow-sm"
-          >
-            <span className="material-symbols-outlined text-[16px]">add</span>
-            {isArabic ? 'محادثة جديدة' : 'New Conversation'}
-          </button>
+          <div className="flex items-center gap-2 mb-4">
+            <button 
+              onClick={() => setShowNewModal(true)}
+              className="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-bold text-xs py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors duration-300 active:scale-95 shadow-sm"
+            >
+              <span className="material-symbols-outlined text-[16px]">add</span>
+              {isArabic ? 'محادثة جديدة' : 'New Conversation'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(false)}
+              className="md:hidden p-2 border border-border-subtle hover:bg-surface-container rounded-lg text-secondary hover:text-primary transition-colors flex items-center justify-center cursor-pointer shrink-0"
+              title={isArabic ? 'إغلاق القائمة' : 'Close Sidebar'}
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
+            </button>
+          </div>
           <div className="relative">
             <span className={`material-symbols-outlined absolute ${isArabic ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 text-secondary text-[18px]`}>search</span>
             <input 
@@ -599,7 +618,12 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
               return (
                 <div 
                   key={t.id}
-                  onClick={() => setActiveThreadId(t.id)}
+                  onClick={() => {
+                    setActiveThreadId(t.id);
+                    if (window.innerWidth < 768) {
+                      setIsSidebarOpen(false);
+                    }
+                  }}
                   className={`p-3 rounded-xl cursor-pointer transition-all border relative group ${
                     isActive 
                       ? 'bg-primary-light border-primary/20 shadow-sm' 
@@ -623,7 +647,7 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                   </div>
 
                   {/* Actions (hover triggers) */}
-                  <div className={`absolute ${isArabic ? 'left-2' : 'right-2'} top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 p-1 rounded-lg`}>
+                  <div className={`absolute ${isArabic ? 'left-2' : 'right-2'} top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 p-1 rounded-lg`}>
                     <button 
                       onClick={(e) => handleTogglePin(e, t.id, t.is_pinned)}
                       className="p-1 hover:text-primary text-secondary rounded"
@@ -649,7 +673,7 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
       {/* Right Area: Main Chat Window */}
       <div className="flex-1 flex flex-col bg-bg-canvas relative">
         {/* Chat Header - clean, no dropdown */}
-        <div className="h-16 border-b border-border-subtle flex items-center justify-between px-6 bg-white flex-shrink-0 shadow-sm">
+        <div className="sticky top-0 z-10 h-16 border-b border-border-subtle flex items-center justify-between px-6 bg-white flex-shrink-0 shadow-sm">
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -674,17 +698,6 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
               </span>
             )}
           </div>
-
-          {activeThread && (
-            <button
-              onClick={(e) => handleDeleteThread(e, activeThread.id)}
-              className="p-2 text-secondary hover:text-error hover:bg-error/10 rounded-lg transition-colors flex items-center gap-1.5 text-xs font-semibold"
-              title={isArabic ? "حذف المحادثة" : "Delete Conversation"}
-            >
-              <span className="material-symbols-outlined text-[18px]">delete</span>
-              <span>{isArabic ? 'حذف المحادثة' : 'Delete Chat'}</span>
-            </button>
-          )}
         </div>
 
         {/* Chat History (Scrollable) */}
@@ -930,7 +943,12 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="bg-white rounded-2xl border border-border-subtle shadow-lg max-w-sm w-full overflow-hidden">
             <div className="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas">
-              <h3 className="text-sm text-primary font-bold">New Clinical Chat Session</h3>
+              <h3 className="text-sm text-primary font-bold">
+                {currentUser?.role === 'admin' 
+                  ? (isArabic ? 'محادثة جديدة' : 'New AI Chat Session') 
+                  : (isArabic ? 'جلسة محادثة جديدة' : 'New Chat Session')
+                }
+              </h3>
               <button 
                 onClick={() => setShowNewModal(false)}
                 className="p-1 hover:bg-surface-container rounded-full text-secondary"
@@ -939,20 +957,22 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
               </button>
             </div>
             <form onSubmit={handleCreateThreadSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Select Patient (Optional)</label>
-                <select
-                  value={newPatientId}
-                  onChange={(e) => setNewPatientId(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary text-on-surface cursor-pointer"
-                >
-                  <option value="">-- General Session (No specific patient) --</option>
-                  {patients.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} - {p.phone}</option>
-                  ))}
-                </select>
-                <p className="text-[10px] text-secondary mt-1 ml-1">If no patient is selected, this will be a general AI session.</p>
-              </div>
+              {currentUser?.role !== 'admin' && (
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Select Patient (Optional)</label>
+                  <select
+                    value={newPatientId}
+                    onChange={(e) => setNewPatientId(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary text-on-surface cursor-pointer"
+                  >
+                    <option value="">-- General Session (No specific patient) --</option>
+                    {patients.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} - {p.phone}</option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-secondary mt-1 ml-1">If no patient is selected, this will be a general AI session.</p>
+                </div>
+              )}
               
               <div className="pt-2 border-t border-border-subtle">
                 <label className="block text-xs font-semibold text-on-surface-variant mb-1">Custom Title (Optional)</label>

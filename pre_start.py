@@ -72,6 +72,10 @@ async def check_and_migrate():
         # Ensure all columns/tables are synchronized
         print("Ensuring database schema is fully synchronized...")
         subprocess.run([sys.executable, "-m", "app.sync_db_schema"], check=True)
+
+        # Seed subscription bundles
+        print("Ensuring subscription bundles are seeded...")
+        subprocess.run([sys.executable, "-m", "app.seed_bundles"], check=True)
         
         # Now we only run alembic upgrade head to apply any future migrations
         if alembic_exists:

@@ -210,7 +210,7 @@ async def activate_doctor_subscription(
                 bundle_id = bundle["id"]
                 
                 # Prevent doctor from taking Free Trial more than once
-                bundle_details = await conn.fetchrow("SELECT price, name FROM subscription_bundles WHERE id = $1", bundle_id)
+                bundle_details = await conn.fetchrow("SELECT price, name, allowed_minutes, allowed_messages FROM subscription_bundles WHERE id = $1", bundle_id)
                 if bundle_details and (bundle_details["price"] == 0 or bundle_details["name"] == "Free Trial"):
                     has_had_trial = await conn.fetchval(
                         """
@@ -247,12 +247,14 @@ async def activate_doctor_subscription(
     
                 await conn.execute(
                     """
-                    INSERT INTO subscriptions (doctor_id, bundle_id, end_date, status)
-                    VALUES ($1, $2, $3, 'active')
+                    INSERT INTO subscriptions (doctor_id, bundle_id, end_date, status, allowed_minutes, allowed_messages)
+                    VALUES ($1, $2, $3, 'active', $4, $5)
                     """,
                     doctor_id,
                     bundle_id,
-                    expiry_date
+                    expiry_date,
+                    bundle_details["allowed_minutes"] if bundle_details else None,
+                    bundle_details["allowed_messages"] if bundle_details else None
                 )
             
             # Fetch doctor details matching DoctorResponse schema (which includes dyn plan info)

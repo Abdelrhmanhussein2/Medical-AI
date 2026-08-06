@@ -18,8 +18,6 @@ async def seed_bundles():
       - Gold Health Center    – 299 SAR / 15 doctors
       - Platinum Hospital     – 399 SAR / 20 doctors
     """
-    await db.connect()
-
     # Doctor bundles — aligned with frontend plans.js
     doctor_bundles = [
         {
@@ -147,8 +145,10 @@ async def seed_bundles():
                 )
                 print(f"SUCCESS: Updated existing bundle: '{b['name']}' ({b['target_type']})")
 
-    await db.disconnect()
-    print("\nSUCCESS: Bundles seeded successfully!")
-
 if __name__ == "__main__":
-    asyncio.run(seed_bundles())
+    async def run_standalone():
+        await db.connect()
+        await seed_bundles()
+        await db.disconnect()
+        print("\nSUCCESS: Standalone bundles seed completed!")
+    asyncio.run(run_standalone())

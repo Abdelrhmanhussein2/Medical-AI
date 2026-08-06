@@ -85,7 +85,7 @@ class DoctorService:
             if row and not doctor_data.department_id:
                 from datetime import timedelta
                 free_trial_bundle = await connection.fetchrow(
-                    "SELECT id, duration_days FROM subscription_bundles WHERE name = 'Free Trial' AND target_type = 'doctor' AND is_active = true LIMIT 1"
+                    "SELECT id, duration_days, allowed_minutes, allowed_messages FROM subscription_bundles WHERE name = 'Free Trial' AND target_type = 'doctor' AND is_active = true LIMIT 1"
                 )
                 if free_trial_bundle:
                     from datetime import datetime, timezone
@@ -93,10 +93,10 @@ class DoctorService:
                     end_dt = now + timedelta(days=free_trial_bundle["duration_days"])
                     await connection.execute(
                         """
-                        INSERT INTO subscriptions (doctor_id, bundle_id, status, start_date, end_date)
-                        VALUES ($1, $2, 'active', $3, $4)
+                        INSERT INTO subscriptions (doctor_id, bundle_id, status, start_date, end_date, allowed_minutes, allowed_messages)
+                        VALUES ($1, $2, 'active', $3, $4, $5, $6)
                         """,
-                        row["id"], free_trial_bundle["id"], now, end_dt
+                        row["id"], free_trial_bundle["id"], now, end_dt, free_trial_bundle["allowed_minutes"], free_trial_bundle["allowed_messages"]
                     )
                     # Mark doctor as approved immediately
                     row = await connection.fetchrow(

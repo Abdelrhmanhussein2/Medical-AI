@@ -405,9 +405,10 @@ export default function Checkout() {
               </label>
               <div className="space-y-2">
                 {(() => {
-                  const plansToShow = currentUser && currentUser.role === 'doctor'
-                    ? mergedPlans.filter(p => p.id !== 'free')
-                    : mergedPlans;
+                  const isOrg = ['business', 'enterprise'].includes(planId) || (currentUser && currentUser.role === 'department');
+                  const plansToShow = isOrg
+                    ? mergedPlans.filter(p => ['business', 'enterprise'].includes(p.id))
+                    : mergedPlans.filter(p => ['starter', 'pro'].includes(p.id));
                   return plansToShow.map((plan) => {
                     const isSelected = plan.id === planId;
                     return (

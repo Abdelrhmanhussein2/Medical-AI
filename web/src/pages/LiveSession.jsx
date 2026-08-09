@@ -21,6 +21,8 @@ export default function LiveSession({ appointmentId, setActivePage }) {
     prescriptions,
     tasks,
     showSummaryError,
+    summaryFormat,
+    setSummaryFormat,
     startRecording,
     stopRecording,
     endSessionAndSummarize,
@@ -55,6 +57,10 @@ export default function LiveSession({ appointmentId, setActivePage }) {
   const [saveFillSuccess, setSaveFillSuccess] = useState(false);
   const [patientFills, setPatientFills] = useState([]);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+
+  // Format picker before starting session
+  const [showFormatPicker, setShowFormatPicker] = useState(false);
+  const [pendingSessionType, setPendingSessionType] = useState(null); // 'mic' | 'manual'
 
   // Fetch templates for the dropdown
   useEffect(() => {
@@ -200,8 +206,21 @@ export default function LiveSession({ appointmentId, setActivePage }) {
     if (isRecording) {
       stopRecording();
     } else {
-      startRecording(appointmentId, patient);
+      // Show format picker before starting
+      setPendingSessionType('mic');
+      setShowFormatPicker(true);
     }
+  };
+
+  // Confirm chosen format and start
+  const handleConfirmFormat = () => {
+    setShowFormatPicker(false);
+    if (pendingSessionType === 'mic') {
+      startRecording(appointmentId, patient);
+    } else if (pendingSessionType === 'manual') {
+      startManualSession(appointmentId, patient);
+    }
+    setPendingSessionType(null);
   };
 
   // Parse lines from raw transcript text
@@ -517,7 +536,8 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                     if (isManualMode) {
                       forceCloseSession();
                     } else {
-                      startManualSession(appointmentId, patient);
+                      setPendingSessionType('manual');
+                      setShowFormatPicker(true);
                     }
                   }}
                   className="mt-4 text-xs font-bold text-[#52D2C8] hover:underline flex items-center gap-1.5 cursor-pointer bg-white/5 hover:bg-white/10 px-3.5 py-2 rounded-lg border border-white/10 transition-colors"
@@ -956,6 +976,158 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* ===== Summary Format Picker Modal ===== */}
+      {showFormatPicker && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{background: 'rgba(10,14,26,0.82)', backdropFilter: 'blur(12px)'}}>
+          <div className="relative w-full max-w-2xl animate-fade-in">
+
+            {/* Close */}
+            <button
+              onClick={() => { setShowFormatPicker(false); setPendingSessionType(null); }}
+              className="absolute -top-10 right-0 text-white/40 hover:text-white transition-colors flex items-center gap-1.5 text-sm font-semibold"
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
+              {isArabic ? 'إلغاء' : 'Cancel'}
+            </button>
+
+            {/* Heading */}
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-[#6C63FF] to-[#3A9E95] mb-4 shadow-lg shadow-[#6C63FF]/30">
+                <span className="material-symbols-outlined text-white text-[28px]">clinical_notes</span>
+              </div>
+              <h2 className="text-2xl font-black text-white mb-2">
+                {isArabic ? 'اختر شكل ملخص الجلسة' : 'Choose Summary Format'}
+              </h2>
+              <p className="text-white/50 text-sm">
+                {isArabic ? 'سيقوم الذكاء الاصطناعي بتلخيص الجلسة وفق النمط الذي تختاره' : 'AI will summarize the session in your chosen format'}
+              </p>
+            </div>
+
+            {/* Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8">
+
+              {/* SOAP Card */}
+              <button
+                onClick={() => setSummaryFormat('soap')}
+                className={`group relative text-left p-6 rounded-2xl border-2 transition-all duration-300 cursor-pointer ${
+                  summaryFormat === 'soap'
+                    ? 'border-[#6C63FF] bg-[#6C63FF]/10 shadow-lg shadow-[#6C63FF]/20'
+                    : 'border-white/10 bg-white/5 hover:border-white/25 hover:bg-white/10'
+                }`}
+              >
+                {summaryFormat === 'soap' && (
+                  <div className="absolute top-4 right-4 w-6 h-6 rounded-full bg-[#6C63FF] flex items-center justify-center shadow-md">
+                    <span className="material-symbols-outlined text-white text-[14px]">check</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm transition-colors ${
+                    summaryFormat === 'soap' ? 'bg-[#6C63FF] text-white' : 'bg-white/10 text-white/60'
+                  }`}>S</div>
+                  <span className={`font-black text-lg transition-colors ${
+                    summaryFormat === 'soap' ? 'text-white' : 'text-white/70'
+                  }`}>SOAP Note</span>
+                </div>
+                <div className="space-y-2.5">
+                  {['Subjective', 'Objective', 'Assessment', 'Plan'].map((item) => (
+                    <div key={item} className="flex items-center gap-2.5">
+                      <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                        summaryFormat === 'soap' ? 'bg-[#6C63FF]' : 'bg-white/20'
+                      }`}/>
+                      <span className={`text-xs font-semibold uppercase tracking-wider ${
+                        summaryFormat === 'soap' ? 'text-[#A9A5FF]' : 'text-white/30'
+                      }`}>{item}</span>
+                      <div className={`flex-1 h-1.5 rounded-full ${
+                        summaryFormat === 'soap' ? 'bg-[#6C63FF]/30' : 'bg-white/8'
+                      }`}/>
+                    </div>
+                  ))}
+                </div>
+                <p className={`mt-4 text-xs leading-relaxed ${
+                  summaryFormat === 'soap' ? 'text-white/60' : 'text-white/25'
+                }`}>
+                  {isArabic ? 'تنظيم طبي كلاسيكي في 4 محاور واضحة' : 'Classic 4-section clinical note structure'}
+                </p>
+              </button>
+
+              {/* Multi-Section Card */}
+              <button
+                onClick={() => setSummaryFormat('multi_section')}
+                className={`group relative text-left p-6 rounded-2xl border-2 transition-all duration-300 cursor-pointer ${
+                  summaryFormat === 'multi_section'
+                    ? 'border-[#3A9E95] bg-[#3A9E95]/10 shadow-lg shadow-[#3A9E95]/20'
+                    : 'border-white/10 bg-white/5 hover:border-white/25 hover:bg-white/10'
+                }`}
+              >
+                {summaryFormat === 'multi_section' && (
+                  <div className="absolute top-4 right-4 w-6 h-6 rounded-full bg-[#3A9E95] flex items-center justify-center shadow-md">
+                    <span className="material-symbols-outlined text-white text-[14px]">check</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                    summaryFormat === 'multi_section' ? 'bg-[#3A9E95] text-white' : 'bg-white/10 text-white/60'
+                  }`}>
+                    <span className="material-symbols-outlined text-[18px]">format_list_bulleted</span>
+                  </div>
+                  <span className={`font-black text-lg transition-colors ${
+                    summaryFormat === 'multi_section' ? 'text-white' : 'text-white/70'
+                  }`}>{isArabic ? 'تفصيلي متعدد الأقسام' : 'Multi-Section'}</span>
+                </div>
+                <div className="space-y-2">
+                  {[
+                    isArabic ? 'الشكوى الرئيسية' : 'Chief Complaint',
+                    isArabic ? 'تاريخ المرض' : 'History of Illness',
+                    isArabic ? 'التشخيص' : 'Diagnosis',
+                    isArabic ? 'الخطة العلاجية' : 'Treatment Plan',
+                    isArabic ? '+أقسام أخرى' : '+More Sections',
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center gap-2.5">
+                      <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                        summaryFormat === 'multi_section' ? 'bg-[#3A9E95]' : 'bg-white/20'
+                      }`}/>
+                      <span className={`text-xs font-semibold uppercase tracking-wider ${
+                        summaryFormat === 'multi_section' ? 'text-[#6DCFC8]' : 'text-white/30'
+                      } ${i === 4 ? 'italic' : ''}`}>{item}</span>
+                      <div className={`flex-1 h-1.5 rounded-full ${
+                        summaryFormat === 'multi_section' ? 'bg-[#3A9E95]/30' : 'bg-white/8'
+                      } ${i === 4 ? 'opacity-40' : ''}`}/>
+                    </div>
+                  ))}
+                </div>
+                <p className={`mt-4 text-xs leading-relaxed ${
+                  summaryFormat === 'multi_section' ? 'text-white/60' : 'text-white/25'
+                }`}>
+                  {isArabic ? 'ملخص شامل ومفصّل بأقسام طبية متعددة' : 'Comprehensive detailed notes with multiple sections'}
+                </p>
+              </button>
+
+            </div>
+
+            {/* Confirm Button */}
+            <button
+              onClick={handleConfirmFormat}
+              className={`w-full py-4 rounded-2xl font-black text-base tracking-wide transition-all duration-300 shadow-xl flex items-center justify-center gap-3 ${
+                summaryFormat === 'soap'
+                  ? 'bg-gradient-to-r from-[#6C63FF] to-[#9490FF] text-white shadow-[#6C63FF]/30 hover:shadow-[#6C63FF]/50 active:scale-[0.98]'
+                  : 'bg-gradient-to-r from-[#3A9E95] to-[#52D2C8] text-white shadow-[#3A9E95]/30 hover:shadow-[#3A9E95]/50 active:scale-[0.98]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[22px]">
+                {pendingSessionType === 'manual' ? 'edit_document' : 'mic'}
+              </span>
+              <span>
+                {isArabic 
+                  ? (pendingSessionType === 'manual' ? 'بدء إدخال يدوي' : 'بدء تسجيل الجلسة')
+                  : (pendingSessionType === 'manual' ? 'Start Manual Input' : 'Start Session Recording')
+                }
+              </span>
+              <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
+            </button>
+
           </div>
         </div>
       )}

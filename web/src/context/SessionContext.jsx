@@ -102,6 +102,7 @@ export const SessionProvider = ({ children }) => {
   const [aiModelUsed, setAiModelUsed] = useState('');
   const [aiTokensUsed, setAiTokensUsed] = useState(0);
   const [showSummaryError, setShowSummaryError] = useState(false);
+  const [summaryFormat, setSummaryFormat] = useState('soap'); // 'soap' | 'multi_section'
 
   // References for Web Recording
   const mediaRecorderRef = useRef(null);
@@ -529,7 +530,8 @@ export const SessionProvider = ({ children }) => {
   };
 
   // --- Finalize Session & Summarize ---
-  const endSessionAndSummarize = async () => {
+  const endSessionAndSummarize = async (format) => {
+    const activeFormat = format || summaryFormat || 'soap';
     setIsSummarizing(true);
     setShowSummaryError(false);
     
@@ -577,7 +579,7 @@ export const SessionProvider = ({ children }) => {
         // Request AI summary
         const result = await apiFetch(`/sessions/${activeSessionId}/summarize`, {
           method: 'POST',
-          body: JSON.stringify({ patient_name: patient?.name || 'المراجع' })
+          body: JSON.stringify({ patient_name: patient?.name || 'المراجع', summary_format: activeFormat })
         });
 
         setSummaryText(result.summary_text || '');
@@ -611,13 +613,14 @@ export const SessionProvider = ({ children }) => {
   };
 
   // --- Retry Summary if failed ---
-  const retrySummary = async () => {
+  const retrySummary = async (format) => {
     setIsSummarizing(true);
     setShowSummaryError(false);
+    const activeFormat = format || summaryFormat || 'soap';
     try {
       const result = await apiFetch(`/sessions/${sessionId}/summarize`, {
         method: 'POST',
-        body: JSON.stringify({ patient_name: patient?.name || 'المراجع' })
+        body: JSON.stringify({ patient_name: patient?.name || 'المراجع', summary_format: activeFormat })
       });
       setSummaryText(result.summary_text || '');
       setSoapNote(result.soap_note);
@@ -699,6 +702,8 @@ export const SessionProvider = ({ children }) => {
       aiModelUsed,
       aiTokensUsed,
       showSummaryError,
+      summaryFormat,
+      setSummaryFormat,
       startRecording,
       stopRecording,
       endSessionAndSummarize,

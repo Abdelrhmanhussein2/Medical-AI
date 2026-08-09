@@ -16,3 +16,4 @@ web/*.local
 web/npm-debug.log*
 app/uploads/
 app/docker/docker-compose.yaml
+web/nginx.local.conf

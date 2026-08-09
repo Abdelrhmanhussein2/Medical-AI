@@ -169,10 +169,11 @@ class AIEngineService:
             # Fetch thread
             thread = await ChatService.get_thread_by_id(thread_id, owner_id, owner_type)
 
-            today_dt = datetime.now()
+            from datetime import timezone
+            today_dt = datetime.now(timezone(timedelta(hours=3))).replace(tzinfo=None)
             ARABIC_WEEKDAYS = ["الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"]
             today_day_name = ARABIC_WEEKDAYS[today_dt.weekday()]
-            today_formatted = f"{today_day_name} {today_dt.strftime('%Y-%m-%d')}"
+            today_formatted = f"{today_day_name} {today_dt.strftime('%Y-%m-%d')} (الوقت الحالي: {today_dt.strftime('%H:%M')})"
 
             calendar_lines = [
                 f"تاريخ اليوم: {today_formatted}",

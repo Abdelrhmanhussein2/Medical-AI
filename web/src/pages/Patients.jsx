@@ -401,6 +401,7 @@ export default function Patients({ setActivePage }) {
                 <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'تاريخ الميلاد' : 'Date of Birth'}</label>
                 <input
                   type="date"
+                  lang="en-US"
                   value={dob}
                   onChange={(e) => setDob(e.target.value)}
                   class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -634,6 +635,7 @@ export default function Patients({ setActivePage }) {
                       <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">{isArabic ? 'تاريخ الميلاد' : 'Date of Birth'}</label>
                       <input
                         type="date"
+                        lang="en-US"
                         value={editDob}
                         onChange={(e) => setEditDob(e.target.value)}
                         class="w-full px-3 py-1.5 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary"

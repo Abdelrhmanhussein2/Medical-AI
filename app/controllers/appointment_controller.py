@@ -4,7 +4,7 @@ from uuid import UUID
 from datetime import date
 from pydantic import BaseModel
 
-from app.schemes.appointment_schema import AppointmentCreate, AppointmentResponse
+from app.schemes.appointment_schema import AppointmentCreate, AppointmentResponse, AppointmentUpdate
 from app.services.appointment_service import AppointmentService
 from app.core.dependencies import get_current_user
 
@@ -137,3 +137,48 @@ async def update_appointment_status(
         return updated
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.patch("/{appointment_id}")
+async def update_appointment(
+    appointment_id: UUID,
+    data: AppointmentUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    تعديل تفاصيل الموعد.
+    """
+    appointment = await AppointmentService.get_appointment(str(appointment_id))
+    if not appointment:
+        raise HTTPException(status_code=404, detail="الموعد غير موجود")
+        
+    role = current_user.get("role")
+    doctor_id = appointment.get("doctor_id")
+    
+    # Strict Authorization Rule: Only the doctor who owns the appointment is allowed to edit it.
+    if role != "doctor":
+        raise HTTPException(
+            status_code=403, 
+            detail="غير مصرح لك بتعديل الموعد. هذه الصلاحية مقتصرة على الأطباء فقط."
+        )
+    if str(doctor_id) != str(current_user["id"]):
+        raise HTTPException(
+            status_code=403, 
+            detail="غير مصرح لك بتعديل هذا الموعد. يمكنك تعديل المواعيد الخاصة بك فقط."
+        )
+        
+    try:
+        updated = await AppointmentService.update_appointment(
+            str(appointment_id),
+            appointment_date=data.appointment_date,
+            appointment_time=data.appointment_time,
+            duration_minutes=data.duration_minutes,
+            description=data.description
+        )
+        if not updated:
+            raise HTTPException(status_code=404, detail="الموعد غير موجود")
+        return updated
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"خطأ داخلي: {str(e)}")

@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function Appointments({ setActivePage }) {
-  const { appointments, patients, currentUser, addAppointment, updateAppointmentStatus, addPatient } = useApp();
+  const { appointments, patients, currentUser, addAppointment, updateAppointmentStatus, updateAppointment, addPatient } = useApp();
   const { t, isArabic } = useLanguage();
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -84,7 +84,7 @@ export default function Appointments({ setActivePage }) {
   const handleOpenEdit = (appt) => {
     setEditAppt(appt);
     setEditDate(appt.appointment_date || '');
-    setEditTime(appt.appointment_time || '');
+    setEditTime(appt.appointment_time ? appt.appointment_time.substring(0, 5) : '');
     setEditDuration(appt.duration_minutes || 30);
     setEditDescription(appt.description || '');
     setEditError('');
@@ -99,8 +99,12 @@ export default function Appointments({ setActivePage }) {
       return;
     }
     try {
-      // For now update locally since we don't have a PATCH endpoint yet
-      // updateAppointment(editAppt.id, { appointment_date: editDate, appointment_time: editTime, duration_minutes: Number(editDuration), description: editDescription });
+      await updateAppointment(editAppt.id, {
+        appointment_date: editDate,
+        appointment_time: editTime,
+        duration_minutes: Number(editDuration),
+        description: editDescription
+      });
       setEditAppt(null);
     } catch (err) {
       setEditError(err.message || 'حدث خطأ أثناء التعديل');
@@ -691,6 +695,7 @@ export default function Appointments({ setActivePage }) {
                   <input
                     type="date"
                     required
+                    lang="en-US"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                     class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
@@ -775,6 +780,7 @@ export default function Appointments({ setActivePage }) {
                   <input
                     type="date"
                     required
+                    lang="en-US"
                     value={editDate}
                     onChange={(e) => setEditDate(e.target.value)}
                     class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"

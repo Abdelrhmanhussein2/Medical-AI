@@ -139,7 +139,7 @@ export const PLANS = [
       'Highest usage limits.',
       'Priority customer & tech support.'
     ],
-    badgeAr: 'الأقوى',
+    badgeAr: 'الأعلى قيمة',
     badgeEn: 'Highest Limit',
     highlight: false
   }

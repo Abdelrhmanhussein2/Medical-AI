@@ -689,7 +689,9 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                 <h2 className="text-sm font-bold text-on-surface leading-tight">{displayTitle(activeThread.title)}</h2>
                 <div className="flex items-center gap-1.5 mt-1">
                   <div className="w-1.5 h-1.5 rounded-full bg-tertiary-container animate-pulse"></div>
-                  <span className="text-[11px] text-secondary font-medium">SBR AI Assistant Active</span>
+                  <span className="text-[11px] text-secondary font-medium">
+                    {isArabic ? 'مساعد مسبار النشط' : 'SBR AI Assistant Active'}
+                  </span>
                 </div>
               </div>
             ) : (
@@ -717,7 +719,9 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
           ) : (
             <>
               <div className="flex items-center justify-center">
-                <div className="bg-surface-container px-3 py-1 rounded-full text-[10px] font-bold text-secondary tracking-wider uppercase">TODAY</div>
+                <div className="bg-surface-container px-3 py-1 rounded-full text-[10px] font-bold text-secondary tracking-wider uppercase">
+                  {isArabic ? 'اليوم' : 'TODAY'}
+                </div>
               </div>
 
               {messages.map((message) => {
@@ -734,7 +738,9 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                         <span className="material-symbols-outlined text-[16px] relative z-10">smart_toy</span>
                       </div>
                       <div className="flex flex-col gap-1">
-                        <span className="text-[11px] text-secondary ml-1">SBR AI Assistant</span>
+                        <span className="text-[11px] text-secondary ml-1">
+                          {isArabic ? 'مساعد مسبار' : 'SBR AI Assistant'}
+                        </span>
                         <div className="bg-white border border-border-subtle p-4 rounded-2xl rounded-tl-sm shadow-sm space-y-4">
                           {(() => {
                             let parsed = null;
@@ -779,7 +785,9 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                                 <div className="bg-primary-light/50 p-3 rounded-xl border border-primary/10">
                                   <div className="flex items-center gap-1.5 mb-1 text-primary">
                                     <span className="material-symbols-outlined text-[14px]">visibility</span>
-                                    <span className="font-label-caps text-[10px] font-bold">FINDING 1</span>
+                                    <span className="font-label-caps text-[10px] font-bold">
+                                      {isArabic ? 'النتيجة 1' : 'FINDING 1'}
+                                    </span>
                                   </div>
                                   <div className="text-xs text-on-surface-variant leading-relaxed">{message.bento_data.finding1}</div>
                                 </div>
@@ -788,7 +796,9 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                                 <div className="bg-bg-canvas p-3 rounded-xl border border-border-subtle">
                                   <div className="flex items-center gap-1.5 mb-1 text-secondary">
                                     <span className="material-symbols-outlined text-[14px]">timeline</span>
-                                    <span className="font-label-caps text-[10px] font-bold">COMPARISON</span>
+                                    <span className="font-label-caps text-[10px] font-bold">
+                                      {isArabic ? 'المقارنة' : 'COMPARISON'}
+                                    </span>
                                   </div>
                                   <div className="text-xs text-on-surface-variant leading-relaxed">{message.bento_data.comparison}</div>
                                 </div>
@@ -853,7 +863,9 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                 <span className="material-symbols-outlined text-[16px]">smart_toy</span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-[11px] text-secondary ml-1">SBR AI Assistant is thinking...</span>
+                <span className="text-[11px] text-secondary ml-1">
+                  {isArabic ? 'مساعد مسبار يفكر...' : 'SBR AI Assistant is thinking...'}
+                </span>
                 <div className="bg-white border border-border-subtle px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                   <div className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
@@ -903,7 +915,7 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                 onKeyDown={handleKeyDown}
                 disabled={!activeThreadId || isRecording || isUploadingAudio}
                 className="w-full bg-transparent border-none focus:ring-0 resize-none font-body-md text-xs text-on-surface py-2.5 max-h-24 min-h-[40px] outline-none disabled:opacity-50" 
-                placeholder={activeThreadId ? "Ask SBR AI or type clinical notes..." : "اختر محادثة للكتابة فيها..."} 
+                placeholder={activeThreadId ? (isArabic ? "اسأل مسبار أو اكتب ملاحظات سريرية..." : "Ask SBR AI or type clinical notes...") : (isArabic ? "اختر محادثة للكتابة فيها..." : "Select a conversation to type...")} 
                 rows="1"
               ></textarea>
               <div className="flex items-center gap-1.5 mb-0.5">
@@ -916,7 +928,7 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                       ? 'bg-error text-white animate-bounce' 
                       : 'bg-primary-light text-primary hover:bg-primary/10'
                   }`} 
-                  title={isRecording ? "Stop Recording" : "Record Voice Message"}
+                  title={isRecording ? (isArabic ? "إيقاف التسجيل" : "Stop Recording") : (isArabic ? "تسجيل رسالة صوتية" : "Record Voice Message")}
                 >
                   <span className="material-symbols-outlined text-[20px]">{isRecording ? 'stop_circle' : 'mic'}</span>
                 </button>
@@ -925,14 +937,19 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                   onClick={() => handleSendMessage()}
                   disabled={!activeThreadId || isRecording || isUploadingAudio}
                   className="p-2 bg-primary text-on-primary hover:bg-primary-hover transition-colors rounded-lg shadow-sm flex items-center justify-center disabled:opacity-50" 
-                  title="Send Message"
+                  title={isArabic ? "إرسال الرسالة" : "Send Message"}
                 >
                   <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>send</span>
                 </button>
               </div>
             </div>
             <div className="text-center mt-2">
-              <span className="font-body-sm text-[10px] text-secondary">AI generated content may be inaccurate. Always verify clinical information.</span>
+              <span className="font-body-sm text-[10px] text-secondary">
+                {isArabic 
+                  ? 'المحتوى الناتج عن الذكاء الاصطناعي قد يكون غير دقيق. تحقق دائماً من المعلومات السريرية.' 
+                  : 'AI generated content may be inaccurate. Always verify clinical information.'
+                }
+              </span>
             </div>
           </div>
         </div>
@@ -959,38 +976,48 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
             <form onSubmit={handleCreateThreadSubmit} className="p-6 space-y-4">
               {currentUser?.role !== 'admin' && (
                 <div>
-                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Select Patient (Optional)</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    {isArabic ? 'اختر المراجع (اختياري)' : 'Select Patient (Optional)'}
+                  </label>
                   <select
                     value={newPatientId}
                     onChange={(e) => setNewPatientId(e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary text-on-surface cursor-pointer"
                   >
-                    <option value="">-- General Session (No specific patient) --</option>
+                    <option value="">
+                      {isArabic ? '-- جلسة عامة (لا يوجد مراجع محدد) --' : '-- General Session (No specific patient) --'}
+                    </option>
                     {patients.map(p => (
                       <option key={p.id} value={p.id}>{p.name} - {p.phone}</option>
                     ))}
                   </select>
-                  <p className="text-[10px] text-secondary mt-1 ml-1">If no patient is selected, this will be a general AI session.</p>
+                  <p className="text-[10px] text-secondary mt-1 ml-1">
+                    {isArabic ? 'في حال لم يتم تحديد مراجع، ستكون هذه الجلسة جلسة ذكاء اصطناعي عامة.' : 'If no patient is selected, this will be a general AI session.'}
+                  </p>
                 </div>
               )}
               
               <div className="pt-2 border-t border-border-subtle">
-                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Custom Title (Optional)</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                  {isArabic ? 'عنوان مخصص (اختياري)' : 'Custom Title (Optional)'}
+                </label>
                 <input
                   type="text"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder={newPatientId ? "e.g. MRI Review" : "e.g. Medical Guidelines Query"}
+                  placeholder={newPatientId ? (isArabic ? "مثال: مراجعة الرنين المغناطيسي" : "e.g. MRI Review") : (isArabic ? "مثال: الاستفسار عن الإرشادات الطبية" : "e.g. Medical Guidelines Query")}
                   className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Department / Specialty (Optional)</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                  {isArabic ? 'القسم / التخصص (اختياري)' : 'Department / Specialty (Optional)'}
+                </label>
                 <input
                   type="text"
                   value={newDept}
                   onChange={(e) => setNewDept(e.target.value)}
-                  placeholder="e.g. Neurology, Cardiology"
+                  placeholder={isArabic ? "مثال: الأعصاب، أمراض القلب" : "e.g. Neurology, Cardiology"}
                   className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
                 />
               </div>
@@ -1001,13 +1028,13 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                   onClick={() => setShowNewModal(false)}
                   className="flex-1 bg-white border border-border-subtle text-secondary py-2 rounded-lg text-xs hover:bg-surface-container-low transition-colors"
                 >
-                  Cancel
+                  {isArabic ? 'إلغاء' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   className="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-bold py-2 rounded-lg text-xs transition-colors shadow-sm"
                 >
-                  Create Chat
+                  {isArabic ? 'إنشاء المحادثة' : 'Create Chat'}
                 </button>
               </div>
             </form>

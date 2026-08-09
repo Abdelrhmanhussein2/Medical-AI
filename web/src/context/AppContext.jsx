@@ -297,6 +297,17 @@ export const AppProvider = ({ children }) => {
     );
   };
 
+  const updateAppointment = async (id, apptData) => {
+    const updated = await apiFetch(`/appointments/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(apptData)
+    });
+    setAppointments(prev =>
+      prev.map(a => a.id === id ? updated : a)
+    );
+    return updated;
+  };
+
   const addVisit = async (visitData) => {
     const newVisit = await apiFetch(`/visits/`, {
       method: 'POST',
@@ -481,6 +492,7 @@ export const AppProvider = ({ children }) => {
       refreshPatients,
       addAppointment,
       updateAppointmentStatus,
+      updateAppointment,
       addVisit,
       updateDoctor,
       updateProfile,

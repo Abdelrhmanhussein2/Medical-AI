@@ -5,7 +5,7 @@ export const translations = {
     patients: 'المراجعين',
     appointments: 'المواعيد',
     visits: 'الزيارات الطبية',
-    aichat: 'SBR AI Chat',
+    aichat: 'تحدث مع مسبار',
     subscription: 'اشتراكي',
     settings: 'الإعدادات',
     signout: 'تسجيل الخروج',

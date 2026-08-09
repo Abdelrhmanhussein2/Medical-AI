@@ -516,7 +516,7 @@ export default function OrgDoctors() {
                   <div>
                     <label className="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'انتهاء الاشتراك' : 'Subscription Expiry'}</label>
                     <input
-                      type="date" required value={editDocExpiry} onChange={(e) => setEditDocExpiry(e.target.value)}
+                      type="date" lang="en-US" required value={editDocExpiry} onChange={(e) => setEditDocExpiry(e.target.value)}
                       className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
                     />
                   </div>

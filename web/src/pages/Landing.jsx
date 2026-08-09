@@ -172,32 +172,48 @@ export default function Landing({ setActivePage }) {
                 <div class="bg-white/80 backdrop-blur-md border border-border-subtle shadow-ambient rounded-xl p-stack-md absolute top-10 left-0 w-64 animate-float-up z-10">
                   <div class="flex items-center gap-stack-sm mb-stack-md border-b border-border-subtle pb-stack-sm">
                     <span class="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>mic</span>
-                    <span class="font-label-caps text-[10px] uppercase font-bold text-secondary">Live Dictation Active</span>
+                    <span class="font-label-caps text-[10px] uppercase font-bold text-secondary">
+                      {isArabic ? 'التدوين المباشر نشط' : 'Live Dictation Active'}
+                    </span>
                   </div>
                   <p class="font-body-sm text-xs text-on-surface-variant leading-relaxed">
-                    "Patient presents with mild hypertension. Recommending low-sodium diet and follow-up in 2 weeks..."
+                    {isArabic
+                      ? '"يعاني المريض من ارتفاع طفيف في ضغط الدم. يوصى باتباع نظام غذائي قليل الصوديوم والمتابعة بعد أسبوعين..."'
+                      : '"Patient presents with mild hypertension. Recommending low-sodium diet and follow-up in 2 weeks..."'}
                   </p>
                   <div class="mt-stack-md flex gap-2">
-                    <span class="px-2 py-1 bg-surface-container-low text-secondary text-[10px] rounded">ICD-10 Extracted</span>
-                    <span class="px-2 py-1 bg-primary-light text-primary text-[10px] rounded">Auto-Saved</span>
+                    <span class="px-2 py-1 bg-surface-container-low text-secondary text-[10px] rounded">
+                      {isArabic ? 'تم استخراج ICD-10' : 'ICD-10 Extracted'}
+                    </span>
+                    <span class="px-2 py-1 bg-primary-light text-primary text-[10px] rounded">
+                      {isArabic ? 'حُفظ تلقائياً' : 'Auto-Saved'}
+                    </span>
                   </div>
                 </div>
 
                 <div class="bg-white/80 backdrop-blur-md border border-border-subtle shadow-ambient rounded-xl p-stack-md absolute bottom-20 right-0 w-72 animate-float-down z-10">
                   <div class="flex items-center justify-between mb-stack-sm">
-                    <span class="font-label-caps text-[10px] uppercase font-bold text-secondary">Risk Analysis</span>
-                    <span class="text-status-warning text-xs font-bold">Moderate</span>
+                    <span class="font-label-caps text-[10px] uppercase font-bold text-secondary">
+                      {isArabic ? 'تحليل المخاطر' : 'Risk Analysis'}
+                    </span>
+                    <span class="text-status-warning text-xs font-bold">
+                      {isArabic ? 'متوسط' : 'Moderate'}
+                    </span>
                   </div>
                   <div class="w-full bg-surface-container-low rounded-full h-2 mb-stack-md">
                     <div class="bg-status-warning h-2 rounded-full" style={{ width: '65%' }}></div>
                   </div>
                   <div class="space-y-2 font-body-sm text-xs">
                     <div class="flex justify-between border-b border-border-subtle pb-1">
-                      <span class="text-on-surface-variant">Cardiovascular</span>
+                      <span class="text-on-surface-variant">
+                        {isArabic ? 'أمراض القلب والأوعية الدموية' : 'Cardiovascular'}
+                      </span>
                       <span class="text-on-surface font-semibold">65%</span>
                     </div>
                     <div class="flex justify-between border-b border-border-subtle pb-1">
-                      <span class="text-on-surface-variant">Metabolic</span>
+                      <span class="text-on-surface-variant">
+                        {isArabic ? 'التمثيل الغذائي' : 'Metabolic'}
+                      </span>
                       <span class="text-on-surface font-semibold">42%</span>
                     </div>
                   </div>

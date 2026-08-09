@@ -515,7 +515,7 @@ export default function OrgSubscriptions() {
                   {isArabic ? 'تاريخ انتهاء الاشتراك *' : 'Subscription Expiry Date *'}
                 </label>
                 <input
-                  type="date" required value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)}
+                  type="date" lang="en-US" required value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)}
                   className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary mb-3"
                 />
               </div>

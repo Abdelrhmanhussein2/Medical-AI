@@ -92,6 +92,51 @@ async def send_clinic_report(
         
     return {"message": "تم إرسال التقرير بنجاح إلى رقم الواتساب الخاص بك."}
 
+class SendMessageRequest(BaseModel):
+    phone: str
+    text: str
+
+@router.post("/send-message")
+async def send_custom_message(
+    req: SendMessageRequest,
+    current_user: dict = Depends(get_current_user),
+    service: WhatsAppService = Depends(get_whatsapp_service)
+):
+    """
+    Endpoint for doctors to send an arbitrary WhatsApp message to any phone number
+    using the connected Evolution API instance.
+    """
+    success = await service.send_message(req.phone, req.text)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="فشل إرسال الرسالة عبر الواتساب. تأكد من ربط حساب الواتساب الخاص بالعيادة (Evolution API)."
+        )
+    return {"message": "تم إرسال الرسالة بنجاح عبر الواتساب."}
+
+class SendMediaRequest(BaseModel):
+    phone: str
+    base64_data: str
+    file_name: str
+
+@router.post("/send-document")
+async def send_whatsapp_document(
+    req: SendMediaRequest,
+    current_user: dict = Depends(get_current_user),
+    service: WhatsAppService = Depends(get_whatsapp_service)
+):
+    """
+    Endpoint for doctors to send a PDF document (base64) to any phone number
+    using the connected Evolution API instance.
+    """
+    success = await service.send_document(req.phone, req.base64_data, req.file_name)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="فشل إرسال الملف عبر الواتساب. تأكد من ربط حساب الواتساب الخاص بالعيادة (Evolution API)."
+        )
+    return {"message": "تم إرسال الملف بنجاح عبر الواتساب."}
+
 @router.get("/logs")
 async def get_whatsapp_logs(
     current_user: dict = Depends(get_current_user),

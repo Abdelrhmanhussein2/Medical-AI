@@ -195,6 +195,68 @@ async def format_patient_instructions_endpoint(
         raise HTTPException(status_code=500, detail=f"فشل تنسيق التعليمات: {str(e)}")
 
 
+@router.post("/{session_id}/patient-instructions/audio")
+async def process_patient_instructions_audio(
+    session_id: UUID,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """رفع تسجيل صوتي لتعليمات المراجع وتفريغه وتنسيقه بالذكاء الاصطناعي"""
+    await assert_session_owner(str(session_id), current_user)
+    
+    # 1. Transcribe the audio chunk using OpenAI Whisper (similar to process_audio_chunk)
+    from app.core.config import settings
+    import os
+    from uuid import uuid4
+    
+    openai_key = settings.OPENAI_API_KEY or os.environ.get("OPENAI_API_KEY", "")
+    if not openai_key:
+        raise HTTPException(status_code=500, detail="OpenAI API Key is not configured.")
+        
+    filename = getattr(file, "filename", None) or ""
+    ext = os.path.splitext(filename)[1].lower() if filename else ".webm"
+    if not ext:
+        ext = ".webm"
+        
+    upload_dir = os.path.join(os.getcwd(), "app", "uploads", "instruction_audios")
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    unique_name = f"instruction_{session_id}_{uuid4()}{ext}"
+    saved_file_path = os.path.join(upload_dir, unique_name)
+    
+    contents = await file.read()
+    try:
+        with open(saved_file_path, "wb") as f:
+            f.write(contents)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save audio file: {str(e)}")
+        
+    transcribed_text = ""
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=openai_key.strip())
+        with open(saved_file_path, "rb") as audio_file:
+            transcription = await client.audio.transcriptions.create(
+                file=(unique_name, audio_file.read()),
+                model="whisper-1",
+                response_format="text"
+            )
+            transcribed_text = str(transcription).strip()
+    except Exception as e:
+        if os.path.exists(saved_file_path):
+            os.remove(saved_file_path)
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
+        
+    if os.path.exists(saved_file_path):
+        os.remove(saved_file_path)
+        
+    if not transcribed_text or transcribed_text.startswith("Subtitles by") or transcribed_text.startswith("Amara.org"):
+        raise HTTPException(status_code=400, detail="لم يتم كشف أي كلام واضح في التسجيل الصوتي.")
+
+    return {"transcribed_text": transcribed_text}
+
+
+
 
 @router.get("/{session_id}")
 async def get_session(session_id: UUID, current_user: dict = Depends(get_current_user)):

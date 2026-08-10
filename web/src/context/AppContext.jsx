@@ -15,38 +15,38 @@ export const AppProvider = ({ children }) => {
 
   const [bundles, setBundles] = useState([]);
 
-  // Load user and bundles on mount
-  useEffect(() => {
-    sessionStorage.removeItem("accessToken"); // Securely clear any legacy token stored in sessionStorage
-    
-    const verifySession = async () => {
-      try {
-        const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.user) {
-            if (data.user.role === 'department') {
-              data.user.role = 'org';
-            }
-            setCurrentUser(data.user);
-            sessionStorage.setItem("currentUser", JSON.stringify(data.user));
-          } else {
-            setCurrentUser(null);
-            sessionStorage.removeItem("currentUser");
+  const verifySession = async () => {
+    try {
+      const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.user) {
+          if (data.user.role === 'department') {
+            data.user.role = 'org';
           }
+          setCurrentUser(data.user);
+          sessionStorage.setItem("currentUser", JSON.stringify(data.user));
         } else {
-          // Cookie expired or invalid — clear local session
           setCurrentUser(null);
           sessionStorage.removeItem("currentUser");
         }
-      } catch (e) {
-        console.error("Failed to verify session on mount", e);
+      } else {
+        // Cookie expired or invalid — clear local session
         setCurrentUser(null);
         sessionStorage.removeItem("currentUser");
-      } finally {
-        setSessionLoading(false);
       }
-    };
+    } catch (e) {
+      console.error("Failed to verify session", e);
+      setCurrentUser(null);
+      sessionStorage.removeItem("currentUser");
+    } finally {
+      setSessionLoading(false);
+    }
+  };
+
+  // Load user and bundles on mount
+  useEffect(() => {
+    sessionStorage.removeItem("accessToken"); // Securely clear any legacy token stored in sessionStorage
     verifySession();
 
     const loadBundles = async () => {
@@ -62,6 +62,15 @@ export const AppProvider = ({ children }) => {
     };
     loadBundles();
   }, []);
+
+  // Periodic session refresh in the background (every 10 minutes) when active
+  useEffect(() => {
+    if (!currentUser) return;
+    const interval = setInterval(() => {
+      verifySession();
+    }, 10 * 60 * 1000); // 10 mins
+    return () => clearInterval(interval);
+  }, [currentUser]);
 
   const mergedPlans = getMergedPlans(bundles);
   const doctorPlans = mergedPlans.filter(p => ['free', 'starter', 'pro'].includes(p.id));

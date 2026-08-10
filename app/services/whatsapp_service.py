@@ -430,3 +430,18 @@ class WhatsAppService:
 
         return requeued_count
 
+    async def send_document(self, phone: str, base64_data: str, file_name: str) -> bool:
+        """
+        Sends a base64 media document to a normalized phone number via Evolution API.
+        """
+        normalized = normalize_phone(phone, self.default_country_code)
+        if not normalized:
+            logger.warning(f"Could not normalize phone number for document sending: {phone}")
+            return False
+        try:
+            await self.evolution_client.send_media(normalized, base64_data, file_name)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send document to {normalized}: {e}")
+            return False
+

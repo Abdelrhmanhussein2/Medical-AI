@@ -14,7 +14,31 @@ const diffWords = (oldStr, newStr) => {
   let i = 0, j = 0;
   
   while (i < oldWords.length || j < newWords.length) {
-    if (i < oldWords.length && j < newWords.length && oldWords[i] === newWords[j]) {
+    if (i >= oldWords.length) {
+      while (j < newWords.length) {
+        if (newWords[j] && newWords[j].trim()) {
+          result.push({ value: newWords[j], added: true });
+        } else {
+          result.push({ value: newWords[j] });
+        }
+        j++;
+      }
+      break;
+    }
+    
+    if (j >= newWords.length) {
+      while (i < oldWords.length) {
+        if (oldWords[i] && oldWords[i].trim()) {
+          result.push({ value: oldWords[i], removed: true });
+        } else {
+          result.push({ value: oldWords[i] });
+        }
+        i++;
+      }
+      break;
+    }
+
+    if (oldWords[i] === newWords[j]) {
       result.push({ value: oldWords[i] });
       i++;
       j++;
@@ -85,7 +109,7 @@ const renderDiffText = (oldText, newText) => {
 };
 
 export default function LiveSession({ appointmentId, setActivePage }) {
-  const { appointments, patients, updatePatient } = useApp();
+  const { appointments, patients, updatePatient, currentUser } = useApp();
   const { t, isArabic } = useLanguage();
   const {
     isRecording,
@@ -113,6 +137,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
     retrySummary,
     forceCloseSession,
     getPatientSessions,
+    loadSessionByAppointment,
     setTranscriptText,
     startManualSession,
     isManualMode,
@@ -141,6 +166,864 @@ export default function LiveSession({ appointmentId, setActivePage }) {
   const [instructionsSaveSuccess, setInstructionsSaveSuccess] = useState(false);
   const [isDictatingInstructions, setIsDictatingInstructions] = useState(false);
   const instructionsDictationRef = useRef(null);
+  const instructionsChunksRef = useRef([]);
+  const instructionsStreamRef = useRef(null);
+
+  // Load raw/formatted instructions from localStorage on session load
+  useEffect(() => {
+    if (appointmentId) {
+      const savedRaw = localStorage.getItem(`instructions_raw_${appointmentId}`);
+      const savedFormatted = localStorage.getItem(`instructions_formatted_${appointmentId}`);
+      
+      if (savedRaw) {
+        setInstructionsRawText(savedRaw);
+      } else {
+        setInstructionsRawText('');
+      }
+      
+      if (savedFormatted) {
+        setInstructionsFormatted(savedFormatted);
+      } else if (patientSummary) {
+        setInstructionsFormatted(patientSummary);
+      } else {
+        setInstructionsFormatted('');
+      }
+    } else {
+      setInstructionsRawText('');
+      setInstructionsFormatted('');
+    }
+  }, [appointmentId, patientSummary]);
+
+  // Save raw instructions to localStorage on change
+  useEffect(() => {
+    if (appointmentId) {
+      if (instructionsRawText) {
+        localStorage.setItem(`instructions_raw_${appointmentId}`, instructionsRawText);
+      } else {
+        localStorage.removeItem(`instructions_raw_${appointmentId}`);
+      }
+    }
+  }, [instructionsRawText, appointmentId]);
+
+  // Save formatted instructions to localStorage on change
+  useEffect(() => {
+    if (appointmentId) {
+      if (instructionsFormatted) {
+        localStorage.setItem(`instructions_formatted_${appointmentId}`, instructionsFormatted);
+      } else {
+        localStorage.removeItem(`instructions_formatted_${appointmentId}`);
+      }
+    }
+  }, [instructionsFormatted, appointmentId]);
+
+  // PDF Export states
+  const [showPdfModal, setShowPdfModal] = useState(false);
+  const [pdfTarget, setPdfTarget] = useState(null); // 'note' | 'instructions'
+
+  // WhatsApp Sharing states
+  const [showWhatsappModal, setShowWhatsappModal] = useState(false);
+  const [whatsappTarget, setWhatsappTarget] = useState(null); // 'note' | 'instructions'
+  const [whatsappRecipient, setWhatsappRecipient] = useState(null); // 'doctor' | 'patient'
+  const [whatsappCustomPhone, setWhatsappCustomPhone] = useState('');
+  const [whatsappShowPhoneInput, setWhatsappShowPhoneInput] = useState(false);
+  const [whatsappStatus, setWhatsappStatus] = useState('idle'); // 'idle' | 'sending' | 'success' | 'error'
+  const [whatsappStatusMsg, setWhatsappStatusMsg] = useState('');
+  const [whatsappSendType, setWhatsappSendType] = useState('text'); // 'text' | 'pdf'
+
+  const handleSendWhatsapp = async (phoneNum) => {
+    const cleaned = phoneNum.replace(/[^0-9]/g, '');
+    let text = '';
+    
+    // Helper to identify if a section content is empty or holds a template placeholder
+    const isPlaceholderText = (text) => {
+      if (!text) return true;
+      const clean = text.trim().toLowerCase();
+      const placeholders = [
+        'n/a', 'na', 'none', 'unknown', 'no data', 'no allergies', 'no active', 'not applicable',
+        'لا توجد', 'لا يوجد', 'لم يتم', 'لا ينطبق', 'غير مذكور', 'غير متوفر', 'لا توجد علامات', 
+        'لا توجد نتائج', 'لا توجد أدوية', 'لا توجد مواعيد'
+      ];
+      if (clean.length <= 4) return true;
+      return placeholders.some(p => clean.includes(p)) || 
+             clean.startsWith('لا ') || 
+             clean.startsWith('لم ') || 
+             clean.startsWith('not ') || 
+             clean.startsWith('no ');
+    };
+
+    const isAr = isArabic;
+    const docTitle = whatsappTarget === 'note'
+      ? (isAr ? 'تقرير الاستشارة الطبية (Note)' : 'Clinical Consultation Report (Note)')
+      : (isAr ? 'تعليمات وإرشادات المراجع' : 'Patient Care Instructions');
+    
+    const dateStr = new Date().toLocaleDateString(isAr ? 'ar-EG' : 'en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    if (whatsappTarget === 'note') {
+      let msg = `*SBR AI — تقرير استشارة طبية*\n`;
+      msg += `*المراجع:* ${patient?.name || 'غير معروف'}\n`;
+      msg += `*التاريخ:* ${new Date().toLocaleDateString('ar-EG')}\n`;
+      msg += `*الطبيب المعالج:* د. ${currentUser?.name || ''}\n\n`;
+      
+      if (summaryText) {
+        msg += `*الملخص الطبي للزيارة:*\n${summaryText}\n\n`;
+      }
+      
+      const sections = Object.entries(editedSoapNote || soapNote || {})
+        .filter(([key, val]) => {
+          if (key === '_original' || typeof val === 'object' || !val || !val.trim()) return false;
+          return !isPlaceholderText(val);
+        });
+        
+      if (sections.length > 0) {
+        msg += `*تفاصيل التقرير الطبي:*\n`;
+        sections.forEach(([key, val]) => {
+          const norm = key.trim().toLowerCase();
+          let label = key;
+          if (norm === 's') label = 'الشكوى المرضية';
+          else if (norm === 'o') label = 'الفحص الإكلينيكي';
+          else if (norm === 'a') label = 'التشخيص الطبي';
+          else if (norm === 'p') label = 'الخطة العلاجية';
+          
+          msg += `• *${label}:* ${val}\n`;
+        });
+      }
+      text = msg;
+    } else {
+      let msg = `*منصة مِسبار AI للذكاء الاصطناعي الطبي*\n`;
+      msg += `*عزيزي المراجع:* ${patient?.name || ''}\n`;
+      msg += `*إليك التعليمات الطبية وخطة الرعاية الموصى بها من الطبيب:*\n\n`;
+      
+      const soapAssessmentKey = Object.keys(soapNote || {}).find(k => {
+        const lk = k.toLowerCase().trim();
+        return lk === 'a' || lk === 'assessment' || lk.includes('التشخيص') || lk.includes('التقييم');
+      });
+      const soapAssessment = soapAssessmentKey ? soapNote[soapAssessmentKey] : null;
+      
+      if (patientSummary || soapAssessment) {
+        msg += `*1. التشخيص وملخص الحالة:*\n`;
+        if (soapAssessment) msg += `• التشخيص: ${soapAssessment}\n`;
+        if (patientSummary) msg += `• ملخص: ${patientSummary}\n`;
+        msg += `\n`;
+      }
+      
+      const soapPlanKey = Object.keys(soapNote || {}).find(k => {
+        const lk = k.toLowerCase().trim();
+        return lk === 'p' || lk === 'plan' || lk.includes('الخطة') || lk.includes('الخطه');
+      });
+      const soapPlan = soapPlanKey ? soapNote[soapPlanKey] : null;
+      
+      if (soapPlan) {
+        msg += `*2. الخطة العلاجية المقترحة:*\n${soapPlan}\n\n`;
+      }
+      
+      const actualInstructions = instructionsFormatted || '';
+      if (actualInstructions) {
+        msg += `*3. إرشادات الطبيب المعالج:*\n${actualInstructions}\n\n`;
+      }
+      
+      if (tasks && tasks.length > 0) {
+        msg += `*4. مهام المتابعة المطلوبة:*\n`;
+        tasks.forEach(t => {
+          msg += `• ${t}\n`;
+        });
+      }
+      text = msg;
+    }
+
+    setWhatsappStatus('sending');
+    setWhatsappStatusMsg(isAr ? 'جاري التحضير وتجهيز الملف بالذكاء الاصطناعي...' : 'Preparing and generating report via AI...');
+
+    const token = sessionStorage.getItem('accessToken');
+
+    if (whatsappSendType === 'pdf') {
+      try {
+        setWhatsappStatusMsg(isAr ? 'جاري تحميل موديول الـ PDF...' : 'Loading PDF engine...');
+
+
+        // --- Build PDF purely using jsPDF (no html2canvas, no blank page issues) ---
+        const jspdfUrl = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        const jspdf = await new Promise((resolve, reject) => {
+          if (window.jspdf) { resolve(window.jspdf); return; }
+          const s = document.createElement('script');
+          s.src = jspdfUrl;
+          s.onload = () => resolve(window.jspdf);
+          s.onerror = reject;
+          document.head.appendChild(s);
+        });
+
+        const { jsPDF } = jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+        // Set RTL support via text alignment — jsPDF does RTL via alignment
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 15;
+        const contentWidth = pageWidth - margin * 2;
+        let yPos = margin;
+
+        const addText = (text, opts = {}) => {
+          const {
+            fontSize = 11,
+            fontStyle = 'normal',
+            color = [30, 41, 59],
+            align = 'right',
+            lineHeight = 6,
+            maxWidth = contentWidth,
+            wrap = true
+          } = opts;
+          doc.setFontSize(fontSize);
+          doc.setTextColor(...color);
+          try { doc.setFont('helvetica', fontStyle); } catch (_) {}
+
+          const lines = wrap ? doc.splitTextToSize(text || '', maxWidth) : [text];
+          const xPos = align === 'right' ? pageWidth - margin : margin;
+          
+          // Page break check
+          if (yPos + lines.length * lineHeight > pageHeight - margin) {
+            doc.addPage();
+            yPos = margin;
+          }
+
+          doc.text(lines, xPos, yPos, { align });
+          yPos += lines.length * lineHeight + 2;
+          return lines.length * lineHeight + 2;
+        };
+
+        const addRect = (h, color = [248, 250, 252]) => {
+          if (yPos + h > pageHeight - margin) { doc.addPage(); yPos = margin; }
+          doc.setFillColor(...color);
+          doc.roundedRect(margin, yPos - 4, contentWidth, h + 6, 2, 2, 'F');
+        };
+
+        const addHLine = (colorArr = [226, 232, 240]) => {
+          doc.setDrawColor(...colorArr);
+          doc.setLineWidth(0.3);
+          doc.line(margin, yPos, pageWidth - margin, yPos);
+          yPos += 4;
+        };
+
+        // ===== HEADER =====
+        doc.setFillColor(26, 86, 219);
+        doc.rect(0, 0, pageWidth, 18, 'F');
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(255, 255, 255);
+        doc.text('مِسبار AI  |  SBR AI', pageWidth - margin, 12, { align: 'right' });
+        doc.setFontSize(9);
+        doc.text(isAr ? 'ملخص زيارة طبية' : 'Medical Visit Summary', margin, 12, { align: 'left' });
+        yPos = 26;
+
+        // ===== DOC TITLE =====
+        addText(docTitle, { fontSize: 14, fontStyle: 'bold', color: [15, 23, 42], align: 'center' });
+        yPos += 2;
+        addHLine();
+
+        // ===== META GRID =====
+        doc.setFontSize(10);
+        doc.setTextColor(51, 65, 85);
+        const col1X = pageWidth - margin;
+        const col2X = pageWidth / 2 + 5;
+        const metaY = yPos;
+        // Right column
+        doc.setFont('helvetica', 'bold'); doc.text(isAr ? 'اسم المريض:' : 'Patient:', col1X, metaY, { align: 'right' });
+        doc.setFont('helvetica', 'normal'); doc.text(patient?.name || (isAr ? 'غير معروف' : 'Unknown'), col1X - 28, metaY, { align: 'right' });
+        doc.setFont('helvetica', 'bold'); doc.text(isAr ? 'الطبيب المعالج:' : 'Physician:', col1X, metaY + 7, { align: 'right' });
+        doc.setFont('helvetica', 'normal'); doc.text(currentUser?.name || (isAr ? 'دكتور' : 'Doctor'), col1X - 35, metaY + 7, { align: 'right' });
+        // Left column
+        doc.setFont('helvetica', 'bold'); doc.text(isAr ? 'التاريخ:' : 'Date:', col2X, metaY, { align: 'right' });
+        doc.setFont('helvetica', 'normal'); doc.text(dateStr, col2X - 18, metaY, { align: 'right' });
+        doc.setFont('helvetica', 'bold'); doc.text(isAr ? 'الهاتف:' : 'Phone:', col2X, metaY + 7, { align: 'right' });
+        doc.setFont('helvetica', 'normal'); doc.text(patient?.phone || 'N/A', col2X - 18, metaY + 7, { align: 'right' });
+        yPos = metaY + 16;
+        addHLine([203, 213, 225]);
+
+        // ===== CONTENT =====
+        if (whatsappTarget === 'note') {
+          if (summaryText) {
+            addText(isAr ? 'ملخص الجلسة:' : 'Session Summary:', { fontSize: 11, fontStyle: 'bold', color: [26, 86, 219] });
+            addText(summaryText, { fontSize: 10, color: [75, 85, 99] });
+            yPos += 2;
+          }
+
+          const sections = Object.entries(editedSoapNote || soapNote || {})
+            .filter(([key, val]) => key !== '_original' && typeof val !== 'object' && val && val.trim() && !isPlaceholderText(val));
+
+          if (sections.length > 0) {
+            addText(isAr ? 'تفاصيل التقرير الطبي:' : 'Clinical Note Details:', { fontSize: 11, fontStyle: 'bold', color: [26, 86, 219] });
+            sections.forEach(([key, val]) => {
+              const norm = key.trim().toLowerCase();
+              let label = key;
+              const map = { s: { ar: 'الشكوى المرضية', en: 'Subjective (S)' }, o: { ar: 'الفحص الإكلينيكي', en: 'Objective (O)' }, a: { ar: 'التشخيص الطبي', en: 'Assessment (A)' }, p: { ar: 'الخطة العلاجية', en: 'Plan (P)' } };
+              if (map[norm]) label = isAr ? map[norm].ar : map[norm].en;
+              addText(`• ${label}:`, { fontSize: 10, fontStyle: 'bold', color: [30, 58, 138] });
+              addText(val, { fontSize: 10, color: [51, 65, 85] });
+              yPos += 1;
+            });
+          }
+        } else {
+          const soapAssessmentKey = Object.keys(soapNote || {}).find(k => {
+            const lk = k.toLowerCase().trim();
+            return lk === 'a' || lk === 'assessment' || lk.includes('التشخيص') || lk.includes('التقييم');
+          });
+          const soapAssessment = soapAssessmentKey ? soapNote[soapAssessmentKey] : null;
+          const soapPlanKey = Object.keys(soapNote || {}).find(k => {
+            const lk = k.toLowerCase().trim();
+            return lk === 'p' || lk === 'plan' || lk.includes('الخطة') || lk.includes('الخطه');
+          });
+          const soapPlan = soapPlanKey ? soapNote[soapPlanKey] : null;
+
+          if (soapAssessment || patientSummary) {
+            addText(isAr ? '1. التشخيص وملخص الحالة:' : '1. Diagnosis & Summary:', { fontSize: 11, fontStyle: 'bold', color: [26, 86, 219] });
+            if (soapAssessment) addText(`${isAr ? 'التشخيص: ' : 'Diagnosis: '}${soapAssessment}`, { fontSize: 10, fontStyle: 'bold', color: [15, 23, 42] });
+            if (patientSummary) addText(patientSummary, { fontSize: 10, color: [51, 65, 85] });
+            yPos += 2;
+          }
+          if (soapPlan) {
+            addText(isAr ? '2. الخطة العلاجية المقترحة:' : '2. Proposed Treatment Plan:', { fontSize: 11, fontStyle: 'bold', color: [245, 158, 11] });
+            addText(soapPlan, { fontSize: 10, color: [69, 26, 3] });
+            yPos += 2;
+          }
+          const actualInstructions = instructionsFormatted || '';
+          if (actualInstructions) {
+            addText(isAr ? '3. تعليمات وإرشادات الطبيب المعالج:' : '3. Physician Instructions:', { fontSize: 11, fontStyle: 'bold', color: [16, 185, 129] });
+            addText(actualInstructions, { fontSize: 10, color: [22, 101, 52] });
+            yPos += 2;
+          }
+          if (tasks && tasks.length > 0) {
+            addText(isAr ? '4. مهام المتابعة:' : '4. Follow-up Tasks:', { fontSize: 11, fontStyle: 'bold', color: [236, 72, 153] });
+            tasks.forEach(t => addText(`• ${t}`, { fontSize: 10, color: [77, 7, 82] }));
+          }
+        }
+
+        // ===== FOOTER =====
+        const footerY = pageHeight - 20;
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.3);
+        doc.line(margin, footerY, pageWidth - margin, footerY);
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text(isAr ? 'تم توليد هذا التقرير بأمان بواسطة منصة مِسبار للذكاء الاصطناعي الطبي — SBR AI' : 'Generated securely by SBR AI Medical Intelligence Platform', pageWidth / 2, footerY + 5, { align: 'center' });
+        doc.setFontSize(9);
+        doc.setTextColor(71, 85, 105);
+        doc.text(isAr ? `توقيع الطبيب: ${currentUser?.name || ''}` : `Physician: ${currentUser?.name || ''}`, margin, footerY + 12, { align: 'left' });
+
+        const pdfBlob = doc.output('blob');
+        console.log('[PDF Debug] Blob size:', pdfBlob.size, 'type:', pdfBlob.type);
+
+        setWhatsappStatusMsg(isAr ? 'جاري رفع وإرسال الـ PDF عبر الواتساب...' : 'Uploading and sending PDF over WhatsApp...');
+
+        // Convert Blob to Base64
+        const base64Data = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(pdfBlob);
+          reader.onloadend = () => resolve(reader.result);
+        });
+
+        const res = await fetch('/api/v1/whatsapp/send-document', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            phone: cleaned,
+            base64_data: base64Data,
+            file_name: whatsappTarget === 'note' 
+              ? (isAr ? 'التقرير_الطبي.pdf' : 'Clinical_Report.pdf')
+              : (isAr ? 'تعليمات_المريض.pdf' : 'Patient_Instructions.pdf')
+          })
+        });
+
+        if (res.ok) {
+          setWhatsappStatus('success');
+          setWhatsappStatusMsg(isAr ? 'تم إرسال ملف التقرير الطبي الـ PDF بنجاح!' : 'Clinical PDF report sent successfully!');
+          setTimeout(() => {
+            setShowWhatsappModal(false);
+            setWhatsappTarget(null);
+            setWhatsappRecipient(null);
+            setWhatsappCustomPhone('');
+            setWhatsappShowPhoneInput(false);
+            setWhatsappStatus('idle');
+          }, 2500);
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          console.warn('Backend document send failed:', errData);
+          setWhatsappStatus('error');
+          setWhatsappStatusMsg(isAr 
+            ? 'تعذر الإرسال التلقائي للـ PDF عبر الخادم. جاري فتح المحادثة لإرسال نصي يدوي...'
+            : 'Automatic PDF send failed. Opening manual chat for text sending...');
+          setTimeout(() => {
+            const url = `https://wa.me/${cleaned}?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+            setShowWhatsappModal(false);
+            setWhatsappTarget(null);
+            setWhatsappRecipient(null);
+            setWhatsappCustomPhone('');
+            setWhatsappShowPhoneInput(false);
+            setWhatsappStatus('idle');
+          }, 3500);
+        }
+      } catch (err) {
+        console.error('Error generating/sending PDF:', err);
+        setWhatsappStatus('error');
+        setWhatsappStatusMsg(isAr 
+          ? 'حدث خطأ أثناء معالجة الـ PDF. جاري فتح المحادثة لإرسال النص يدوياً...' 
+          : 'Error generating PDF. Redirecting to manual text send...');
+        setTimeout(() => {
+          const url = `https://wa.me/${cleaned}?text=${encodeURIComponent(text)}`;
+          window.open(url, '_blank');
+          setShowWhatsappModal(false);
+          setWhatsappTarget(null);
+          setWhatsappRecipient(null);
+          setWhatsappCustomPhone('');
+          setWhatsappShowPhoneInput(false);
+          setWhatsappStatus('idle');
+        }, 3500);
+      }
+    } else {
+      // Send Text Message
+      try {
+        const res = await fetch('/api/v1/whatsapp/send-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ phone: cleaned, text })
+        });
+        
+        if (res.ok) {
+          setWhatsappStatus('success');
+          setWhatsappStatusMsg(isAr ? 'تم إرسال الرسالة بنجاح عبر الواتساب!' : 'Message sent successfully via WhatsApp!');
+          setTimeout(() => {
+            setShowWhatsappModal(false);
+            setWhatsappTarget(null);
+            setWhatsappRecipient(null);
+            setWhatsappCustomPhone('');
+            setWhatsappShowPhoneInput(false);
+            setWhatsappStatus('idle');
+          }, 2500);
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          console.warn('Backend send failed:', errData);
+          setWhatsappStatus('error');
+          setWhatsappStatusMsg(isAr 
+            ? 'تعذر الإرسال التلقائي عبر خادم العيادة. جاري التحويل للإرسال اليدوي...' 
+            : 'Automatic send failed. Redirecting to manual sending...');
+          setTimeout(() => {
+            const url = `https://wa.me/${cleaned}?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+            setShowWhatsappModal(false);
+            setWhatsappTarget(null);
+            setWhatsappRecipient(null);
+            setWhatsappCustomPhone('');
+            setWhatsappShowPhoneInput(false);
+            setWhatsappStatus('idle');
+          }, 3500);
+        }
+      } catch (err) {
+        console.error('Error sending message via API:', err);
+        setWhatsappStatus('error');
+        setWhatsappStatusMsg(isAr 
+          ? 'تعذر الاتصال بالخادم. جاري التحويل للإرسال اليدوي...' 
+          : 'Server connection failed. Redirecting to manual sending...');
+        setTimeout(() => {
+          const url = `https://wa.me/${cleaned}?text=${encodeURIComponent(text)}`;
+          window.open(url, '_blank');
+          setShowWhatsappModal(false);
+          setWhatsappTarget(null);
+          setWhatsappRecipient(null);
+          setWhatsappCustomPhone('');
+          setWhatsappShowPhoneInput(false);
+          setWhatsappStatus('idle');
+        }, 3500);
+      }
+    }
+  };
+
+  const handleSelectRecipient = (recipientType) => {
+    setWhatsappRecipient(recipientType);
+    if (recipientType === 'doctor') {
+      const docPhone = currentUser?.phone || '';
+      const cleaned = docPhone.replace(/[^0-9]/g, '');
+      if (cleaned) {
+        handleSendWhatsapp(cleaned);
+      } else {
+        setWhatsappShowPhoneInput(true);
+      }
+    } else {
+      const patPhone = patient?.phone || appointment?.patient_phone || '';
+      const cleaned = patPhone.replace(/[^0-9]/g, '');
+      if (cleaned) {
+        handleSendWhatsapp(cleaned);
+      } else {
+        setWhatsappShowPhoneInput(true);
+      }
+    }
+  };
+
+  const generatePdfDocument = (target, lang) => {
+    const isAr = lang === 'ar';
+    const dateStr = new Date().toLocaleDateString(isAr ? 'ar-EG' : 'en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const docTitle = target === 'note'
+      ? (isAr ? 'تقرير الاستشارة الطبية (Note)' : 'Clinical Consultation Report (Note)')
+      : (isAr ? 'تعليمات وإرشادات المراجع' : 'Patient Care Instructions');
+
+    // Helper to identify if a section content is empty or holds a template placeholder
+    const isPlaceholder = (text) => {
+      if (!text) return true;
+      const clean = text.trim().toLowerCase();
+      const placeholders = [
+        'n/a', 'na', 'none', 'unknown', 'no data', 'no allergies', 'no active', 'not applicable',
+        'لا توجد', 'لا يوجد', 'لم يتم', 'لا ينطبق', 'غير مذكور', 'غير متوفر', 'لا توجد علامات', 
+        'لا توجد نتائج', 'لا توجد أدوية', 'لا توجد مواعيد'
+      ];
+      if (clean.length <= 4) return true;
+      return placeholders.some(p => clean.includes(p)) || 
+             clean.startsWith('لا ') || 
+             clean.startsWith('لم ') || 
+             clean.startsWith('not ') || 
+             clean.startsWith('no ');
+    };
+
+    let contentHtml = '';
+
+    if (target === 'note') {
+      // Build SOAP/Multi-section content — filtering out placeholders to save space
+      const sectionsHtml = Object.entries(editedSoapNote || soapNote || {})
+        .filter(([key, val]) => {
+          if (key === '_original' || typeof val === 'object' || !val || !val.trim()) return false;
+          return !isPlaceholder(val);
+        })
+        .map(([key, val]) => {
+          const norm = key.trim().toLowerCase();
+          let label = key;
+          if (norm === 's') label = isAr ? 'الشكوى المرضية (Subjective)' : 'Subjective (S)';
+          else if (norm === 'o') label = isAr ? 'الفحص الإكلينيكي (Objective)' : 'Objective (O)';
+          else if (norm === 'a') label = isAr ? 'التشخيص الطبي (Assessment)' : 'Assessment (A)';
+          else if (norm === 'p') label = isAr ? 'الخطة العلاجية (Plan)' : 'Plan (P)';
+          else {
+            const sections = {
+              'chief complaint': { ar: 'الشكوى الرئيسية', en: 'Chief Complaint' },
+              'history of present illness': { ar: 'تاريخ المرض الحالي', en: 'History of Present Illness' },
+              'past medical history': { ar: 'التاريخ الطبي السابق', en: 'Past Medical History' },
+              'past surgical history': { ar: 'التاريخ الجراحي السابق', en: 'Past Surgical History' },
+              'past obstetric history': { ar: 'تاريخ الحمل والولادة', en: 'Past Obstetric History' },
+              'family history': { ar: 'التاريخ العائلي المرضي', en: 'Family History' },
+              'social history': { ar: 'التاريخ الاجتماعي', en: 'Social History' },
+              'allergies': { ar: 'الحساسية', en: 'Allergies' },
+              'current medications': { ar: 'الأدوية الحالية', en: 'Current Medications' },
+              'immunizations': { ar: 'التطعيمات واللقاحات', en: 'Immunizations' },
+              'vitals': { ar: 'العلامات الحيوية', en: 'Vitals' },
+              'physical exam': { ar: 'الفحص السريري', en: 'Physical Exam' },
+              'lab results': { ar: 'نتائج التحاليل', en: 'Lab Results' },
+              'imaging results': { ar: 'نتائج الأشعة', en: 'Imaging Results' },
+              'assessment & plan': { ar: 'التقييم والخطة العلاجية', en: 'Assessment & Plan' },
+              'visit diagnosis 1': { ar: 'التشخيص الأول للزيارة', en: 'Visit Diagnosis 1' },
+              'visit diagnosis 2': { ar: 'التشخيص الثاني للزيارة', en: 'Visit Diagnosis 2' },
+              'prescription': { ar: 'الروشتة الطبية', en: 'Prescription' },
+              'appointments': { ar: 'المواعيد القادمة والمتابعة', en: 'Appointments' },
+              'visit diagnoses suggestions': { ar: 'مقترحات تشخيص الزيارة', en: 'Visit Diagnoses Suggestions' }
+            };
+            if (sections[norm]) {
+              label = isAr ? sections[norm].ar : sections[norm].en;
+            }
+          }
+
+          return `
+            <div style="margin-bottom: 12px; page-break-inside: avoid; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
+              <h3 style="font-size: 12px; color: #1e3a8a; margin: 0 0 4px 0; font-weight: bold; text-transform: uppercase;">
+                ${label}
+              </h3>
+              <p style="font-size: 12.5px; line-height: 1.5; color: #334155; margin: 0; white-space: pre-wrap; font-weight: 500;">
+                ${val}
+              </p>
+            </div>
+          `;
+        }).join('');
+
+      contentHtml = `
+        <div style="margin-bottom: 20px;">
+          <h2 style="font-size: 14px; color: #1f2937; margin-bottom: 6px; font-weight: 800;">
+            ${isAr ? 'ملخص الجلسة الطبي:' : 'Clinical Consultation Summary:'}
+          </h2>
+          <p style="font-size: 12.5px; line-height: 1.5; color: #4b5563; background-color: #f8fafc; border-left: 4px solid #1a56db; padding: 10px 14px; border-radius: 6px; margin: 0; font-weight: 500;">
+            ${summaryText || (isAr ? 'لا يوجد ملخص متاح.' : 'No clinical summary available.')}
+          </p>
+        </div>
+        
+        <div>
+          <h2 style="font-size: 14px; color: #1f2937; margin-top: 20px; margin-bottom: 10px; font-weight: 800;">
+            ${isAr ? 'تفاصيل التقرير الطبي:' : 'Clinical Note Details:'}
+          </h2>
+          ${sectionsHtml || `<p style="color: #94a3b8; font-style: italic; font-size: 12px;">${isAr ? 'لا توجد تفاصيل إضافية مسجلة.' : 'No additional clinical details recorded.'}</p>`}
+        </div>
+      `;
+    } else {
+      // Find Diagnosis (Assessment) and Plan from SOAP note dynamically
+      const soapAssessmentKey = Object.keys(soapNote || {}).find(k => {
+        const lk = k.toLowerCase().trim();
+        return lk === 'a' || lk === 'assessment' || lk.includes('التشخيص') || lk.includes('التقييم');
+      });
+      const soapAssessment = soapAssessmentKey ? soapNote[soapAssessmentKey] : null;
+
+      const soapPlanKey = Object.keys(soapNote || {}).find(k => {
+        const lk = k.toLowerCase().trim();
+        return lk === 'p' || lk === 'plan' || lk.includes('الخطة') || lk.includes('الخطه');
+      });
+      const soapPlan = soapPlanKey ? soapNote[soapPlanKey] : null;
+
+      // Patient Action Plan & Instructions
+      let diagnosisSection = '';
+      if (patientSummary || soapAssessment) {
+        diagnosisSection = `
+          <div style="margin-bottom: 15px; background-color: #f8fafc; border-left: 4px solid #1a56db; padding: 12px; border-radius: 6px; page-break-inside: avoid;">
+            <h2 style="font-size: 13px; color: #1e3a8a; margin: 0 0 6px 0; font-weight: 800; text-transform: uppercase;">
+              ${isAr ? 'التشخيص وملخص الحالة (Diagnosis & Summary)' : 'Diagnosis & Summary'}
+            </h2>
+            ${soapAssessment ? `<p style="font-size: 12.5px; line-height: 1.5; color: #0f172a; margin: 0 0 8px 0; font-weight: bold; border-bottom: 1px dashed #e2e8f0; padding-bottom: 6px;">${isAr ? 'التشخيص الطبي: ' : 'Medical Diagnosis: '}${soapAssessment}</p>` : ''}
+            <p style="font-size: 12.5px; line-height: 1.5; color: #334155; margin: 0; font-weight: 500;">
+              ${patientSummary || ''}
+            </p>
+          </div>
+        `;
+      }
+
+      let instructionsSection = '';
+      const actualInstructions = instructionsFormatted || '';
+      if (actualInstructions) {
+        instructionsSection = `
+          <div style="margin-bottom: 15px; background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 12px; border-radius: 6px; page-break-inside: avoid;">
+            <h2 style="font-size: 13px; color: #14532d; margin: 0 0 6px 0; font-weight: 800; text-transform: uppercase;">
+              ${isAr ? 'تعليمات وإرشادات الطبيب (Physician Instructions)' : 'Physician Instructions'}
+            </h2>
+            <p style="font-size: 12.5px; line-height: 1.5; color: #166534; margin: 0; font-weight: 500; white-space: pre-wrap;">
+              ${actualInstructions}
+            </p>
+          </div>
+        `;
+      }
+
+      let planSection = '';
+      if (soapPlan) {
+        planSection = `
+          <div style="margin-bottom: 15px; background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 6px; page-break-inside: avoid;">
+            <h2 style="font-size: 13px; color: #78350f; margin: 0 0 6px 0; font-weight: 800; text-transform: uppercase;">
+              ${isAr ? 'الخطة العلاجية المقترحة (Proposed Treatment Plan)' : 'Proposed Treatment Plan'}
+            </h2>
+            <p style="font-size: 12.5px; line-height: 1.5; color: #451a03; margin: 0; font-weight: 500; white-space: pre-wrap;">
+              ${soapPlan}
+            </p>
+          </div>
+        `;
+      }
+
+      let tasksSection = '';
+      if (tasks && tasks.length > 0) {
+        const tasksList = tasks.map(t => `<li style="margin-bottom: 4px;">${t}</li>`).join('');
+        tasksSection = `
+          <div style="margin-bottom: 15px; background-color: #fdf2f8; border-left: 4px solid #ec4899; padding: 12px; border-radius: 6px; page-break-inside: avoid;">
+            <h2 style="font-size: 13px; color: #701a75; margin: 0 0 6px 0; font-weight: 800; text-transform: uppercase;">
+              ${isAr ? 'مهام المتابعة (Follow-up Tasks)' : 'Follow-up Tasks'}
+            </h2>
+            <ul style="font-size: 12.5px; line-height: 1.5; color: #4d0752; margin: 0; padding-left: 20px; font-weight: 500;">
+              ${tasksList}
+            </ul>
+          </div>
+        `;
+      }
+
+      contentHtml = `
+        <div>
+          ${diagnosisSection}
+          ${planSection}
+          ${instructionsSection}
+          ${tasksSection}
+          ${!patientSummary && !actualInstructions && !soapPlan && (!tasks || !tasks.length) ? `
+            <p style="color: #94a3b8; font-style: italic; font-size: 12px; text-align: center; margin: 30px 0;">
+              ${isAr ? 'لا توجد تعليمات أو ملخصات مسجلة لهذه الجلسة بعد.' : 'No instructions or clinical summary recorded for this session yet.'}
+            </p>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    const printHtml = `
+      <!DOCTYPE html>
+      <html lang="${isAr ? 'ar' : 'en'}" dir="${isAr ? 'rtl' : 'ltr'}">
+      <head>
+        <meta charset="UTF-8">
+        <title>${docTitle}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Cairo:wght@400;600;800&display=swap');
+          
+          body {
+            font-family: ${isAr ? "'Cairo'" : "'Outfit'"}, system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 25px 30px;
+            color: #1e293b;
+            background-color: #ffffff;
+            -webkit-print-color-adjust: exact;
+          }
+          
+          .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2.5px solid #1a56db;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+          }
+          
+          .logo-text {
+            font-size: 22px;
+            font-weight: 900;
+            color: #1a56db;
+            letter-spacing: 0.5px;
+          }
+          
+          .report-badge {
+            background-color: #eff6ff;
+            color: #1a56db;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          
+          .meta-grid {
+            display: grid;
+            grid-template-cols: 1fr 1fr;
+            gap: 8px 15px;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px 15px;
+            margin-bottom: 20px;
+            font-size: 12.5px;
+          }
+          
+          .meta-item {
+            display: flex;
+            gap: 8px;
+          }
+          
+          .meta-label {
+            color: #64748b;
+            font-weight: 600;
+          }
+          
+          .meta-value {
+            color: #0f172a;
+            font-weight: bold;
+          }
+          
+          .footer-container {
+            margin-top: 40px;
+            border-top: 1.5px solid #e2e8f0;
+            padding-top: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            font-size: 11px;
+            color: #64748b;
+            page-break-inside: avoid;
+          }
+          
+          .doctor-signature {
+            text-align: ${isAr ? 'left' : 'right'};
+          }
+          
+          .signature-line {
+            width: 130px;
+            border-bottom: 1.5px solid #94a3b8;
+            margin-top: 25px;
+            margin-bottom: 4px;
+            display: inline-block;
+          }
+          
+          @media print {
+            body {
+              padding: 15px;
+            }
+            @page {
+              size: A4;
+              margin: 15mm;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header-container">
+          <div class="logo-text">${isAr ? 'مِسبار AI' : 'SBR AI'}</div>
+          <div class="report-badge">${isAr ? 'ملخص زيارة طبية' : 'Clinical Report'}</div>
+        </div>
+        
+        <h1 style="font-size: 17px; color: #0f172a; margin-top: 0; margin-bottom: 15px; font-weight: 800; text-align: center;">
+          ${docTitle}
+        </h1>
+        
+        <div class="meta-grid">
+          <div class="meta-item">
+            <span class="meta-label">${isAr ? 'اسم المريض:' : 'Patient Name:'}</span>
+            <span class="meta-value">${patient?.name || (isAr ? 'غير معروف' : 'Unknown')}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">${isAr ? 'التاريخ والوقت:' : 'Date & Time:'}</span>
+            <span class="meta-value">${dateStr}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">${isAr ? 'الطبيب المعالج:' : 'Attending Physician:'}</span>
+            <span class="meta-value">${currentUser?.name || (isAr ? 'دكتور' : 'Doctor')}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">${isAr ? 'رقم الهاتف:' : 'Phone Number:'}</span>
+            <span class="meta-value">${patient?.phone || 'N/A'}</span>
+          </div>
+        </div>
+        
+        <div class="content-container">
+          ${contentHtml}
+        </div>
+        
+        <div class="footer-container">
+          <div>
+            <p style="margin: 0 0 3px 0;">${isAr ? 'تم توليد هذا التقرير بأمان بواسطة منصة مسبار للذكاء الاصطناعي الطبي.' : 'This report was securely generated by SBR Medical AI Platform.'}</p>
+            <p style="margin: 0; font-size: 9px; color: #94a3b8;">SBR AI - Smarter Care Better Outcomes</p>
+          </div>
+          <div class="doctor-signature">
+            <p style="margin: 0; font-weight: bold; color: #334155;">${isAr ? 'توقيع الطبيب المعالج:' : 'Physician Signature:'}</p>
+            <div class="signature-line"></div>
+            <p style="margin: 0; font-size: 10px;">${currentUser?.name || ''}</p>
+          </div>
+        </div>
+        
+        <script>
+          window.onload = function() {
+            window.print();
+          }
+        </script>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank', 'width=800,height=900');
+    if (printWindow) {
+      printWindow.document.write(printHtml);
+      printWindow.document.close();
+    } else {
+      alert(isAr ? 'تم حظر النوافذ المنبثقة من قبل المتصفح. يرجى السماح بالنوافذ المنبثقة لتنزيل التقرير.' : 'Pop-ups are blocked by your browser. Please allow pop-ups to download the report.');
+    }
+  };
 
   const [hiddenSections, setHiddenSections] = useState(() => {
     try {
@@ -179,11 +1062,15 @@ export default function LiveSession({ appointmentId, setActivePage }) {
   }, [soapNote]);
 
   useEffect(() => {
-    // When entering a new appointment, clear the previous session data if there is no active recording running
+    // When entering a new appointment, load the session if it's already completed, otherwise clear the previous session data if there is no active recording running
     if (!isRecording) {
-      forceCloseSession();
+      if (appointment && appointment.status === 'completed') {
+        loadSessionByAppointment(appointmentId);
+      } else {
+        forceCloseSession();
+      }
     }
-  }, [appointmentId]);
+  }, [appointmentId, appointment]);
 
   useEffect(() => {
     if (summaryDone) {
@@ -450,10 +1337,50 @@ export default function LiveSession({ appointmentId, setActivePage }) {
     const norm = key.trim().toLowerCase();
     
     // Default mapping for SOAP
-    if (norm === 's') return { label: isArabic ? 'الشكوى المرضية' : 'Subjective', icon: 'patient_alt', short: 'S' };
-    if (norm === 'o') return { label: isArabic ? 'الفحص الإكلينيكي' : 'Objective', icon: 'monitor_heart', short: 'O' };
-    if (norm === 'a') return { label: isArabic ? 'التشخيص الطبي' : 'Assessment', icon: 'psychology', short: 'A' };
-    if (norm === 'p') return { label: isArabic ? 'الخطة العلاجية' : 'Plan', icon: 'medication', short: 'P' };
+    if (
+      norm === 's' || 
+      norm.startsWith('subjective') || 
+      norm.startsWith('s_') || 
+      norm.startsWith('s -') || 
+      norm.startsWith('s:') || 
+      norm.includes('الشكوى المرضية') || 
+      norm.includes('الشكوى الذاتية')
+    ) {
+      return { label: isArabic ? 'الشكوى المرضية' : 'Subjective', icon: 'person', short: 'S' };
+    }
+    if (
+      norm === 'o' || 
+      norm.startsWith('objective') || 
+      norm.startsWith('o_') || 
+      norm.startsWith('o -') || 
+      norm.startsWith('o:') || 
+      norm.includes('الفحص الإكلينيكي') || 
+      norm.includes('الفحص السريري')
+    ) {
+      return { label: isArabic ? 'الفحص الإكلينيكي' : 'Objective', icon: 'monitor_heart', short: 'O' };
+    }
+    if (
+      norm === 'a' || 
+      norm.startsWith('assessment') || 
+      norm.startsWith('a_') || 
+      norm.startsWith('a -') || 
+      norm.startsWith('a:') || 
+      norm.includes('التشخيص الطبي') || 
+      norm.includes('التقييم')
+    ) {
+      return { label: isArabic ? 'التشخيص الطبي' : 'Assessment', icon: 'psychology', short: 'A' };
+    }
+    if (
+      norm === 'p' || 
+      norm.startsWith('plan') || 
+      norm.startsWith('p_') || 
+      norm.startsWith('p -') || 
+      norm.startsWith('p:') || 
+      norm.includes('الخطة العلاجية') || 
+      norm.includes('الخطة')
+    ) {
+      return { label: isArabic ? 'الخطة العلاجية' : 'Plan', icon: 'medication', short: 'P' };
+    }
     
     // Mapping for Multi-section keys:
     const sections = {
@@ -638,9 +1565,14 @@ export default function LiveSession({ appointmentId, setActivePage }) {
     if (isRecording) {
       stopRecording();
     } else {
-      // Show format picker before starting
-      setPendingSessionType('mic');
-      setShowFormatPicker(true);
+      if (sessionId) {
+        // If resuming an active session, skip the format picker and start recording directly
+        startRecording(appointmentId, patient);
+      } else {
+        // Show format picker before starting a new session
+        setPendingSessionType('mic');
+        setShowFormatPicker(true);
+      }
     }
   };
 
@@ -974,6 +1906,30 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                           {isArabic ? 'تحرير وتدقيق التقرير الطبي' : 'Clinical Summary Editing'}
                         </h3>
                         <div className="flex items-center gap-2">
+                          {/* Export PDF Button */}
+                          <button
+                            onClick={() => {
+                              setPdfTarget('note');
+                              setShowPdfModal(true);
+                            }}
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border bg-surface-container-low border-border-subtle hover:bg-surface-container text-error hover:bg-error/5 hover:border-error/30"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                            <span>{isArabic ? 'تصدير PDF' : 'PDF'}</span>
+                          </button>
+
+                          {/* Share via WhatsApp Button */}
+                          <button
+                            onClick={() => {
+                              setWhatsappTarget('note');
+                              setShowWhatsappModal(true);
+                            }}
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border bg-surface-container-low border-border-subtle hover:bg-surface-container text-success hover:bg-success/5 hover:border-success/30"
+                          >
+                            <span className="material-symbols-outlined text-[16px] text-success">send_to_mobile</span>
+                            <span>{isArabic ? 'إرسال واتساب' : 'WhatsApp'}</span>
+                          </button>
+
                           {/* Toggle Diff Highlighter */}
                           <button
                             onClick={() => setHighlightDiff(!highlightDiff)}
@@ -1059,15 +2015,6 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                                 
                                 {/* Micro-toolbar visible on hover */}
                                 <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                  <button 
-                                    onClick={() => handleStartSectionMic(section.key, section)}
-                                    className={`p-1 rounded hover:bg-surface-container transition-colors cursor-pointer flex items-center justify-center ${
-                                      isDictating ? 'text-error animate-pulse bg-error/10' : 'text-secondary hover:text-primary'
-                                    }`}
-                                    title={isArabic ? 'إملاء صوتي للقسم' : 'Voice dictation'}
-                                  >
-                                    <span className="material-symbols-outlined text-[16px]">mic</span>
-                                  </button>
                                   <button 
                                     onClick={() => {
                                       navigator.clipboard.writeText(content);
@@ -1205,34 +2152,96 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                           {/* Dictation button */}
                           <button
                             type="button"
-                            onClick={() => {
+                            onClick={async () => {
                               if (isDictatingInstructions) {
-                                instructionsDictationRef.current?.stop();
+                                if (instructionsDictationRef.current && instructionsDictationRef.current.state !== 'inactive') {
+                                  instructionsDictationRef.current.stop();
+                                }
+                                if (instructionsStreamRef.current) {
+                                  instructionsStreamRef.current.getTracks().forEach(track => track.stop());
+                                  instructionsStreamRef.current = null;
+                                }
                                 setIsDictatingInstructions(false);
                                 return;
                               }
-                              const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                              if (!SpeechRecognition) {
-                                alert(isArabic ? 'المتصفح لا يدعم التسجيل الصوتي.' : 'Browser does not support voice recording.');
-                                return;
+
+                              try {
+                                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                                instructionsStreamRef.current = stream;
+                                instructionsChunksRef.current = [];
+
+                                const mimeTypes = [
+                                  'audio/webm;codecs=opus',
+                                  'audio/webm',
+                                  'audio/ogg;codecs=opus',
+                                  'audio/ogg',
+                                  'audio/mp4',
+                                ];
+                                const supportedMime = mimeTypes.find(m => MediaRecorder.isTypeSupported(m)) || '';
+
+                                const recorder = supportedMime
+                                  ? new MediaRecorder(stream, { mimeType: supportedMime })
+                                  : new MediaRecorder(stream);
+                                instructionsDictationRef.current = recorder;
+
+                                recorder.ondataavailable = (e) => {
+                                  if (e.data && e.data.size > 0) {
+                                    instructionsChunksRef.current.push(e.data);
+                                  }
+                                };
+
+                                recorder.onstop = async () => {
+                                  const mimeType = supportedMime || 'audio/webm';
+                                  const audioBlob = new Blob(instructionsChunksRef.current, { type: mimeType });
+                                  
+                                  setIsFormattingInstructions(true); // show loader
+                                  try {
+                                    const token = sessionStorage.getItem('accessToken');
+                                    const formData = new FormData();
+                                    
+                                    const extMap = {
+                                      'audio/webm': '.webm',
+                                      'audio/webm;codecs=opus': '.webm',
+                                      'audio/ogg': '.ogg',
+                                      'audio/ogg;codecs=opus': '.ogg',
+                                      'audio/mp4': '.mp4',
+                                      'audio/mpeg': '.mp3',
+                                    };
+                                    const ext = extMap[mimeType] || extMap[mimeType.split(';')[0]] || '.webm';
+                                    formData.append("file", audioBlob, `instruction_voice${ext}`);
+
+                                    const uploadRes = await fetch(`/api/v1/sessions/${sessionId}/patient-instructions/audio`, {
+                                      method: 'POST',
+                                      headers: {
+                                        'Authorization': `Bearer ${token}`
+                                      },
+                                      body: formData
+                                    });
+
+                                    if (uploadRes.ok) {
+                                      const uploadData = await uploadRes.json();
+                                      const text = uploadData.transcribed_text;
+                                      if (text) {
+                                        setInstructionsRawText(prev => (prev ? prev + ' ' + text : text));
+                                      }
+                                    } else {
+                                      const errData = await uploadRes.json().catch(() => ({}));
+                                      alert(errData.detail || (isArabic ? 'فشل إرسال التسجيل الصوتي.' : 'Failed to send audio recording.'));
+                                    }
+                                  } catch (err) {
+                                    console.error("Instructions audio upload failed:", err);
+                                    alert(isArabic ? 'حدث خطأ أثناء معالجة التسجيل.' : 'Error processing recording.');
+                                  } finally {
+                                    setIsFormattingInstructions(false);
+                                  }
+                                };
+
+                                recorder.start(250);
+                                setIsDictatingInstructions(true);
+                              } catch (err) {
+                                console.error("Mic access denied for instructions", err);
+                                alert(isArabic ? "تعذر الوصول إلى الميكروفون. يرجى السماح للمتصفح بالوصول." : "Microphone access denied. Please check permission.");
                               }
-                              const recognition = new SpeechRecognition();
-                              recognition.lang = isArabic ? 'ar-SA' : 'en-US';
-                              recognition.continuous = true;
-                              recognition.interimResults = false;
-                              recognition.onresult = (e) => {
-                                const transcript = Array.from(e.results).map(r => r[0].transcript).join(' ');
-                                setInstructionsRawText(prev => (prev ? prev + ' ' : '') + transcript);
-                              };
-                              recognition.onerror = () => {
-                                setIsDictatingInstructions(false);
-                              };
-                              recognition.onend = () => {
-                                setIsDictatingInstructions(false);
-                              };
-                              instructionsDictationRef.current = recognition;
-                              recognition.start();
-                              setIsDictatingInstructions(true);
                             }}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer ${
                               isDictatingInstructions
@@ -1367,16 +2376,64 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                               <span className="material-symbols-outlined text-[16px]">content_copy</span>
                               {isArabic ? 'نسخ' : 'Copy'}
                             </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPdfTarget('instructions');
+                                setShowPdfModal(true);
+                              }}
+                              className="px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 bg-surface-container-low hover:bg-surface-container border border-border-subtle text-error hover:bg-error/5 hover:border-error/30 transition-all cursor-pointer active:scale-[0.98]"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                              {isArabic ? 'PDF' : 'PDF'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setWhatsappTarget('instructions');
+                                setShowWhatsappModal(true);
+                              }}
+                              className="px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 bg-surface-container-low hover:bg-surface-container border border-border-subtle text-success hover:bg-success/5 hover:border-success/30 transition-all cursor-pointer active:scale-[0.98]"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">send_to_mobile</span>
+                              {isArabic ? 'واتساب' : 'WhatsApp'}
+                            </button>
                           </div>
                         </div>
                       )}
 
                       {/* Show existing patient_summary if no new one formatted yet */}
                       {!instructionsFormatted && patientSummary && (
-                        <div className="bg-surface-container-low rounded-xl p-4 border border-border-subtle/50 space-y-2">
-                          <span className="text-[10px] font-bold text-secondary uppercase tracking-wide block">
-                            {isArabic ? 'التعليمات المولّدة من الجلسة:' : 'Session-generated instructions:'}
-                          </span>
+                        <div className="bg-surface-container-low rounded-xl p-4 border border-border-subtle/50 space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-secondary uppercase tracking-wide block">
+                              {isArabic ? 'التعليمات المولّدة من الجلسة:' : 'Session-generated instructions:'}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPdfTarget('instructions');
+                                  setShowPdfModal(true);
+                                }}
+                                className="px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border bg-surface-container-low border-border-subtle hover:bg-surface-container text-error hover:bg-error/5 hover:border-error/30"
+                              >
+                                <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>
+                                <span>{isArabic ? 'تصدير PDF' : 'Export PDF'}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setWhatsappTarget('instructions');
+                                  setShowWhatsappModal(true);
+                                }}
+                                className="px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border bg-surface-container-low border-border-subtle hover:bg-surface-container text-success hover:bg-success/5 hover:border-success/30"
+                              >
+                                <span className="material-symbols-outlined text-[14px]">send_to_mobile</span>
+                                <span>{isArabic ? 'واتساب' : 'WhatsApp'}</span>
+                              </button>
+                            </div>
+                          </div>
                           <p className="text-sm text-on-surface leading-relaxed whitespace-pre-wrap">{patientSummary}</p>
                         </div>
                       )}
@@ -1675,8 +2732,10 @@ export default function LiveSession({ appointmentId, setActivePage }) {
             <div class="p-6 overflow-y-auto flex-1">
               {activeDoc === 'soap' && soapNote && (
                 <div class="space-y-5">
-                  {Object.entries(soapNote).map(([key, content]) => {
-                    const details = getSectionDetails(key);
+                  {Object.entries(soapNote)
+                    .filter(([key, content]) => key !== '_original' && typeof content !== 'object')
+                    .map(([key, content]) => {
+                      const details = getSectionDetails(key);
                     return (
                       <div key={key} class="bg-surface-container-low rounded-xl p-5">
                         <div class="flex items-center gap-3 mb-3">
@@ -1742,8 +2801,10 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                 <div class="space-y-4">
                   <strong class="text-xs font-bold text-secondary block border-b border-border-subtle pb-1">{isArabic ? 'الملخص الطبي والتفاصيل:' : 'Clinical Summary & Details:'}</strong>
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {Object.entries(selectedPastSession.soap_note).map(([key, content]) => {
-                      const details = getSectionDetails(key);
+                    {Object.entries(selectedPastSession.soap_note)
+                      .filter(([key, content]) => key !== '_original' && typeof content !== 'object')
+                      .map(([key, content]) => {
+                        const details = getSectionDetails(key);
                       return (
                         <div key={key} class="bg-surface-container-low p-4 rounded-xl border border-border-subtle/50">
                           <span class="font-black text-xs text-primary flex items-center gap-1.5 mb-2">
@@ -2078,6 +3139,264 @@ export default function LiveSession({ appointmentId, setActivePage }) {
               <span className={`material-symbols-outlined text-[20px] ${isArabic ? 'rotate-180' : ''}`}>arrow_forward</span>
             </button>
 
+          </div>
+        </div>
+      )}
+
+      {/* ===== PDF Language Selection Modal ===== */}
+      {showPdfModal && (
+        <div 
+          className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in"
+          dir={isArabic ? 'rtl' : 'ltr'}
+        >
+          <div className="bg-white rounded-2xl border border-border-subtle p-6 max-w-sm w-full shadow-2xl relative text-right">
+            <button 
+              onClick={() => {
+                setShowPdfModal(false);
+                setPdfTarget(null);
+              }}
+              className="absolute top-4 left-4 text-on-surface-variant hover:text-on-surface p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+
+            <div className="flex items-center gap-2 border-b border-border-subtle pb-3 mb-5">
+              <span className="material-symbols-outlined text-error text-[22px]">picture_as_pdf</span>
+              <h3 className="text-sm font-bold text-secondary">
+                {isArabic ? 'تصدير التقرير كـ PDF' : 'Export Report as PDF'}
+              </h3>
+            </div>
+
+            <p className="text-xs text-secondary mb-6 leading-relaxed">
+              {isArabic 
+                ? 'يرجى اختيار لغة طباعة التقرير. العناوين والتسميات ستطبع باللغة المختارة بينما يظل نص التشخيص والملاحظات باللغة الأصلية المكتوبة.'
+                : 'Please select the export language. Heading labels will be translated to the selected language, while clinical content remains in its original typed language.'}
+            </p>
+
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <button
+                type="button"
+                onClick={() => {
+                  generatePdfDocument(pdfTarget, 'ar');
+                  setShowPdfModal(false);
+                  setPdfTarget(null);
+                }}
+                className="flex flex-col items-center gap-2 p-4 rounded-xl border border-border-subtle bg-surface-container-low hover:bg-primary/5 hover:border-primary/30 transition-all cursor-pointer group"
+              >
+                <span className="text-xl font-bold text-primary group-hover:scale-105 transition-transform">العربية</span>
+                <span className="text-[10px] text-secondary">عناوين التقرير باللغة العربية</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  generatePdfDocument(pdfTarget, 'en');
+                  setShowPdfModal(false);
+                  setPdfTarget(null);
+                }}
+                className="flex flex-col items-center gap-2 p-4 rounded-xl border border-border-subtle bg-surface-container-low hover:bg-primary/5 hover:border-primary/30 transition-all cursor-pointer group"
+              >
+                <span className="text-xl font-bold text-primary group-hover:scale-105 transition-transform">English</span>
+                <span className="text-[10px] text-secondary">English heading labels</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowPdfModal(false);
+                setPdfTarget(null);
+              }}
+              className="w-full bg-surface-container hover:bg-surface-container-hover text-secondary font-bold py-2.5 rounded-xl text-xs transition-colors border border-border-subtle cursor-pointer"
+            >
+              {isArabic ? 'إلغاء' : 'Cancel'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== WhatsApp Share Selection Modal ===== */}
+      {showWhatsappModal && (
+        <div 
+          className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in"
+          dir={isArabic ? 'rtl' : 'ltr'}
+        >
+          <div className="bg-white rounded-2xl border border-border-subtle p-6 max-w-sm w-full shadow-2xl relative text-right">
+            {whatsappStatus === 'idle' && (
+              <button 
+                onClick={() => {
+                  setShowWhatsappModal(false);
+                  setWhatsappTarget(null);
+                  setWhatsappRecipient(null);
+                  setWhatsappCustomPhone('');
+                  setWhatsappShowPhoneInput(false);
+                }}
+                className="absolute top-4 left-4 text-on-surface-variant hover:text-on-surface p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            )}
+
+            <div className="flex items-center gap-2 border-b border-border-subtle pb-3 mb-5">
+              <span className="material-symbols-outlined text-success text-[24px]">chat</span>
+              <h3 className="text-sm font-bold text-secondary">
+                {isArabic ? 'إرسال عبر واتساب' : 'Send via WhatsApp'}
+              </h3>
+            </div>
+
+            {whatsappStatus !== 'idle' ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center animate-fade-in">
+                {whatsappStatus === 'sending' && (
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 rounded-full border-4 border-success/30 border-t-success animate-spin"></div>
+                    <p className="text-xs font-bold text-secondary">{whatsappStatusMsg}</p>
+                  </div>
+                )}
+                {whatsappStatus === 'success' && (
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-success/15 border border-success/30 flex items-center justify-center animate-pulse">
+                      <span className="material-symbols-outlined text-success text-[28px] font-black">check</span>
+                    </div>
+                    <p className="text-xs font-bold text-success">{whatsappStatusMsg}</p>
+                  </div>
+                )}
+                {whatsappStatus === 'error' && (
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-error/10 border border-error/20 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-error text-[28px]">warning</span>
+                    </div>
+                    <p className="text-xs font-bold text-error leading-relaxed">{whatsappStatusMsg}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div>
+                {/* Send Format Type Selector */}
+                <div className="mb-5">
+                  <span className="text-[10px] font-bold text-secondary uppercase tracking-wide block mb-2">
+                    {isArabic ? 'صيغة الإرسال المفضلّة:' : 'Preferred Send Format:'}
+                  </span>
+                  <div className="grid grid-cols-2 gap-1 bg-surface-container p-1 rounded-xl border border-border-subtle">
+                    <button
+                      type="button"
+                      onClick={() => setWhatsappSendType('text')}
+                      className={`py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        whatsappSendType === 'text'
+                          ? 'bg-white text-secondary shadow-xs border border-border-subtle'
+                          : 'text-secondary/60 hover:text-secondary'
+                      }`}
+                    >
+                      {isArabic ? 'رسالة نصية' : 'Text Message'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setWhatsappSendType('pdf')}
+                      className={`py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        whatsappSendType === 'pdf'
+                          ? 'bg-white text-secondary shadow-xs border border-border-subtle'
+                          : 'text-secondary/60 hover:text-secondary'
+                      }`}
+                    >
+                      {isArabic ? 'ملف تقرير PDF' : 'PDF Report File'}
+                    </button>
+                  </div>
+                </div>
+
+                {whatsappShowPhoneInput ? (
+                  <div>
+                    <p className="text-xs text-secondary mb-4 leading-relaxed">
+                      {isArabic 
+                        ? `رقم الهاتف غير مسجل في النظام. يرجى إدخال رقم المستلم مع كود الدولة لإرسال التقرير (مثال: 201012345678):`
+                        : `Phone number is not registered. Please enter recipient's phone number with country code (e.g. 201012345678):`}
+                    </p>
+                    
+                    <div className="mb-5">
+                      <input 
+                        type="tel"
+                        value={whatsappCustomPhone}
+                        onChange={(e) => setWhatsappCustomPhone(e.target.value)}
+                        placeholder={isArabic ? 'رقم الهاتف (مثال: 201012345678)' : 'Phone Number (e.g. 201012345678)'}
+                        className="w-full px-3 py-2.5 border border-border-subtle rounded-xl text-xs text-on-surface focus:outline-none focus:border-success text-left"
+                        dir="ltr"
+                        autoFocus
+                      />
+                    </div>
+
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (whatsappCustomPhone.trim()) {
+                            handleSendWhatsapp(whatsappCustomPhone);
+                          } else {
+                            alert(isArabic ? 'يرجى إدخال رقم هاتف صحيح' : 'Please enter a valid phone number');
+                          }
+                        }}
+                        className="flex-1 bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold py-2.5 rounded-xl text-xs transition-colors cursor-pointer"
+                      >
+                        {isArabic ? 'إرسال الآن' : 'Send Now'}
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setWhatsappShowPhoneInput(false);
+                          setWhatsappRecipient(null);
+                        }}
+                        className="bg-surface-container hover:bg-surface-container-hover text-secondary font-bold py-2.5 px-4 rounded-xl text-xs transition-colors border border-border-subtle cursor-pointer"
+                      >
+                        {isArabic ? 'رجوع' : 'Back'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-xs text-secondary mb-6 leading-relaxed">
+                      {isArabic 
+                        ? 'لمن تريد إرسال التقرير؟'
+                        : 'Who would you like to send this report to?'}
+                    </p>
+                    
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                      <button
+                        type="button"
+                        onClick={() => handleSelectRecipient('doctor')}
+                        className="flex flex-col items-center gap-2.5 p-4 rounded-xl border border-border-subtle bg-surface-container-low hover:bg-success/5 hover:border-success/30 transition-all cursor-pointer group"
+                      >
+                        <span className="material-symbols-outlined text-[24px] text-success group-hover:scale-105 transition-transform">person</span>
+                        <span className="text-xs font-bold text-secondary">{isArabic ? 'إلى نفسي (الطبيب)' : 'To Myself (Doctor)'}</span>
+                        <span className="text-[10px] text-secondary/70">
+                          {currentUser?.phone ? currentUser.phone : (isArabic ? 'أدخل الرقم' : 'Enter number')}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSelectRecipient('patient')}
+                        className="flex flex-col items-center gap-2.5 p-4 rounded-xl border border-border-subtle bg-surface-container-low hover:bg-success/5 hover:border-success/30 transition-all cursor-pointer group"
+                      >
+                        <span className="material-symbols-outlined text-[24px] text-success group-hover:scale-105 transition-transform">person_search</span>
+                        <span className="text-xs font-bold text-secondary">{isArabic ? 'إلى المريض' : 'To Patient'}</span>
+                        <span className="text-[10px] text-secondary/70">
+                          {patient?.phone || appointment?.patient_phone ? (patient?.phone || appointment?.patient_phone) : (isArabic ? 'أدخل الرقم' : 'Enter number')}
+                        </span>
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowWhatsappModal(false);
+                        setWhatsappTarget(null);
+                      }}
+                      className="w-full bg-surface-container hover:bg-surface-container-hover text-secondary font-bold py-2.5 rounded-xl text-xs transition-colors border border-border-subtle cursor-pointer"
+                    >
+                      {isArabic ? 'إلغاء' : 'Cancel'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

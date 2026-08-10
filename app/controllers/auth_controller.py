@@ -14,12 +14,23 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.get("/me", response_model=Token)
-async def get_me(current_user: dict = Depends(get_current_user)):
+async def get_me(response: Response, current_user: dict = Depends(get_current_user)):
     """
-    Get logged-in user profile from secure cookie.
+    Get logged-in user profile from secure cookie and refresh the cookie.
     """
     role = current_user.get("role")
-    return auth_service.create_token(current_user, role)
+    token_dict = auth_service.create_token(current_user, role)
+    
+    # Refresh HttpOnly cookie to extend session (sliding expiration)
+    response.set_cookie(
+        key="access_token",
+        value=token_dict.access_token,
+        httponly=True,
+        samesite="lax",
+        secure=True,
+        max_age=1800  # 30 mins
+    )
+    return token_dict
 
 @router.post("/login", response_model=Token)
 async def login(login_data: LoginRequest, response: Response, role: str = "doctor"):

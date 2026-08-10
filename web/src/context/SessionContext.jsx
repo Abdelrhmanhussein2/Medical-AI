@@ -223,33 +223,39 @@ export const SessionProvider = ({ children }) => {
     try {
       setAppointmentId(appId);
       setPatient(patientObj);
-      setDuration(0);
-      setIsPaused(false);
-      setTranscriptText('');
-      setSummaryDone(false);
-      setSoapNote(null);
-      setSummaryText('');
-      setPatientSummary('');
-      setPrescriptions([]);
-      setTasks([]);
-      setShowSummaryError(false);
-      setIsManualMode(false);
 
-      let currentSessionId = null;
+      let currentSessionId = sessionId;
 
-      // 1. Initialize backend session
-      if (isOnline) {
-        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
-        const session = await apiFetch('/sessions/', {
-          method: 'POST',
-          body: JSON.stringify({
-            doctor_id: currentUser.id,
-            appointment_id: appId || null,
-            patient_id: patientObj?.id || null
-          })
-        });
-        setSessionId(session.id);
-        currentSessionId = session.id;
+      if (!currentSessionId) {
+        setDuration(0);
+        setIsPaused(false);
+        setTranscriptText('');
+        setSummaryDone(false);
+        setSoapNote(null);
+        setSummaryText('');
+        setPatientSummary('');
+        setPrescriptions([]);
+        setTasks([]);
+        setShowSummaryError(false);
+        setIsManualMode(false);
+
+        // 1. Initialize backend session
+        if (isOnline) {
+          const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
+          const session = await apiFetch('/sessions/', {
+            method: 'POST',
+            body: JSON.stringify({
+              doctor_id: currentUser.id,
+              appointment_id: appId || null,
+              patient_id: patientObj?.id || null
+            })
+          });
+          setSessionId(session.id);
+          currentSessionId = session.id;
+        }
+      } else {
+        setIsManualMode(false);
+        setIsPaused(false);
       }
 
       // 2. Initialize Microphone Stream
@@ -691,11 +697,7 @@ export const SessionProvider = ({ children }) => {
   // --- Clear Session States ---
   const clearActiveSession = () => {
     localStorage.removeItem("active_bg_recording_session");
-    // We keep summary results in view, but reset recording meta
-    setSessionId(null);
-    setAppointmentId(null);
-    setPatient(null);
-    setDuration(0);
+    // We keep summary results and session identifiers in view, but reset recording state
     setIsRecording(false);
     isRecordingRef.current = false;
     setIsManualMode(false);
@@ -711,9 +713,58 @@ export const SessionProvider = ({ children }) => {
     }
   };
 
+  const loadSessionByAppointment = async (apptId) => {
+    if (!apptId) return null;
+    try {
+      // 1. Get sessions for this appointment
+      const sessions = await apiFetch(`/sessions/by-appointment/${apptId}`);
+      if (sessions && sessions.length > 0) {
+        // Get the latest session
+        const sessionHeader = sessions[0];
+        
+        // 2. Fetch full session details
+        const fullSession = await apiFetch(`/sessions/${sessionHeader.id}`);
+        if (fullSession) {
+          setSessionId(fullSession.id);
+          setAppointmentId(apptId);
+          setDuration(fullSession.duration_seconds || 0);
+          setTranscriptText(fullSession.transcript_raw || '');
+          setSummaryText(fullSession.summary_text || '');
+          
+          let parsedSoap = fullSession.soap_note;
+          if (parsedSoap) {
+            parsedSoap._original = { ...parsedSoap };
+          }
+          setSoapNote(parsedSoap || null);
+          setPatientSummary(fullSession.patient_summary || '');
+          setPrescriptions(fullSession.prescriptions || []);
+          setTasks(fullSession.tasks || []);
+          setAiModelUsed(fullSession.ai_model_used || '');
+          setAiTokensUsed(fullSession.ai_tokens_used || 0);
+          
+          setSummaryDone(fullSession.status === 'summarized' || fullSession.status === 'completed');
+          setIsManualMode(false);
+          setIsRecording(false);
+          isRecordingRef.current = false;
+          setIsPaused(false);
+          return fullSession;
+        }
+      }
+      return null;
+    } catch (err) {
+      console.error("Failed to load session by appointment:", err);
+      return null;
+    }
+  };
+
   const forceCloseSession = () => {
     stopRecording();
     clearActiveSession();
+    // Explicitly clear session identifiers when leaving the page
+    setSessionId(null);
+    setAppointmentId(null);
+    setPatient(null);
+    setDuration(0);
     setIsManualMode(false);
     setSummaryDone(false);
     setSoapNote(null);
@@ -781,6 +832,7 @@ export const SessionProvider = ({ children }) => {
       clearActiveSession,
       forceCloseSession,
       getPatientSessions,
+      loadSessionByAppointment,
       setTranscriptText,
       startManualSession,
       isManualMode,

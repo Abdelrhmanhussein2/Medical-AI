@@ -2,6 +2,33 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 
+const getVisitSections = (soapNote, isArabic) => {
+  if (!soapNote) return [];
+  
+  const chiefComplaint = soapNote['Chief Complaint'] || soapNote['S'] || '';
+  const hpi = soapNote['History of Present Illness'] || soapNote['O'] || '';
+  
+  let assessmentPlan = '';
+  if (soapNote['Assessment & Plan'] !== undefined) {
+    assessmentPlan = soapNote['Assessment & Plan'] || '';
+  } else {
+    const a = soapNote['A'] || '';
+    const p = soapNote['P'] || '';
+    if (a || p) {
+      assessmentPlan = `${a}\n${p}`.trim();
+    }
+  }
+  
+  const freeText = soapNote['Free Text'] || soapNote['free text'] || '';
+
+  return [
+    { label: isArabic ? 'الشكوى الرئيسية' : 'CHIEF COMPLAINT', value: chiefComplaint },
+    { label: isArabic ? 'تاريخ المرض الحالي' : 'HISTORY OF PRESENT ILLNESS', value: hpi },
+    { label: isArabic ? 'التقييم والخطة العلاجية' : 'ASSESSMENT & PLAN', value: assessmentPlan },
+    { label: isArabic ? 'ملاحظات حرة' : 'FREE TEXT', value: freeText }
+  ];
+};
+
 export default function Patients({ setActivePage }) {
   const { patients, addPatient, updatePatient, visits, generateGeneralSummary } = useApp();
   const { t, isArabic } = useLanguage();
@@ -766,19 +793,14 @@ export default function Patients({ setActivePage }) {
                                 </div>
                               )}
 
-                              {/* SOAP Note details */}
+                              {/* Clinical Note / SOAP */}
                               {visit.soap_note && (
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                                  {[
-                                    ['S', isArabic ? 'الشكوى (S)' : 'Subjective (S)'],
-                                    ['O', isArabic ? 'الفحص (O)' : 'Objective (O)'],
-                                    ['A', isArabic ? 'التشخيص (A)' : 'Assessment (A)'],
-                                    ['P', isArabic ? 'الخطة (P)' : 'Plan (P)']
-                                  ].map(([key, label]) => (
-                                    <div key={key} class="bg-surface-container-low p-2.5 rounded-lg border border-border-subtle/50 space-y-1">
-                                      <span class="text-[9px] font-black text-primary block">{label}</span>
-                                      <p class="text-[11px] text-on-surface-variant leading-relaxed min-h-[18px]">
-                                        {visit.soap_note[key] || (isArabic ? 'لا يوجد' : 'N/A')}
+                                  {getVisitSections(visit.soap_note, isArabic).map((section, idx) => (
+                                    <div key={idx} class="bg-surface-container-low p-2.5 rounded-lg border border-border-subtle/50 space-y-1">
+                                      <span class="text-[9px] font-black text-primary block">{section.label}</span>
+                                      <p class="text-[11px] text-on-surface-variant leading-relaxed min-h-[18px] whitespace-pre-wrap">
+                                        {section.value || (isArabic ? 'لا يوجد' : 'N/A')}
                                       </p>
                                     </div>
                                   ))}

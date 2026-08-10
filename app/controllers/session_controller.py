@@ -59,6 +59,7 @@ class TranscriptUpdate(BaseModel):
 
 class SummarizeRequest(BaseModel):
     patient_name: Optional[str] = "المريض"
+    summary_format: Optional[str] = "soap"
 
 
 class CompleteRequest(BaseModel):
@@ -121,13 +122,20 @@ async def summarize_session(session_id: UUID, data: SummarizeRequest, current_us
     try:
         result = await SessionService.summarize(
             session_id=str(session_id),
-            patient_name=data.patient_name or "المريض"
+            patient_name=data.patient_name or "المريض",
+            summary_format=data.summary_format or "soap"
         )
         return result
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"فشل التلخيص: {str(e)}")
+
+
+class SessionNotesUpdate(BaseModel):
+    soap_note: Optional[dict] = None
+    summary_text: Optional[str] = None
+    patient_summary: Optional[str] = None
 
 
 @router.patch("/{session_id}/complete")
@@ -141,6 +149,51 @@ async def complete_session(session_id: UUID, data: CompleteRequest, current_user
     if not result:
         raise HTTPException(status_code=404, detail="الجلسة غير موجودة")
     return result
+
+
+@router.patch("/{session_id}/notes")
+async def update_session_notes(session_id: UUID, data: SessionNotesUpdate, current_user: dict = Depends(get_current_user)):
+    """تحديث ملاحظات الكشف والملخص للجلسة بعد المراجعة والتحرير"""
+    await assert_session_owner(str(session_id), current_user)
+    try:
+        result = await SessionService.update_session_notes(
+            session_id=str(session_id),
+            soap_note=data.soap_note,
+            summary_text=data.summary_text,
+            patient_summary=data.patient_summary
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class PatientInstructionsRequest(BaseModel):
+    raw_text: str
+    patient_name: Optional[str] = "المريض"
+    language: Optional[str] = "ar"
+
+
+@router.post("/{session_id}/patient-instructions/format")
+async def format_patient_instructions_endpoint(
+    session_id: UUID,
+    data: PatientInstructionsRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """تنسيق تعليمات المراجع بالذكاء الاصطناعي من ملاحظات الطبيب الخام"""
+    await assert_session_owner(str(session_id), current_user)
+    if not data.raw_text or not data.raw_text.strip():
+        raise HTTPException(status_code=400, detail="النص الخام مطلوب ولا يمكن أن يكون فارغاً.")
+    try:
+        from app.services.ai_service import format_patient_instructions
+        formatted = await format_patient_instructions(
+            raw_text=data.raw_text,
+            patient_name=data.patient_name or "المريض",
+            language=data.language or "ar"
+        )
+        return {"formatted_text": formatted}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"فشل تنسيق التعليمات: {str(e)}")
+
 
 
 @router.get("/{session_id}")

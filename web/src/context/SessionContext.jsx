@@ -82,6 +82,7 @@ const deleteChunkFromDB = async (id) => {
 export const SessionProvider = ({ children }) => {
   const { refreshPatients, updateAppointmentStatus } = useApp();
   const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [duration, setDuration] = useState(0);
   const [sessionId, setSessionId] = useState(null);
   const [appointmentId, setAppointmentId] = useState(null);
@@ -124,6 +125,7 @@ export const SessionProvider = ({ children }) => {
         setDuration(data.duration);
         setTranscriptText(data.transcriptText || '');
         setIsRecording(data.isRecording);
+        setIsPaused(data.isPaused || false);
         setIsManualMode(data.isManualMode || false);
         setSummaryDone(data.summaryDone || false);
         setSummaryText(data.summaryText || '');
@@ -136,7 +138,7 @@ export const SessionProvider = ({ children }) => {
         
         // If it was recording and not manual, we attempt to re-initialize mediaRecorder
         if (data.isRecording && !data.isManualMode) {
-          resumeRecording(data.sessionId);
+          recoverRecordingSession(data.sessionId, data.isPaused || false);
         }
       } catch (err) {
         console.error("Failed to restore background session metadata", err);
@@ -154,6 +156,7 @@ export const SessionProvider = ({ children }) => {
         duration,
         transcriptText,
         isRecording,
+        isPaused,
         isManualMode,
         summaryDone,
         summaryText,
@@ -168,7 +171,7 @@ export const SessionProvider = ({ children }) => {
     } else {
       localStorage.removeItem("active_bg_recording_session");
     }
-  }, [sessionId, appointmentId, patient, duration, transcriptText, isRecording, isManualMode, summaryDone, summaryText, soapNote, patientSummary, prescriptions, tasks]);
+  }, [sessionId, appointmentId, patient, duration, transcriptText, isRecording, isPaused, isManualMode, summaryDone, summaryText, soapNote, patientSummary, prescriptions, tasks]);
 
   // Online / Offline monitor
   useEffect(() => {
@@ -188,7 +191,7 @@ export const SessionProvider = ({ children }) => {
 
   // Background Timer Effect
   useEffect(() => {
-    if (isRecording) {
+    if (isRecording && !isPaused) {
       timerRef.current = setInterval(() => {
         setDuration(d => d + 1);
       }, 1000);
@@ -201,7 +204,7 @@ export const SessionProvider = ({ children }) => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isRecording]);
+  }, [isRecording, isPaused]);
 
   const apiFetch = async (url, options = {}) => {
     const token = sessionStorage.getItem('accessToken');
@@ -221,6 +224,7 @@ export const SessionProvider = ({ children }) => {
       setAppointmentId(appId);
       setPatient(patientObj);
       setDuration(0);
+      setIsPaused(false);
       setTranscriptText('');
       setSummaryDone(false);
       setSoapNote(null);
@@ -341,8 +345,8 @@ export const SessionProvider = ({ children }) => {
     }
   };
 
-  // --- Resume Recording after Reload ---
-  const resumeRecording = async (activeSessionId) => {
+  // --- Recover Recording after Reload ---
+  const recoverRecordingSession = async (activeSessionId, wasPaused) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
@@ -373,18 +377,52 @@ export const SessionProvider = ({ children }) => {
       };
 
       isRecordingRef.current = true;
-      recorder.start();
       setIsRecording(true);
 
+      if (wasPaused) {
+        recorder.start();
+        recorder.pause();
+        setIsPaused(true);
+      } else {
+        recorder.start();
+        setIsPaused(false);
+        chunkTimerRef.current = setInterval(() => {
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop();
+          }
+        }, 15000);
+      }
+
+    } catch (err) {
+      console.error("Failed to recover recording stream", err);
+      setIsRecording(false);
+    }
+  };
+
+  // --- Pause Recording Stream ---
+  const pauseRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.pause();
+      setIsPaused(true);
+      if (chunkTimerRef.current) {
+        clearInterval(chunkTimerRef.current);
+        chunkTimerRef.current = null;
+      }
+    }
+  };
+
+  // --- Resume Recording Stream ---
+  const resumeRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'paused') {
+      mediaRecorderRef.current.resume();
+      setIsPaused(false);
+      
+      // Slicing audio files: stop and restart every 15s so each is a valid file
       chunkTimerRef.current = setInterval(() => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
           mediaRecorderRef.current.stop();
         }
       }, 15000);
-
-    } catch (err) {
-      console.error("Failed to resume recording stream", err);
-      setIsRecording(false);
     }
   };
 
@@ -392,6 +430,7 @@ export const SessionProvider = ({ children }) => {
   const stopRecording = () => {
     isRecordingRef.current = false;
     setIsRecording(false);
+    setIsPaused(false);
 
     if (chunkTimerRef.current) {
       clearInterval(chunkTimerRef.current);
@@ -531,7 +570,7 @@ export const SessionProvider = ({ children }) => {
 
   // --- Finalize Session & Summarize ---
   const endSessionAndSummarize = async (format) => {
-    const activeFormat = format || summaryFormat || 'soap';
+    const activeFormat = typeof format === 'string' ? format : (summaryFormat || 'soap');
     setIsSummarizing(true);
     setShowSummaryError(false);
     
@@ -583,6 +622,9 @@ export const SessionProvider = ({ children }) => {
         });
 
         setSummaryText(result.summary_text || '');
+        if (result.soap_note) {
+          result.soap_note._original = { ...result.soap_note };
+        }
         setSoapNote(result.soap_note);
         setPatientSummary(result.patient_summary || '');
         setPrescriptions(result.prescriptions || []);
@@ -616,13 +658,16 @@ export const SessionProvider = ({ children }) => {
   const retrySummary = async (format) => {
     setIsSummarizing(true);
     setShowSummaryError(false);
-    const activeFormat = format || summaryFormat || 'soap';
+    const activeFormat = typeof format === 'string' ? format : (summaryFormat || 'soap');
     try {
       const result = await apiFetch(`/sessions/${sessionId}/summarize`, {
         method: 'POST',
         body: JSON.stringify({ patient_name: patient?.name || 'المراجع', summary_format: activeFormat })
       });
       setSummaryText(result.summary_text || '');
+      if (result.soap_note) {
+        result.soap_note._original = { ...result.soap_note };
+      }
       setSoapNote(result.soap_note);
       setPatientSummary(result.patient_summary || '');
       setPrescriptions(result.prescriptions || []);
@@ -651,7 +696,6 @@ export const SessionProvider = ({ children }) => {
     setAppointmentId(null);
     setPatient(null);
     setDuration(0);
-    setTranscriptText('');
     setIsRecording(false);
     isRecordingRef.current = false;
     setIsManualMode(false);
@@ -680,6 +724,28 @@ export const SessionProvider = ({ children }) => {
     setAiModelUsed('');
     setAiTokensUsed(0);
     setShowSummaryError(false);
+    setTranscriptText('');
+  };
+
+  const saveEditedNotes = async (activeSessionId, updatedSoap, updatedSummaryText, updatedPatientSummary) => {
+    if (!activeSessionId) return null;
+    try {
+      const result = await apiFetch(`/sessions/${activeSessionId}/notes`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          soap_note: updatedSoap,
+          summary_text: updatedSummaryText,
+          patient_summary: updatedPatientSummary
+        })
+      });
+      if (updatedSoap !== undefined) setSoapNote(updatedSoap);
+      if (updatedSummaryText !== undefined) setSummaryText(updatedSummaryText);
+      if (updatedPatientSummary !== undefined) setPatientSummary(updatedPatientSummary);
+      return result;
+    } catch (err) {
+      console.error("Failed to save edited notes:", err);
+      throw err;
+    }
   };
 
   return (
@@ -696,6 +762,7 @@ export const SessionProvider = ({ children }) => {
       summaryDone,
       summaryText,
       soapNote,
+      setSoapNote,
       patientSummary,
       prescriptions,
       tasks,
@@ -706,6 +773,9 @@ export const SessionProvider = ({ children }) => {
       setSummaryFormat,
       startRecording,
       stopRecording,
+      pauseRecording,
+      resumeRecording,
+      isPaused,
       endSessionAndSummarize,
       retrySummary,
       clearActiveSession,
@@ -714,7 +784,8 @@ export const SessionProvider = ({ children }) => {
       setTranscriptText,
       startManualSession,
       isManualMode,
-      setIsManualMode
+      setIsManualMode,
+      saveEditedNotes
     }}>
       {children}
     </SessionContext.Provider>

@@ -8,7 +8,6 @@ from uuid import UUID, uuid4
 from app.core.database import db
 from app.core.config import settings
 from app.services.ai_service import summarize_session_transcript
-from groq import AsyncGroq
 
 
 class SessionService:
@@ -87,7 +86,7 @@ class SessionService:
     @staticmethod
     async def process_audio_chunk(session_id: str, file) -> dict:
         """
-        يستقبل جزء من الصوت، يرسله لـ Groq Whisper لتفريغه،
+        يستقبل جزء من الصوت، يرسله لـ OpenAI Whisper لتفريغه،
         ثم يدمجه في transcript_raw للجلسة المعنية.
         """
         openai_key = settings.OPENAI_API_KEY or os.environ.get("OPENAI_API_KEY", "")
@@ -181,7 +180,7 @@ class SessionService:
             return dict(row) if row else None
     
     @staticmethod
-    async def summarize(session_id: str, patient_name: str = "المريض") -> dict:
+    async def summarize(session_id: str, patient_name: str = "المريض", summary_format: str = "soap") -> dict:
         """
         يجلب نص الجلسة، يرسله للـ AI، ويحفظ النتيجة.
         """
@@ -200,7 +199,7 @@ class SessionService:
             transcript = "لم يتم تسجيل أي نص في هذه الجلسة."
         
         # إرسال للـ AI
-        ai_result = await summarize_session_transcript(transcript, patient_name)
+        ai_result = await summarize_session_transcript(transcript, patient_name, summary_format)
         
         # حفظ النتيجة
         update_query = """
@@ -325,6 +324,47 @@ class SessionService:
         return result
     
     @staticmethod
+    async def update_session_notes(session_id: str, soap_note: Optional[dict] = None, summary_text: Optional[str] = None, patient_summary: Optional[str] = None) -> dict:
+        """تحديث ملاحظات الكشف والملخص للجلسة بعد المراجعة والتحرير"""
+        updates = []
+        params = []
+        
+        if soap_note is not None:
+            params.append(json.dumps(soap_note, ensure_ascii=False))
+            updates.append(f"soap_note = ${len(params)}")
+            
+        if summary_text is not None:
+            params.append(summary_text)
+            updates.append(f"summary_text = ${len(params)}")
+            
+        if patient_summary is not None:
+            params.append(patient_summary)
+            updates.append(f"patient_summary = ${len(params)}")
+            
+        if not updates:
+            return await SessionService.get_session(session_id)
+            
+        params.append(session_id)
+        query = f"""
+            UPDATE sessions 
+            SET {", ".join(updates)}
+            WHERE id = ${len(params)}
+            RETURNING *
+        """
+        async with db.pool.acquire() as conn:
+            row = await conn.fetchrow(query, *params)
+            if not row:
+                return None
+            result = dict(row)
+            if result.get("soap_note"):
+                result["soap_note"] = json.loads(result["soap_note"])
+            if result.get("prescriptions"):
+                result["prescriptions"] = json.loads(result["prescriptions"])
+            if result.get("tasks"):
+                result["tasks"] = json.loads(result["tasks"])
+            return result
+            
+    @staticmethod
     async def complete_session(session_id: str, duration_seconds: int) -> dict:
         """إنهاء الجلسة وتغيير الحالة إلى completed"""
         query = """
@@ -387,7 +427,7 @@ class SessionService:
     async def get_sessions_by_patient(patient_id: str) -> list:
         """جلب كل الجلسات الطبية لمريض معين"""
         query = """
-            SELECT id, status, duration_seconds, summary_text, soap_note, patient_summary, prescriptions, tasks, ai_model_used, ai_tokens_used, ai_prompt_tokens, ai_completion_tokens, created_at
+            SELECT id, status, duration_seconds, summary_text, soap_note, patient_summary, prescriptions, tasks, ai_model_used, ai_tokens_used, ai_prompt_tokens, ai_completion_tokens, created_at, transcript_raw
             FROM sessions 
             WHERE patient_id = $1
             ORDER BY created_at DESC

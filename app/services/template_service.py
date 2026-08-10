@@ -164,21 +164,14 @@ class TemplateService:
 
         try:
             from openai import AsyncOpenAI
-            from groq import AsyncGroq
             from app.core.config import settings
             import os
 
-            use_openai = settings.OPENAI_API_KEY and not settings.OPENAI_API_KEY.startswith("sk-your")
-            if use_openai:
-                client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.strip())
-                model_to_use = settings.OPENAI_MODEL or "gpt-4o-mini"
-            else:
-                api_key = settings.GROQ_API_KEY or os.environ.get("GROQ_API_KEY", "")
-                if not api_key:
-                    return ["الشكوى الرئيسية", "التاريخ الطبي", "الفحص السريري", "العلاج والتعليمات"]
-                client = AsyncGroq(api_key=api_key.strip())
-                from app.services.ai_engine_service import MODEL_NAME
-                model_to_use = MODEL_NAME
+            if not settings.OPENAI_API_KEY or settings.OPENAI_API_KEY.startswith("sk-your"):
+                return ["الشكوى الرئيسية", "التاريخ الطبي", "الفحص السريري", "العلاج والتعليمات"]
+
+            client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.strip())
+            model_to_use = settings.OPENAI_MODEL or "gpt-4o-mini"
 
             response = await client.chat.completions.create(
                 model=model_to_use,
@@ -189,7 +182,7 @@ class TemplateService:
             content = response.choices[0].message.content.strip()
             if content.startswith("```"):
                 content = content.replace("```json", "").replace("```", "").strip()
-            
+
             import json
             fields = json.loads(content)
             if isinstance(fields, list):
@@ -226,7 +219,7 @@ class TemplateService:
                     f.write(contents)
 
                 transcribed = ""
-                if use_openai:
+                if settings.OPENAI_API_KEY and not settings.OPENAI_API_KEY.startswith("sk-your"):
                     from openai import AsyncOpenAI
                     client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.strip())
                     with open(saved_file_path, "rb") as audio_file:
@@ -236,18 +229,6 @@ class TemplateService:
                             response_format="text"
                         )
                         transcribed = str(transcription).strip()
-                else:
-                    api_key = settings.GROQ_API_KEY or os.environ.get("GROQ_API_KEY", "")
-                    if api_key:
-                        from groq import AsyncGroq
-                        client = AsyncGroq(api_key=api_key.strip())
-                        with open(saved_file_path, "rb") as audio_file:
-                            transcription = await client.audio.transcriptions.create(
-                                file=(unique_name, audio_file.read()),
-                                model="whisper-large-v3",
-                                response_format="text"
-                            )
-                            transcribed = str(transcription).strip()
                 if transcribed:
                     input_text = transcribed
             except Exception as e:
@@ -271,21 +252,14 @@ class TemplateService:
 
         try:
             from openai import AsyncOpenAI
-            from groq import AsyncGroq
             from app.core.config import settings
             import os
 
-            use_openai = settings.OPENAI_API_KEY and not settings.OPENAI_API_KEY.startswith("sk-your")
-            if use_openai:
-                client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.strip())
-                model_to_use = settings.OPENAI_MODEL or "gpt-4o-mini"
-            else:
-                api_key = settings.GROQ_API_KEY or os.environ.get("GROQ_API_KEY", "")
-                if not api_key:
-                    return []
-                client = AsyncGroq(api_key=api_key.strip())
-                from app.services.ai_engine_service import MODEL_NAME
-                model_to_use = MODEL_NAME
+            if not settings.OPENAI_API_KEY or settings.OPENAI_API_KEY.startswith("sk-your"):
+                return []
+
+            client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.strip())
+            model_to_use = settings.OPENAI_MODEL or "gpt-4o-mini"
 
             response = await client.chat.completions.create(
                 model=model_to_use,
@@ -296,7 +270,7 @@ class TemplateService:
             content = response.choices[0].message.content.strip()
             if content.startswith("```"):
                 content = content.replace("```json", "").replace("```", "").strip()
-            
+
             import json
             fields = json.loads(content)
             if isinstance(fields, list):

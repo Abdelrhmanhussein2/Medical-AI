@@ -11,7 +11,6 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-4o-mini"
     DAILY_TOKEN_LIMIT: int = 100000
     GEMINI_API_KEY: Optional[str] = None
-    GROQ_API_KEY: Optional[str] = None
     CHAT_ENCRYPTION_KEY: str = "K_5H6wXz0Zt7wY_VwO45Q0R-gM1tXqK3_Z9iH4R1Lw0="
 
     # ──────────── WhatsApp / Evolution API ────────────

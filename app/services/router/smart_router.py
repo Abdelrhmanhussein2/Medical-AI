@@ -36,8 +36,6 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from groq import AsyncGroq
-
 from app.core.config import settings
 from app.services.router.tool_registry import PREREQUISITE_MAP, ROUTER_SHORT_DESCS, ToolRegistry
 
@@ -45,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 # ─── Constants ───────────────────────────────────────────────────────────────
 
-ROUTER_MODEL = "llama-3.1-8b-instant"
+ROUTER_MODEL = settings.OPENAI_MODEL if hasattr(settings, 'OPENAI_MODEL') else "gpt-4o-mini"
 
 # If LLM confidence is below this threshold, we return NO tools and let the
 # main LLM ask for clarification instead of guessing.
@@ -209,20 +207,15 @@ class SmartRouter:
         routing_context: str,
         api_key: str,
     ) -> str:
-        """Calls the lightweight router LLM and returns its raw text output."""
+        """Calls the router LLM and returns its raw text output."""
         system_prompt = _ROUTER_SYSTEM_PROMPT_TEMPLATE.format(
             tool_manifest=cls._get_tool_manifest(),
             max_tools=MAX_TOOLS,
         )
-        
-        use_openai = settings.OPENAI_API_KEY and not settings.OPENAI_API_KEY.startswith("sk-your")
-        if use_openai:
-            from openai import AsyncOpenAI
-            client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.strip())
-            model_to_use = settings.OPENAI_MODEL or "gpt-4o-mini"
-        else:
-            client = AsyncGroq(api_key=api_key.strip())
-            model_to_use = ROUTER_MODEL
+
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.strip())
+        model_to_use = settings.OPENAI_MODEL or "gpt-4o-mini"
 
         response = await client.chat.completions.create(
             model=model_to_use,
@@ -352,10 +345,9 @@ class SmartRouter:
             A list of tool JSON schemas ready to be passed to the main LLM.
             Returns empty list when confidence is below threshold.
         """
-        api_key = settings.GROQ_API_KEY or os.environ.get("GROQ_API_KEY", "")
         has_openai = bool(settings.OPENAI_API_KEY and not settings.OPENAI_API_KEY.startswith("sk-your"))
-        if not api_key and not has_openai:
-            logger.warning("[SMART ROUTER] Neither GROQ_API_KEY nor OPENAI_API_KEY configured — returning all tools as fallback.")
+        if not has_openai:
+            logger.warning("[SMART ROUTER] OPENAI_API_KEY not configured — returning all tools as fallback.")
             return ToolRegistry.get_all_schemas()
 
         # ── Step 1: Build routing context ──────────────────────────────────
@@ -365,11 +357,11 @@ class SmartRouter:
         preview = current_user_msg[:70] + "…" if len(current_user_msg) > 70 else current_user_msg
         _dbg(f"🚀 Routing: '{preview}'")
         if previous_user_msg:
-            _dbg(f"📌 Original intent: '{previous_user_msg[:60]}{'…' if len(previous_user_msg) > 60 else ''}'")  
+            _dbg(f"📌 Original intent: '{previous_user_msg[:60]}{'…' if len(previous_user_msg) > 60 else ''}'")
 
         # ── Step 2: LLM intent analysis ────────────────────────────────────
         try:
-            raw_text = await cls._call_router_llm(routing_context, api_key)
+            raw_text = await cls._call_router_llm(routing_context, "")
         except Exception as exc:
             logger.exception(f"[SMART ROUTER] LLM call failed: {exc}")
             _dbg(f"{_R}❌ LLM call failed — falling back to all tools{_RST}")

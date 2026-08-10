@@ -108,16 +108,19 @@ async def tool_search_visits_by_diagnosis(fn_args: dict, owner_id: str, conn) ->
             SELECT 
                 p.name as patient_name,
                 s.created_at::date as visit_date,
-                s.soap_note->>'A' as diagnosis,
+                coalesce(s.soap_note->>'A', s.soap_note->>'Visit Diagnosis 1', s.soap_note->>'Assessment & Plan', '') as diagnosis,
                 s.summary_text as description,
-                coalesce(s.soap_note->>'S', '') || ' ' || coalesce(s.soap_note->>'O', '') || ' ' || coalesce(s.soap_note->>'P', '') as notes
+                coalesce(s.soap_note->>'S', s.soap_note->>'Chief Complaint', '') || ' ' || coalesce(s.soap_note->>'O', s.soap_note->>'History of Present Illness', '') || ' ' || coalesce(s.soap_note->>'P', s.soap_note->>'Assessment & Plan', '') as notes
             FROM sessions s
             JOIN patients p ON p.id = s.patient_id
             WHERE s.doctor_id = $1 AND (
                 s.soap_note->>'A' ILIKE $2 OR 
+                s.soap_note->>'Visit Diagnosis 1' ILIKE $2 OR
                 s.summary_text ILIKE $2 OR 
                 s.soap_note->>'S' ILIKE $2 OR 
+                s.soap_note->>'Chief Complaint' ILIKE $2 OR
                 s.soap_note->>'O' ILIKE $2 OR 
+                s.soap_note->>'History of Present Illness' ILIKE $2 OR
                 s.soap_note->>'P' ILIKE $2
             )
             ORDER BY visit_date DESC

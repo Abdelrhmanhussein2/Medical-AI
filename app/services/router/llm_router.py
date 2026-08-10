@@ -9,14 +9,10 @@ import re
 import json
 import logging
 from typing import List
-from groq import AsyncGroq
 from app.core.config import settings
 from app.services.router.tool_registry import ToolRegistry
 
 logger = logging.getLogger(__name__)
-
-# Ultra-fast lightweight router model
-LIGHTWEIGHT_ROUTER_MODEL = "llama-3.1-8b-instant"
 
 SYSTEM_ROUTER_PROMPT = """You are an intent router for a medical clinic AI assistant.
 Your task is to analyze the user message and choose ONLY the relevant tool names required to serve the request.
@@ -33,23 +29,24 @@ CRITICAL RULES:
 class LLMRouter:
     """
     Lightweight, ultra-fast LLM fallback router for ambiguous user queries.
-    Uses ~100-150 tokens per call.
+    Uses OpenAI for routing decisions.
     """
 
     @classmethod
     async def route_query(cls, user_query: str) -> List[str]:
-        api_key = settings.GROQ_API_KEY or os.environ.get("GROQ_API_KEY", "")
-        if not api_key:
-            logger.warning("[LLM ROUTER] Groq API key missing. Falling back to default search tool.")
+        api_key = settings.OPENAI_API_KEY or os.environ.get("OPENAI_API_KEY", "")
+        if not api_key or api_key.startswith("sk-your"):
+            logger.warning("[LLM ROUTER] OpenAI API key missing. Falling back to default search tool.")
             return ["search_my_patients"]
 
         tool_summary = ToolRegistry.get_llm_router_prompt_summary()
         sys_prompt = SYSTEM_ROUTER_PROMPT.format(tool_summary=tool_summary)
 
         try:
-            client = AsyncGroq(api_key=api_key.strip())
+            from openai import AsyncOpenAI
+            client = AsyncOpenAI(api_key=api_key.strip())
             response = await client.chat.completions.create(
-                model=LIGHTWEIGHT_ROUTER_MODEL,
+                model=settings.OPENAI_MODEL or "gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": sys_prompt},
                     {"role": "user", "content": user_query}
@@ -61,17 +58,14 @@ class LLMRouter:
             raw_text = (response.choices[0].message.content or "").strip()
             logger.info(f"[LLM ROUTER] Raw router output: {raw_text}")
 
-            # Clean JSON brackets
             clean_text = raw_text.replace("```json", "").replace("```", "").strip()
 
-            # Attempt JSON parse
             try:
                 selected_tools = json.loads(clean_text)
                 if isinstance(selected_tools, list) and all(isinstance(t, str) for t in selected_tools):
                     logger.info(f"[LLM ROUTER] Successfully routed to: {selected_tools}")
                     return selected_tools
             except json.JSONDecodeError:
-                # Regex fallback for json array extraction
                 match = re.search(r'\[.*?\]', clean_text, re.DOTALL)
                 if match:
                     extracted = json.loads(match.group(0))

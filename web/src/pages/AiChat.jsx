@@ -7,7 +7,7 @@ import remarkGfm from 'remark-gfm';
 import StatsCard from '../components/StatsCard';
 
 export default function AiChat({ initialPatientId, initialThreadId }) {
-  const { currentUser } = useApp();
+  const { currentUser, refreshPatients, refreshAppointments } = useApp();
   const { t, isArabic } = useLanguage();
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
@@ -51,6 +51,45 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
   const timerRef = useRef(null);
   const fileInputRef = useRef(null);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
+
+  const handleAiResponseActions = (aiMsg) => {
+    if (!aiMsg || !aiMsg.actions_data || !Array.isArray(aiMsg.actions_data)) return;
+    
+    // Check if any patient actions were successful
+    const hasPatientAction = aiMsg.actions_data.some(act => 
+      ['add_new_patient', 'update_patient_info', 'delete_patient'].includes(act)
+    );
+    if (hasPatientAction) {
+      console.log("AI Chat action detected: reloading patients...");
+      refreshPatients();
+      
+      // Also refresh the local threads/patients dropdown just in case
+      const fetchPatientsLocal = async () => {
+        try {
+          const token = sessionStorage.getItem("accessToken");
+          const res = await fetch('/api/v1/patients/', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setPatients(data || []);
+          }
+        } catch (err) {
+          console.error("Failed to fetch local patients list", err);
+        }
+      };
+      fetchPatientsLocal();
+    }
+    
+    // Check if any appointment actions were successful
+    const hasApptAction = aiMsg.actions_data.some(act => 
+      ['book_appointment', 'cancel_appointment', 'reschedule_appointment', 'update_appointment_status'].includes(act)
+    );
+    if (hasApptAction) {
+      console.log("AI Chat action detected: reloading appointments...");
+      refreshAppointments();
+    }
+  };
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -288,6 +327,7 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
           if (aiRes.ok) {
             const aiMsg = await aiRes.json();
             setMessages(prev => [...prev, aiMsg]);
+            handleAiResponseActions(aiMsg);
           } else {
             const errData = await aiRes.json().catch(() => ({}));
             const detail = errData.detail || (isArabic ? "حدث خطأ أثناء الاتصال بالذكاء الاصطناعي." : "An error occurred with the AI assistant.");
@@ -431,6 +471,7 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
           if (aiRes.ok) {
             const aiMsg = await aiRes.json();
             setMessages(prev => [...prev, aiMsg]);
+            handleAiResponseActions(aiMsg);
           } else {
             const errData = await aiRes.json().catch(() => ({}));
             const detail = errData.detail || (isArabic ? "حدث خطأ أثناء الاتصال بالذكاء الاصطناعي." : "An error occurred with the AI assistant.");

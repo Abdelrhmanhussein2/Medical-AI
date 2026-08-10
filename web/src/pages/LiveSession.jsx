@@ -108,6 +108,47 @@ const renderDiffText = (oldText, newText) => {
   );
 };
 
+const filterDuplicateSoapEntries = (entries) => {
+  const seen = new Set();
+  
+  const mapped = entries.map(([key, val]) => {
+    let normKey = key.trim().toLowerCase();
+    if (normKey === 's' || normKey === 'subjective' || normKey === 'chief complaint' || normKey === 'chief_complaint') {
+      normKey = 'chief_complaint';
+    } else if (normKey === 'o' || normKey === 'objective' || normKey === 'history of present illness' || normKey === 'history_of_present_illness') {
+      normKey = 'hpi';
+    } else if (normKey === 'a' || normKey === 'assessment') {
+      normKey = 'assessment';
+    } else if (normKey === 'p' || normKey === 'plan') {
+      normKey = 'plan';
+    } else if (normKey === 'assessment & plan' || normKey === 'assessment_plan') {
+      normKey = 'assessment_plan';
+    } else if (normKey === 'free text' || normKey === 'free_text') {
+      normKey = 'free_text';
+    }
+    return { key, val, normKey };
+  });
+
+  const hasAssessmentPlan = mapped.some(item => item.normKey === 'assessment_plan' && item.val && typeof item.val === 'string' && item.val.trim());
+
+  return mapped
+    .filter(item => {
+      const { key, val, normKey } = item;
+      if (key === '_original' || typeof val === 'object' || !val) return false;
+      
+      if (hasAssessmentPlan && (normKey === 'assessment' || normKey === 'plan')) {
+        return false;
+      }
+      
+      if (seen.has(normKey)) {
+        return false;
+      }
+      seen.add(normKey);
+      return true;
+    })
+    .map(item => [item.key, item.val]);
+};
+
 export default function LiveSession({ appointmentId, setActivePage }) {
   const { appointments, patients, updatePatient, currentUser } = useApp();
   const { t, isArabic } = useLanguage();
@@ -220,6 +261,20 @@ export default function LiveSession({ appointmentId, setActivePage }) {
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [pdfTarget, setPdfTarget] = useState(null); // 'note' | 'instructions'
 
+  // Generate Letter states
+  const [showLetterModal, setShowLetterModal] = useState(false);
+  const [letterStep, setLetterStep] = useState(1); // 1 = form, 2 = generated letter
+  const [letterPatientName, setLetterPatientName] = useState('');
+  const [letterReceivingDoctor, setLetterReceivingDoctor] = useState('');
+  const [letterSenderRole, setLetterSenderRole] = useState('referring');
+  const [letterLanguage, setLetterLanguage] = useState('ar');
+  const [isGeneratingLetter, setIsGeneratingLetter] = useState(false);
+  const [generatedLetter, setGeneratedLetter] = useState('');
+  const [letterError, setLetterError] = useState('');
+  const [letterCopied, setLetterCopied] = useState(false);
+  const [letterPersonalInfo, setLetterPersonalInfo] = useState('');
+  const [showLetterActionsDropdown, setShowLetterActionsDropdown] = useState(false);
+
   // WhatsApp Sharing states
   const [showWhatsappModal, setShowWhatsappModal] = useState(false);
   const [whatsappTarget, setWhatsappTarget] = useState(null); // 'note' | 'instructions'
@@ -229,6 +284,8 @@ export default function LiveSession({ appointmentId, setActivePage }) {
   const [whatsappStatus, setWhatsappStatus] = useState('idle'); // 'idle' | 'sending' | 'success' | 'error'
   const [whatsappStatusMsg, setWhatsappStatusMsg] = useState('');
   const [whatsappSendType, setWhatsappSendType] = useState('text'); // 'text' | 'pdf'
+
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
 
   const handleSendWhatsapp = async (phoneNum) => {
     const cleaned = phoneNum.replace(/[^0-9]/g, '');
@@ -662,6 +719,169 @@ export default function LiveSession({ appointmentId, setActivePage }) {
     }
   };
 
+  // Open the letter modal and pre-fill patient name
+  const handleOpenLetterModal = () => {
+    setLetterPatientName(patient?.name || '');
+    setLetterReceivingDoctor('');
+    setLetterSenderRole('referring');
+    setLetterLanguage(isArabic ? 'ar' : 'en');
+    setLetterStep(1);
+    setGeneratedLetter('');
+    setLetterError('');
+    setLetterCopied(false);
+    
+    // Construct default personal info from currentUser details
+    const infoLines = [
+      currentUser?.name ? `Dr. ${currentUser.name}` : '',
+      currentUser?.specialty || (isArabic ? 'استشاري طبي' : 'Medical Consultant'),
+      currentUser?.email || ''
+    ].filter(Boolean).join('\n');
+    setLetterPersonalInfo(infoLines);
+    
+    setShowLetterModal(true);
+  };
+
+  const handleGenerateLetter = async () => {
+    if (!letterPatientName.trim() || !letterReceivingDoctor.trim() || !letterPersonalInfo.trim()) return;
+    setIsGeneratingLetter(true);
+    setLetterError('');
+    setGeneratedLetter('');
+    try {
+      const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+      const res = await fetch('/api/v1/sessions/generate-letter', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          patient_name: letterPatientName,
+          receiving_doctor_name: letterReceivingDoctor || undefined,
+          doctor_info: letterPersonalInfo || undefined,
+          sender_role: letterSenderRole,
+          soap_note: editedSoapNote || soapNote || undefined,
+          summary_text: summaryText || undefined,
+          language: letterLanguage
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'فشل توليد الخطاب');
+      }
+      const data = await res.json();
+      setGeneratedLetter(data.letter || '');
+      setLetterStep(2);
+    } catch (e) {
+      setLetterError(e.message || 'حدث خطأ أثناء توليد الخطاب');
+    } finally {
+      setIsGeneratingLetter(false);
+    }
+  };
+
+  const handleCopyLetter = () => {
+    if (generatedLetter) {
+      navigator.clipboard.writeText(generatedLetter).then(() => {
+        setLetterCopied(true);
+        setTimeout(() => setLetterCopied(false), 2500);
+      });
+    }
+  };
+
+  const handlePrintLetter = () => {
+    if (!generatedLetter) return;
+    const win = window.open('', '_blank');
+    const isAr = letterLanguage === 'ar';
+    
+    // Simple markdown to HTML parser
+    const parseMarkdown = (text) => {
+      if (!text) return '';
+      // Escape HTML
+      let html = text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+        
+      // Bold **text** -> <strong>text</strong>
+      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      
+      // Italic *text* -> <em>text</em>
+      html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      
+      // Multi-line parsing for lists and headers
+      const lines = html.split('\n');
+      const parsedLines = lines.map(line => {
+        const trimmed = line.trim();
+        
+        // List items
+        if (trimmed.startsWith('- ')) {
+          return `<li style="margin-bottom: 6px; list-style-type: disc; margin-inline-start: 24px; font-weight: 500;">${trimmed.substring(2)}</li>`;
+        }
+        if (trimmed.startsWith('* ')) {
+          return `<li style="margin-bottom: 6px; list-style-type: disc; margin-inline-start: 24px; font-weight: 500;">${trimmed.substring(2)}</li>`;
+        }
+        if (trimmed.startsWith('• ')) {
+          return `<li style="margin-bottom: 6px; list-style-type: disc; margin-inline-start: 24px; font-weight: 500;">${trimmed.substring(2)}</li>`;
+        }
+        
+        // Headers
+        if (trimmed.startsWith('### ')) {
+          return `<h4 style="font-size: 15px; font-weight: 800; margin-top: 18px; margin-bottom: 8px; color: #1e3a8a;">${trimmed.substring(4)}</h4>`;
+        }
+        if (trimmed.startsWith('## ')) {
+          return `<h3 style="font-size: 17px; font-weight: 800; margin-top: 22px; margin-bottom: 10px; color: #1e3a8a;">${trimmed.substring(3)}</h3>`;
+        }
+        if (trimmed.startsWith('# ')) {
+          return `<h2 style="font-size: 20px; font-weight: 900; margin-top: 26px; margin-bottom: 12px; color: #1e3a8a;">${trimmed.substring(2)}</h2>`;
+        }
+        
+        return line;
+      });
+      
+      return parsedLines.join('\n').replace(/\n/g, '<br />');
+    };
+
+    const formattedContent = parseMarkdown(generatedLetter);
+
+    win.document.write(`
+      <!DOCTYPE html>
+      <html dir="${isAr ? 'rtl' : 'ltr'}" lang="${isAr ? 'ar' : 'en'}">
+      <head>
+        <meta charset="UTF-8">
+        <title>${isAr ? 'خطاب طبي' : 'Medical Letter'}</title>
+        <style>
+          body { 
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif; 
+            max-width: 720px; 
+            margin: 40px auto; 
+            font-size: 14.5px; 
+            line-height: 1.85; 
+            color: #334155; 
+            direction: ${isAr ? 'rtl' : 'ltr'}; 
+            padding: 20px;
+          }
+          strong {
+            color: #0f172a;
+            font-weight: 700;
+          }
+          h2, h3, h4 {
+            color: #1e3a8a;
+          }
+          @media print { 
+            body { margin: 10px; padding: 15px; font-size: 13.5px; } 
+          }
+        </style>
+      </head>
+      <body>
+        <div class="letter-body">
+          ${formattedContent}
+        </div>
+      </body>
+      </html>
+    `);
+    win.document.close();
+    win.print();
+  };
+
   const generatePdfDocument = (target, lang) => {
     const isAr = lang === 'ar';
     const dateStr = new Date().toLocaleDateString(isAr ? 'ar-EG' : 'en-US', {
@@ -697,9 +917,8 @@ export default function LiveSession({ appointmentId, setActivePage }) {
 
     if (target === 'note') {
       // Build SOAP/Multi-section content — filtering out placeholders to save space
-      const sectionsHtml = Object.entries(editedSoapNote || soapNote || {})
+      const sectionsHtml = filterDuplicateSoapEntries(Object.entries(editedSoapNote || soapNote || {}))
         .filter(([key, val]) => {
-          if (key === '_original' || typeof val === 'object' || !val || !val.trim()) return false;
           return !isPlaceholder(val);
         })
         .map(([key, val]) => {
@@ -730,7 +949,8 @@ export default function LiveSession({ appointmentId, setActivePage }) {
               'visit diagnosis 2': { ar: 'التشخيص الثاني للزيارة', en: 'Visit Diagnosis 2' },
               'prescription': { ar: 'الروشتة الطبية', en: 'Prescription' },
               'appointments': { ar: 'المواعيد القادمة والمتابعة', en: 'Appointments' },
-              'visit diagnoses suggestions': { ar: 'مقترحات تشخيص الزيارة', en: 'Visit Diagnoses Suggestions' }
+              'visit diagnoses suggestions': { ar: 'مقترحات تشخيص الزيارة', en: 'Visit Diagnoses Suggestions' },
+              'free text': { ar: 'ملاحظات', en: 'Free Text' }
             };
             if (sections[norm]) {
               label = isAr ? sections[norm].ar : sections[norm].en;
@@ -1328,12 +1548,16 @@ export default function LiveSession({ appointmentId, setActivePage }) {
   const [saveFillSuccess, setSaveFillSuccess] = useState(false);
   const [patientFills, setPatientFills] = useState([]);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [isExtractingFields, setIsExtractingFields] = useState(false);
 
   // Format picker before starting session
   const [showFormatPicker, setShowFormatPicker] = useState(false);
   const [pendingSessionType, setPendingSessionType] = useState(null); // 'mic' | 'manual'
 
   const getSectionDetails = (key) => {
+    if (!key || typeof key !== 'string') {
+      return { label: key || '', icon: 'article', short: '?' };
+    }
     const norm = key.trim().toLowerCase();
     
     // Default mapping for SOAP
@@ -1403,7 +1627,8 @@ export default function LiveSession({ appointmentId, setActivePage }) {
       'visit diagnosis 2': { label: isArabic ? 'التشخيص الثاني للزيارة' : 'Visit Diagnosis 2', icon: 'stethoscope' },
       'prescription': { label: isArabic ? 'الروشتة الطبية' : 'Prescription', icon: 'medication' },
       'appointments': { label: isArabic ? 'المواعيد القادمة والمتابعة' : 'Appointments', icon: 'calendar_today' },
-      'visit diagnoses suggestions': { label: isArabic ? 'مقترحات تشخيص الزيارة' : 'Visit Diagnoses Suggestions', icon: 'lightbulb' }
+      'visit diagnoses suggestions': { label: isArabic ? 'مقترحات تشخيص الزيارة' : 'Visit Diagnoses Suggestions', icon: 'lightbulb' },
+      'free text': { label: isArabic ? 'ملاحظات' : 'Free Text', icon: 'edit_note' }
     };
     
     if (sections[norm]) {
@@ -1510,6 +1735,56 @@ export default function LiveSession({ appointmentId, setActivePage }) {
       console.error(err);
     } finally {
       setIsSavingFill(false);
+    }
+  };
+
+  const handleExtractFillData = async () => {
+    if (!selectedTemplateId) return;
+    setIsExtractingFields(true);
+    try {
+      let contextText = transcriptText.trim();
+      if (!contextText && soapNote) {
+        contextText = Object.entries(soapNote)
+          .map(([key, val]) => `${key}: ${val}`)
+          .join('\n');
+      }
+
+      if (!contextText) {
+        alert(isArabic 
+          ? 'لا يوجد نص أو حوار متاح لاستخلاص البيانات منه.' 
+          : 'No transcript or session notes available to extract data.');
+        setIsExtractingFields(false);
+        return;
+      }
+
+      const token = sessionStorage.getItem("accessToken");
+      const res = await fetch('/api/v1/templates/patients/fills/ai-extract', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          template_id: selectedTemplateId,
+          transcript: contextText
+        })
+      });
+
+      if (res.ok) {
+        const extractedData = await res.json();
+        setFilledData(prev => ({
+          ...prev,
+          ...extractedData
+        }));
+      } else {
+        const errData = await res.json();
+        alert(errData.detail || (isArabic ? 'فشل استخلاص البيانات بالذكاء الاصطناعي.' : 'Failed to extract data using AI.'));
+      }
+    } catch (err) {
+      console.error("Error extracting template fields:", err);
+      alert(isArabic ? 'حدث خطأ غير متوقع.' : 'An unexpected error occurred.');
+    } finally {
+      setIsExtractingFields(false);
     }
   };
 
@@ -1906,30 +2181,6 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                           {isArabic ? 'تحرير وتدقيق التقرير الطبي' : 'Clinical Summary Editing'}
                         </h3>
                         <div className="flex items-center gap-2">
-                          {/* Export PDF Button */}
-                          <button
-                            onClick={() => {
-                              setPdfTarget('note');
-                              setShowPdfModal(true);
-                            }}
-                            className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border bg-surface-container-low border-border-subtle hover:bg-surface-container text-error hover:bg-error/5 hover:border-error/30"
-                          >
-                            <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
-                            <span>{isArabic ? 'تصدير PDF' : 'PDF'}</span>
-                          </button>
-
-                          {/* Share via WhatsApp Button */}
-                          <button
-                            onClick={() => {
-                              setWhatsappTarget('note');
-                              setShowWhatsappModal(true);
-                            }}
-                            className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border bg-surface-container-low border-border-subtle hover:bg-surface-container text-success hover:bg-success/5 hover:border-success/30"
-                          >
-                            <span className="material-symbols-outlined text-[16px] text-success">send_to_mobile</span>
-                            <span>{isArabic ? 'إرسال واتساب' : 'WhatsApp'}</span>
-                          </button>
-
                           {/* Toggle Diff Highlighter */}
                           <button
                             onClick={() => setHighlightDiff(!highlightDiff)}
@@ -2110,15 +2361,95 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                         );
                       })}
 
-                      {/* Copy Summary & Free Text button */}
-                      <div className="pt-6 border-t border-border-subtle/30 flex gap-4">
-                        <button
-                          onClick={handleCopyNote}
-                          className="flex-1 bg-[#1A56DB] text-white py-3 px-6 rounded-xl font-bold text-sm shadow-sm hover:bg-[#1A56DB]/90 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-[0.98]"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">content_copy</span>
-                          <span>{isArabic ? 'نسخ التقرير والملاحظات معاً' : 'Copy Summary & Free Text'}</span>
-                        </button>
+                      {/* Copy & Export Split-Button Dropdown */}
+                      <div className="pt-6 border-t border-border-subtle/30 flex gap-4 relative">
+                        <div className="flex-1 flex rounded-xl shadow-sm overflow-visible relative">
+                          {/* Copy Button */}
+                          <button
+                            onClick={handleCopyNote}
+                            className="flex-1 bg-[#1A56DB] hover:bg-[#1546b5] text-white py-3 px-6 rounded-s-xl font-bold text-sm flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-[0.98]"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">content_copy</span>
+                            <span>{isArabic ? 'نسخ التقرير والملاحظات معاً' : 'Copy Summary & Free Text'}</span>
+                          </button>
+                          
+                          {/* Dropdown Toggle Button */}
+                          <button
+                            onClick={() => setShowExportDropdown(!showExportDropdown)}
+                            className="bg-[#1A56DB] hover:bg-[#1546b5] text-white border-s border-white/20 px-4 rounded-e-xl flex items-center justify-center cursor-pointer transition-all"
+                            type="button"
+                          >
+                            <span className="material-symbols-outlined text-[20px] transition-transform duration-200" style={{ transform: showExportDropdown ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                              keyboard_arrow_up
+                            </span>
+                          </button>
+
+                          {/* Dropdown Menu (Opens upwards) */}
+                          {showExportDropdown && (
+                            <>
+                              {/* Overlay to close when clicking outside */}
+                              <div 
+                                className="fixed inset-0 z-40 bg-transparent" 
+                                onClick={() => setShowExportDropdown(false)}
+                              />
+                              
+                              <div 
+                                className="absolute bottom-full left-0 right-0 mb-2.5 bg-white border border-border-subtle rounded-2xl shadow-xl z-50 p-2 space-y-1.5 animate-fade-in text-right"
+                                style={{ transformOrigin: 'bottom center' }}
+                              >
+                                {/* PDF Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPdfTarget('note');
+                                    setShowPdfModal(true);
+                                    setShowExportDropdown(false);
+                                  }}
+                                  className="w-full text-right px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-between hover:bg-error/5 text-error cursor-pointer"
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+                                    <span>{isArabic ? 'تصدير كملف PDF' : 'Export as PDF'}</span>
+                                  </div>
+                                  <span className="material-symbols-outlined text-[16px] opacity-40">chevron_left</span>
+                                </button>
+
+                                {/* WhatsApp Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setWhatsappTarget('note');
+                                    setShowWhatsappModal(true);
+                                    setShowExportDropdown(false);
+                                  }}
+                                  className="w-full text-right px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-between hover:bg-success/5 text-success cursor-pointer"
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <span className="material-symbols-outlined text-[18px] text-success">send_to_mobile</span>
+                                    <span>{isArabic ? 'إرسال عبر الواتساب' : 'Send via WhatsApp'}</span>
+                                  </div>
+                                  <span className="material-symbols-outlined text-[16px] opacity-40">chevron_left</span>
+                                </button>
+
+                                {/* Letter Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handleOpenLetterModal();
+                                    setShowExportDropdown(false);
+                                  }}
+                                  className="w-full text-right px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-between hover:bg-primary/5 text-primary cursor-pointer"
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <span className="material-symbols-outlined text-[18px]">description</span>
+                                    <span>{isArabic ? 'توليد خطاب طبي بالذكاء الاصطناعي' : 'Generate Medical Letter'}</span>
+                                  </div>
+                                  <span className="material-symbols-outlined text-[16px] opacity-40">chevron_left</span>
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -2294,7 +2625,14 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                             });
                             if (res.ok) {
                               const data = await res.json();
-                              setInstructionsFormatted(data.formatted_text || '');
+                              const newFormatted = data.formatted_text || '';
+                              setInstructionsFormatted(prev => {
+                                if (prev && prev.trim()) {
+                                  return prev.trim() + '\n' + newFormatted;
+                                }
+                                return newFormatted;
+                              });
+                              setInstructionsRawText('');
                             } else {
                               alert(isArabic ? 'فشل تنسيق التعليمات.' : 'Failed to format instructions.');
                             }
@@ -2712,41 +3050,40 @@ export default function LiveSession({ appointmentId, setActivePage }) {
 
       {/* ===== Document Modal ===== */}
       {activeDoc && (
-        <div class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
             
             {/* Modal Header */}
-            <div class="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas rounded-t-2xl">
-              <h3 class="font-bold text-on-surface text-lg flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary text-[22px]">
+            <div className="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas rounded-t-2xl">
+              <h3 className="font-bold text-on-surface text-lg flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[22px]">
                   {activeDoc === 'soap' ? 'description' : 'medical_information'}
                 </span>
                 {activeDoc === 'soap' ? (isArabic ? 'الملخص الطبي' : 'SOAP Note') : (isArabic ? 'ملخص المراجع' : 'Patient Summary')}
               </h3>
-              <button onClick={() => setActiveDoc(null)} class="p-2 hover:bg-surface-container rounded-lg text-secondary">
-                <span class="material-symbols-outlined text-[20px]">close</span>
+              <button onClick={() => setActiveDoc(null)} className="p-2 hover:bg-surface-container rounded-lg text-secondary">
+                <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
 
             {/* Modal Content */}
-            <div class="p-6 overflow-y-auto flex-1">
+            <div className="p-6 overflow-y-auto flex-1">
               {activeDoc === 'soap' && soapNote && (
-                <div class="space-y-5">
-                  {Object.entries(soapNote)
-                    .filter(([key, content]) => key !== '_original' && typeof content !== 'object')
+                <div className="space-y-5">
+                  {filterDuplicateSoapEntries(Object.entries(soapNote))
                     .map(([key, content]) => {
                       const details = getSectionDetails(key);
                     return (
-                      <div key={key} class="bg-surface-container-low rounded-xl p-5">
-                        <div class="flex items-center gap-3 mb-3">
-                          <div class="w-8 h-8 bg-primary/10 text-primary rounded-lg flex items-center justify-center">
-                            <span class="material-symbols-outlined text-[18px]">{details.icon}</span>
+                      <div key={key} className="bg-surface-container-low rounded-xl p-5">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-8 h-8 bg-primary/10 text-primary rounded-lg flex items-center justify-center">
+                            <span className="material-symbols-outlined text-[18px]">{details.icon}</span>
                           </div>
                           <div>
-                            <h4 class="font-bold text-on-surface text-sm">{details.label}</h4>
+                            <h4 className="font-bold text-on-surface text-sm">{details.label}</h4>
                           </div>
                         </div>
-                        <p class="text-sm text-on-surface-variant leading-relaxed whitespace-pre-wrap">{content || 'N/A'}</p>
+                        <p className="text-sm text-on-surface-variant leading-relaxed whitespace-pre-wrap">{content || 'N/A'}</p>
                       </div>
                     );
                   })}
@@ -2754,15 +3091,15 @@ export default function LiveSession({ appointmentId, setActivePage }) {
               )}
 
               {activeDoc === 'patient_summary' && (
-                <div class="bg-surface-container-low rounded-xl p-6">
-                  <p class="text-on-surface leading-relaxed text-base">{patientSummary}</p>
+                <div className="bg-surface-container-low rounded-xl p-6">
+                  <p className="text-on-surface leading-relaxed text-base">{patientSummary}</p>
                 </div>
               )}
 
             </div>
 
-            <div class="px-6 py-4 border-t border-border-subtle rounded-b-2xl bg-bg-canvas">
-              <button onClick={() => setActiveDoc(null)} class="w-full bg-primary text-on-primary py-2.5 rounded-lg font-bold text-sm hover:bg-primary-hover transition-colors">
+            <div className="px-6 py-4 border-t border-border-subtle rounded-b-2xl bg-bg-canvas">
+              <button onClick={() => setActiveDoc(null)} className="w-full bg-primary text-on-primary py-2.5 rounded-lg font-bold text-sm hover:bg-primary-hover transition-colors">
                 Close
               </button>
             </div>
@@ -2772,46 +3109,45 @@ export default function LiveSession({ appointmentId, setActivePage }) {
 
       {/* Selected Past Session Summary Modal */}
       {selectedPastSession && (
-        <div class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
             
             {/* Header */}
-            <div class="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas rounded-t-2xl">
-              <h3 class="font-bold text-on-surface text-lg flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary text-[22px]">history</span>
+            <div className="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas rounded-t-2xl">
+              <h3 className="font-bold text-on-surface text-lg flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[22px]">history</span>
                 ملخص الجلسة السابقة ({new Date(selectedPastSession.created_at).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })})
               </h3>
-              <button onClick={() => setSelectedPastSession(null)} class="p-2 hover:bg-surface-container rounded-lg text-secondary">
-                <span class="material-symbols-outlined text-[20px]">close</span>
+              <button onClick={() => setSelectedPastSession(null)} className="p-2 hover:bg-surface-container rounded-lg text-secondary">
+                <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
 
             {/* Content */}
-            <div class="p-6 overflow-y-auto flex-1 space-y-6 text-right" dir="rtl">
+            <div className="p-6 overflow-y-auto flex-1 space-y-6 text-right" dir="rtl">
               {/* Summary */}
               {selectedPastSession.summary_text && (
-                <div class="bg-primary/5 p-4 rounded-xl border border-primary/10">
-                  <strong class="text-xs font-bold text-primary block mb-2">التلخيص الطبي:</strong>
-                  <p class="text-sm text-on-surface leading-relaxed">{selectedPastSession.summary_text}</p>
+                <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
+                  <strong className="text-xs font-bold text-primary block mb-2">التلخيص الطبي:</strong>
+                  <p className="text-sm text-on-surface leading-relaxed">{selectedPastSession.summary_text}</p>
                 </div>
               )}
 
               {/* SOAP Note */}
               {selectedPastSession.soap_note && (
-                <div class="space-y-4">
-                  <strong class="text-xs font-bold text-secondary block border-b border-border-subtle pb-1">{isArabic ? 'الملخص الطبي والتفاصيل:' : 'Clinical Summary & Details:'}</strong>
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {Object.entries(selectedPastSession.soap_note)
-                      .filter(([key, content]) => key !== '_original' && typeof content !== 'object')
+                <div className="space-y-4">
+                  <strong className="text-xs font-bold text-secondary block border-b border-border-subtle pb-1">{isArabic ? 'الملخص الطبي والتفاصيل:' : 'Clinical Summary & Details:'}</strong>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {filterDuplicateSoapEntries(Object.entries(selectedPastSession.soap_note))
                       .map(([key, content]) => {
                         const details = getSectionDetails(key);
                       return (
-                        <div key={key} class="bg-surface-container-low p-4 rounded-xl border border-border-subtle/50">
-                          <span class="font-black text-xs text-primary flex items-center gap-1.5 mb-2">
-                            <span class="material-symbols-outlined text-[16px]">{details.icon}</span>
+                        <div key={key} className="bg-surface-container-low p-4 rounded-xl border border-border-subtle/50">
+                          <span className="font-black text-xs text-primary flex items-center gap-1.5 mb-2">
+                            <span className="material-symbols-outlined text-[16px]">{details.icon}</span>
                             {details.label}
                           </span>
-                          <p class="text-xs text-on-surface-variant leading-relaxed whitespace-pre-wrap">
+                          <p className="text-xs text-on-surface-variant leading-relaxed whitespace-pre-wrap">
                             {content || 'لا يوجد'}
                           </p>
                         </div>
@@ -2823,9 +3159,9 @@ export default function LiveSession({ appointmentId, setActivePage }) {
 
               {/* Transcript */}
               {selectedPastSession.transcript_raw && (
-                <div class="space-y-3">
-                  <strong class="text-xs font-bold text-[#3A9E95] block border-b border-border-subtle pb-1">{isArabic ? 'نص الاستشارة الفوري:' : 'Consultation Transcript:'}</strong>
-                  <div class="bg-surface-container-low p-4 rounded-xl border border-border-subtle/50 leading-relaxed text-sm text-on-surface whitespace-pre-wrap">
+                <div className="space-y-3">
+                  <strong className="text-xs font-bold text-[#3A9E95] block border-b border-border-subtle pb-1">{isArabic ? 'نص الاستشارة الفوري:' : 'Consultation Transcript:'}</strong>
+                  <div className="bg-surface-container-low p-4 rounded-xl border border-border-subtle/50 leading-relaxed text-sm text-on-surface whitespace-pre-wrap">
                     {selectedPastSession.transcript_raw}
                   </div>
                 </div>
@@ -2833,19 +3169,19 @@ export default function LiveSession({ appointmentId, setActivePage }) {
 
               {/* Prescriptions */}
               {selectedPastSession.prescriptions && selectedPastSession.prescriptions.length > 0 && (
-                <div class="space-y-3">
-                  <strong class="text-xs font-bold text-secondary block border-b border-border-subtle pb-1">الروشتة العلاجية (الأدوية):</strong>
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-3">
+                  <strong className="text-xs font-bold text-secondary block border-b border-border-subtle pb-1">الروشتة العلاجية (الأدوية):</strong>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {selectedPastSession.prescriptions.map((rx, idx) => (
-                      <div key={idx} class="bg-surface-container-low p-4 rounded-xl border border-border-subtle/50">
-                        <h4 class="font-bold text-sm text-on-surface mb-2 flex items-center gap-2">
-                          <span class="material-symbols-outlined text-[18px] text-primary">medication</span>
+                      <div key={idx} className="bg-surface-container-low p-4 rounded-xl border border-border-subtle/50">
+                        <h4 className="font-bold text-sm text-on-surface mb-2 flex items-center gap-2">
+                          <span className="material-symbols-outlined text-[18px] text-primary">medication</span>
                           {rx.medication}
                         </h4>
-                        <div class="grid grid-cols-3 gap-2 text-xs text-secondary">
-                          <div><strong class="text-on-surface block mb-0.5">الجرعة</strong>{rx.dose}</div>
-                          <div><strong class="text-on-surface block mb-0.5">التكرار</strong>{rx.frequency}</div>
-                          <div><strong class="text-on-surface block mb-0.5">المدة</strong>{rx.duration}</div>
+                        <div className="grid grid-cols-3 gap-2 text-xs text-secondary">
+                          <div><strong className="text-on-surface block mb-0.5">الجرعة</strong>{rx.dose}</div>
+                          <div><strong className="text-on-surface block mb-0.5">التكرار</strong>{rx.frequency}</div>
+                          <div><strong className="text-on-surface block mb-0.5">المدة</strong>{rx.duration}</div>
                         </div>
                       </div>
                     ))}
@@ -2855,12 +3191,12 @@ export default function LiveSession({ appointmentId, setActivePage }) {
 
               {/* Tasks */}
               {selectedPastSession.tasks && selectedPastSession.tasks.length > 0 && (
-                <div class="space-y-3">
-                  <strong class="text-xs font-bold text-secondary block border-b border-border-subtle pb-1">مهام المتابعة:</strong>
-                  <ul class="space-y-2">
+                <div className="space-y-3">
+                  <strong className="text-xs font-bold text-secondary block border-b border-border-subtle pb-1">مهام المتابعة:</strong>
+                  <ul className="space-y-2">
                     {selectedPastSession.tasks.map((task, idx) => (
-                      <li key={idx} class="flex items-start gap-2 text-sm text-on-surface">
-                        <span class="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">task_alt</span>
+                      <li key={idx} className="flex items-start gap-2 text-sm text-on-surface">
+                        <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">task_alt</span>
                         {task}
                       </li>
                     ))}
@@ -2870,8 +3206,8 @@ export default function LiveSession({ appointmentId, setActivePage }) {
             </div>
 
             {/* Footer */}
-            <div class="px-6 py-4 border-t border-border-subtle rounded-b-2xl bg-bg-canvas">
-              <button onClick={() => setSelectedPastSession(null)} class="w-full bg-primary text-on-primary py-2.5 rounded-lg font-bold text-sm hover:bg-primary-hover transition-colors">
+            <div className="px-6 py-4 border-t border-border-subtle rounded-b-2xl bg-bg-canvas">
+              <button onClick={() => setSelectedPastSession(null)} className="w-full bg-primary text-on-primary py-2.5 rounded-lg font-bold text-sm hover:bg-primary-hover transition-colors">
                 إغلاق الملخص
               </button>
             </div>
@@ -2888,6 +3224,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                 setShowTemplateModal(false);
                 setSelectedTemplateId('');
                 setFilledData({});
+                setIsExtractingFields(false);
               }}
               className="absolute top-4 left-4 text-on-surface-variant hover:text-on-surface p-1.5 hover:bg-surface-container rounded-lg cursor-pointer"
             >
@@ -2928,6 +3265,20 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                   </div>
                 )}
 
+                <button
+                  type="button"
+                  disabled={isExtractingFields}
+                  onClick={handleExtractFillData}
+                  className="w-full bg-[#1A8E85] text-white hover:bg-[#127F76] font-bold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm disabled:opacity-50 active:scale-95 cursor-pointer"
+                >
+                  {isExtractingFields ? (
+                    <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                  ) : (
+                    <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
+                  )}
+                  <span>{isArabic ? 'ملء تلقائي بالذكاء الاصطناعي' : 'Auto-fill with AI'}</span>
+                </button>
+
                 <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
                   {(() => {
                     const selected = templates.find(t => t.id === selectedTemplateId);
@@ -2940,7 +3291,8 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                           value={filledData[f.label] || ''}
                           onChange={e => setFilledData({ ...filledData, [f.label]: e.target.value })}
                           placeholder={isArabic ? `اكتب ${f.label}...` : `Enter ${f.label}`}
-                          className="w-full px-3 py-2 bg-surface-container-low text-on-surface border border-border-subtle rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none outline-none font-medium"
+                          className="w-full px-3 py-2 bg-surface-container-low text-on-surface border border-border-subtle rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none outline-none font-medium text-right"
+                          dir="rtl"
                         />
                       </div>
                     ));
@@ -2968,6 +3320,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                       setShowTemplateModal(false);
                       setSelectedTemplateId('');
                       setFilledData({});
+                      setIsExtractingFields(false);
                     }}
                     className="flex-1 bg-surface-container hover:bg-surface-container-hover text-secondary font-bold py-2.5 rounded-xl text-xs transition-colors border border-border-subtle cursor-pointer"
                   >
@@ -3400,6 +3753,246 @@ export default function LiveSession({ appointmentId, setActivePage }) {
           </div>
         </div>
       )}
+      {showLetterModal && (
+        <>
+          <style>{`
+            @keyframes slideInRight {
+              from { transform: translateX(100%); }
+              to { transform: translateX(0); }
+            }
+            .animate-slide-in-right {
+              animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            }
+          `}</style>
+          
+          {/* Backdrop overlay */}
+          <div 
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[60] animate-fade-in"
+            onClick={() => setShowLetterModal(false)}
+          />
+          
+          {/* Right Sliding Drawer */}
+          <div 
+            className="fixed top-0 right-0 h-full w-full sm:w-[500px] bg-white z-[70] shadow-2xl flex flex-col animate-slide-in-right border-l border-border-subtle"
+            dir="ltr"
+          >
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-border-subtle/50 shrink-0">
+              <div className="flex items-center gap-3">
+                {letterStep === 2 && (
+                  <button
+                    onClick={() => { setLetterStep(1); setGeneratedLetter(''); }}
+                    className="p-1.5 hover:bg-surface-container rounded-lg transition-colors text-secondary hover:text-on-surface cursor-pointer flex items-center justify-center"
+                    type="button"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+                  </button>
+                )}
+                <h3 className="font-bold text-on-surface text-lg">Letter</h3>
+              </div>
+              <button
+                onClick={() => setShowLetterModal(false)}
+                className="p-1.5 hover:bg-surface-container rounded-lg transition-colors text-secondary hover:text-on-surface cursor-pointer flex items-center justify-center"
+                type="button"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            {/* Drawer Body (Scrollable) */}
+            <div className="flex-1 overflow-y-auto px-6 py-6">
+              {letterStep === 1 ? (
+                /* STEP 1: Letter config form fields */
+                <div className="space-y-6">
+                  {/* Patient Name */}
+                  <div>
+                    <label className="block text-xs font-bold text-secondary mb-2 uppercase tracking-wide">
+                      Patient name *
+                    </label>
+                    <input
+                      type="text"
+                      value={letterPatientName}
+                      onChange={e => setLetterPatientName(e.target.value)}
+                      placeholder="Patient name"
+                      className="w-full border border-border-subtle rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary text-on-surface"
+                      required
+                    />
+                  </div>
+
+                  {/* Receiving Doctor */}
+                  <div>
+                    <label className="block text-xs font-bold text-secondary mb-2 uppercase tracking-wide">
+                      Receiving doctor's name
+                    </label>
+                    <input
+                      type="text"
+                      value={letterReceivingDoctor}
+                      onChange={e => setLetterReceivingDoctor(e.target.value)}
+                      placeholder="Dr. Colleague"
+                      className="w-full border border-border-subtle rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary text-on-surface"
+                    />
+                  </div>
+
+                  {/* Personal Information Textarea */}
+                  <div>
+                    <label className="block text-xs font-bold text-secondary mb-0.5 uppercase tracking-wide">
+                      Personal information
+                    </label>
+                    <span className="block text-[11px] text-secondary/70 mb-2">
+                      This information will appear in letters and patient notes
+                    </span>
+                    <textarea
+                      rows="5"
+                      value={letterPersonalInfo}
+                      onChange={e => setLetterPersonalInfo(e.target.value)}
+                      placeholder="Address, phone, signature lines..."
+                      className="w-full border border-border-subtle rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary text-on-surface resize-none font-mono"
+                    />
+                  </div>
+
+                  {/* Sender Role Selection */}
+                  <div>
+                    <label className="block text-xs font-bold text-secondary mb-3 uppercase tracking-wide">
+                      I'm sending the letter as
+                    </label>
+                    <div className="space-y-3">
+                      {[
+                        { value: 'referring', label: 'the referring clinician' },
+                        { value: 'consulting', label: 'the consulting clinician' }
+                      ].map(opt => (
+                        <label key={opt.value} className="flex items-center gap-3 cursor-pointer group" onClick={() => setLetterSenderRole(opt.value)}>
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${letterSenderRole === opt.value ? 'border-primary bg-primary' : 'border-border-subtle bg-white'}`}>
+                            {letterSenderRole === opt.value && <div className="w-2 h-2 rounded-full bg-white" />}
+                          </div>
+                          <span className="text-sm text-on-surface font-medium">{opt.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Language Select */}
+                  <div>
+                    <label className="block text-xs font-bold text-secondary mb-2 uppercase tracking-wide">
+                      Letter Language
+                    </label>
+                    <div className="flex gap-2">
+                      {[{ value: 'ar', label: 'العربية (Arabic)' }, { value: 'en', label: 'English' }].map(lang => (
+                        <button
+                          key={lang.value}
+                          type="button"
+                          onClick={() => setLetterLanguage(lang.value)}
+                          className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${letterLanguage === lang.value ? 'bg-primary text-white border-primary shadow-xs' : 'bg-white text-secondary border-border-subtle hover:bg-surface-container'}`}
+                        >
+                          {lang.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {letterError && (
+                    <div className="bg-error/10 border border-error/20 text-error text-xs font-bold p-3.5 rounded-xl">
+                      {letterError}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* STEP 2: Generated Letter Preview text block */
+                <div className="h-full flex flex-col space-y-3">
+                  <label className="block text-xs font-bold text-secondary uppercase tracking-wide shrink-0">
+                    Editable letter body
+                  </label>
+                  
+                  <textarea
+                    className="w-full flex-1 min-h-[380px] border border-border-subtle rounded-2xl p-4 text-sm leading-[1.8] text-on-surface focus:outline-none focus:border-primary resize-none font-medium"
+                    value={generatedLetter}
+                    onChange={e => setGeneratedLetter(e.target.value)}
+                    dir={letterLanguage === 'ar' ? 'rtl' : 'ltr'}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Sticky Drawer Footer (Always visible at the bottom) */}
+            <div className="px-6 py-4 border-t border-border-subtle/50 shrink-0 bg-white flex justify-end">
+              {letterStep === 1 ? (
+                /* Next Button */
+                <button
+                  type="button"
+                  onClick={handleGenerateLetter}
+                  disabled={isGeneratingLetter || !letterPatientName.trim() || !letterReceivingDoctor.trim() || !letterPersonalInfo.trim()}
+                  className="bg-primary hover:bg-primary-hover disabled:opacity-50 text-white font-bold py-3 px-8 rounded-xl text-sm flex items-center gap-2 cursor-pointer transition-all active:scale-[0.98]"
+                >
+                  {isGeneratingLetter ? (
+                    <>
+                      <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+                      <span>Generating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Next</span>
+                      <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                    </>
+                  )}
+                </button>
+              ) : (
+                /* Step 2 Split Action Buttons */
+                <div className="flex rounded-xl shadow-sm overflow-visible relative">
+                  <button
+                    type="button"
+                    onClick={handlePrintLetter}
+                    className="bg-primary hover:bg-primary-hover text-white font-bold py-3 px-6 rounded-l-xl text-sm flex items-center gap-2 cursor-pointer transition-all active:scale-[0.98]"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+                    <span>Generate PDF</span>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => setShowLetterActionsDropdown(!showLetterActionsDropdown)}
+                    className="bg-primary hover:bg-primary-hover text-white border-l border-white/20 px-3.5 rounded-r-xl flex items-center justify-center cursor-pointer transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[18px] transition-transform duration-200" style={{ transform: showLetterActionsDropdown ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                      keyboard_arrow_down
+                    </span>
+                  </button>
+
+                  {showLetterActionsDropdown && (
+                    <>
+                      <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setShowLetterActionsDropdown(false)} />
+                      <div className="absolute right-0 bottom-full mb-2 bg-white border border-border-subtle rounded-2xl shadow-xl z-50 p-2 w-48 space-y-1 animate-fade-in text-left">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleCopyLetter();
+                            setShowLetterActionsDropdown(false);
+                          }}
+                          className="w-full text-left px-4 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 hover:bg-surface-container text-secondary"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">{letterCopied ? 'check' : 'content_copy'}</span>
+                          <span>{letterCopied ? 'Copied!' : 'Copy to Clipboard'}</span>
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handlePrintLetter();
+                            setShowLetterActionsDropdown(false);
+                          }}
+                          className="w-full text-left px-4 py-2.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 hover:bg-surface-container text-secondary"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">print</span>
+                          <span>Print Letter</span>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
+

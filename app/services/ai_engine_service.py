@@ -292,6 +292,7 @@ class AIEngineService:
 
             # Track executed calls to prevent infinite loops on the same error
             executed_calls = set()
+            successful_actions = []
 
             # AI execution loop
             for idx in range(MAX_ITERATIONS):
@@ -318,14 +319,15 @@ class AIEngineService:
                     api_err_str = str(api_err)
                     logger.warning(f"AI tool call exception: {api_err}")
                     _dbg(f"⚠️  OpenAI error: {api_err_str[:200]}")
+                    recovered = False
 
                     # Check if it's a transient network/connection error
                     is_transient = (
-                        "connection" in groq_err_str.lower() or 
-                        "timeout" in groq_err_str.lower() or 
-                        "50" in groq_err_str or 
-                        "rate_limit" in groq_err_str.lower() or
-                        "api_connection" in groq_err_str.lower()
+                        "connection" in api_err_str.lower() or 
+                        "timeout" in api_err_str.lower() or 
+                        "50" in api_err_str or 
+                        "rate_limit" in api_err_str.lower() or
+                        "api_connection" in api_err_str.lower()
                     )
                     if is_transient:
                         _dbg("🔄 Transient network error detected. Retrying WITH tools in 1.5 seconds...")
@@ -338,7 +340,7 @@ class AIEngineService:
                                 accumulated_completion += response.usage.completion_tokens
                                 accumulated_total += response.usage.total_tokens
                             # Succeeded! Nullify the error so we don't trigger fallbacks.
-                            groq_err = None
+                            api_err = None
                         except Exception as retry_err:
                             _dbg(f"❌ Retry failed: {retry_err}")
                             raise retry_err
@@ -350,7 +352,7 @@ class AIEngineService:
                             parsed_calls = _parse_groq_failed_generation(api_err_str)
                             if parsed_calls:
                                 _dbg(f"🔧 Recovered {len(parsed_calls)} tool call(s) from failed_generation")
-                                groq_messages.append({
+                                messages.append({
                                     "role": "assistant",
                                     "content": "",
                                     "tool_calls": [
@@ -376,7 +378,7 @@ class AIEngineService:
                                         if call_key in executed_calls:
                                             logger.warning(f"[AI ENGINE] Duplicate recovered tool call detected: {call_key}. Skipping execution.")
                                             result_data = {"status": "error", "message": "Duplicate tool call detected."}
-                                            groq_messages.append({
+                                            messages.append({
                                                 "role": "tool",
                                                 "name": fn_name,
                                                 "tool_call_id": f"recovered_{i}",
@@ -392,6 +394,7 @@ class AIEngineService:
                                         if isinstance(result_data, dict) and result_data.get("status") == "error":
                                             has_error = True
                                         elif isinstance(result_data, dict) and result_data.get("status") == "success":
+                                            successful_actions.append(fn_name)
                                             if fn_name == "add_new_patient" and result_data.get("patient_id"):
                                                 new_pid = UUID(result_data["patient_id"])
                                                 await conn.execute(
@@ -399,7 +402,7 @@ class AIEngineService:
                                                     new_pid, UUID(thread_id)
                                                 )
                                                 logger.info(f"[AI ENGINE] Associated new patient {new_pid} with thread {thread_id}")
-                                        groq_messages.append({
+                                        messages.append({
                                             "role": "tool",
                                             "name": fn_name,
                                             "tool_call_id": f"recovered_{i}",
@@ -410,12 +413,12 @@ class AIEngineService:
 
                         if not recovered:
                             # Only retry without tools if it is a tool validation / 400 Bad Request error
-                            is_tool_validation_error = "tool" in groq_err_str.lower() or "400" in groq_err_str or "validation" in groq_err_str.lower()
+                            is_tool_validation_error = "tool" in api_err_str.lower() or "400" in api_err_str or "validation" in api_err_str.lower()
                             if is_tool_validation_error:
                                 _dbg("↩️  Last resort: retry WITHOUT tools...")
                                 response = await client.chat.completions.create(
                                     model=model_to_use,
-                                    messages=groq_messages,
+                                    messages=messages,
                                     temperature=0.0
                                 )
                                 if hasattr(response, "usage") and response.usage:
@@ -424,7 +427,7 @@ class AIEngineService:
                                     accumulated_total += response.usage.total_tokens
                                     logger.info(f"[AI ENGINE - TOKENS] Retry Call #{total_calls} -> Model: {model_to_use} | Prompt: {response.usage.prompt_tokens} | Completion: {response.usage.completion_tokens} | Total: {response.usage.total_tokens}")
                             else:
-                                raise groq_err
+                                raise api_err
 
 
                 response_message = response.choices[0].message
@@ -439,7 +442,7 @@ class AIEngineService:
 
                 if response_message.tool_calls:
                     logger.info(f"[AI ENGINE] Model decided to call {len(response_message.tool_calls)} tools:")
-                    groq_messages.append({
+                    messages.append({
                         "role": "assistant",
                         "content": response_message.content or "",
                         "tool_calls": [t.model_dump() for t in response_message.tool_calls]
@@ -465,7 +468,7 @@ class AIEngineService:
                             if call_key in executed_calls:
                                 logger.warning(f"[AI ENGINE] Duplicate tool call detected: {call_key}. Skipping execution.")
                                 result_data = {"status": "error", "message": "Duplicate tool call detected. This operation has already been executed."}
-                                groq_messages.append({
+                                messages.append({
                                     "role": "tool",
                                     "name": fn_name,
                                     "tool_call_id": tool_call.id,
@@ -482,6 +485,7 @@ class AIEngineService:
                             if isinstance(result_data, dict) and result_data.get("status") == "error":
                                 has_error = True
                             elif isinstance(result_data, dict) and result_data.get("status") == "success":
+                                successful_actions.append(fn_name)
                                 if fn_name == "add_new_patient" and result_data.get("patient_id"):
                                     new_pid = UUID(result_data["patient_id"])
                                     await conn.execute(
@@ -490,7 +494,7 @@ class AIEngineService:
                                     )
                                     logger.info(f"[AI ENGINE] Associated new patient {new_pid} with thread {thread_id}")
 
-                            groq_messages.append({
+                            messages.append({
                                 "role": "tool",
                                 "name": fn_name,
                                 "tool_call_id": tool_call.id,
@@ -511,7 +515,7 @@ class AIEngineService:
                 try:
                     final_response = await client.chat.completions.create(
                         model=model_to_use,
-                        messages=groq_messages,
+                        messages=messages,
                         tools=tools,
                         tool_choice="none",
                         temperature=0.0
@@ -569,15 +573,16 @@ class AIEngineService:
             ai_message_data = MessageCreate(
                 sender_type="ai",
                 content=ai_text,
-                insight_data=None
+                insight_data=None,
+                actions_data=successful_actions
             )
             return await ChatService.add_message(thread_id, owner_id, owner_type, ai_message_data)
 
         except HTTPException:
             raise
         except Exception as e:
-            logger.exception(f"Groq API Error in generate_ai_response: {e}")
+            logger.exception(f"AI Engine Error in generate_ai_response: {e}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Groq API Error: {str(e)}"
+                detail=f"AI Engine Error: {str(e)}"
             )

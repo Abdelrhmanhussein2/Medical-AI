@@ -287,6 +287,17 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const refreshAppointments = async () => {
+    try {
+      if (currentUser?.id) {
+        const appts = await apiFetch(`/appointments/my?doctor_id=${currentUser.id}`);
+        setAppointments(appts || []);
+      }
+    } catch (err) {
+      console.error("Failed to refresh appointments list", err);
+    }
+  };
+
   const addAppointment = async (apptData) => {
     const newAppt = await apiFetch(`/appointments/`, {
       method: 'POST',
@@ -499,6 +510,7 @@ export const AppProvider = ({ children }) => {
       updatePatient,
       generateGeneralSummary,
       refreshPatients,
+      refreshAppointments,
       addAppointment,
       updateAppointmentStatus,
       updateAppointment,

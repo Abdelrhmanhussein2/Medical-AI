@@ -336,3 +336,121 @@ async def get_patient_sessions(patient_id: UUID, current_user: dict = Depends(ge
         raise HTTPException(status_code=403, detail="غير مصرح لك بالوصول.")
 
     return await SessionService.get_sessions_by_patient(str(patient_id))
+
+
+class GenerateLetterRequest(BaseModel):
+    patient_name: str
+    receiving_doctor_name: Optional[str] = None
+    doctor_info: Optional[str] = None  # sender info block (name, address, email)
+    sender_role: Optional[str] = "referring"  # "referring" | "consulting"
+    soap_note: Optional[dict] = None
+    summary_text: Optional[str] = None
+    language: Optional[str] = "ar"  # "ar" | "en"
+
+
+@router.post("/generate-letter")
+async def generate_medical_letter(
+    data: GenerateLetterRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """توليد خطاب طبي رسمي (إحالة أو استشارة) بالذكاء الاصطناعي"""
+    try:
+        from openai import AsyncOpenAI
+        from app.core.config import settings
+
+        if not settings.OPENAI_API_KEY or settings.OPENAI_API_KEY.startswith("sk-your"):
+            raise HTTPException(status_code=503, detail="خدمة الذكاء الاصطناعي غير متاحة حالياً.")
+
+        client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.strip())
+        model = settings.OPENAI_MODEL or "gpt-4o-mini"
+
+        is_ar = data.language == "ar"
+        role_label = ("الطبيب المُحيل" if is_ar else "Referring Clinician") if data.sender_role == "referring" else ("الطبيب الاستشاري" if is_ar else "Consulting Clinician")
+        today = __import__('datetime').date.today().strftime("%Y-%m-%d")
+
+        # Build notes summary for the prompt
+        notes_block = ""
+        if data.soap_note:
+            for k, v in data.soap_note.items():
+                if k == "_original" or not v or not isinstance(v, str):
+                    continue
+                notes_block += f"- {k}: {v}\n"
+        if data.summary_text:
+            notes_block += f"\nملخص الزيارة:\n{data.summary_text}"
+
+        if is_ar:
+            # Map SOAP keys to Arabic labels
+            soap_ar_labels = {
+                "S": "الشكوى الرئيسية للمريض",
+                "O": "الفحص والملاحظات الموضوعية",
+                "A": "التشخيص والتقييم",
+                "P": "الخطة العلاجية",
+                "subjective": "الشكوى الرئيسية للمريض",
+                "objective": "الفحص والملاحظات الموضوعية",
+                "assessment": "التشخيص والتقييم",
+                "plan": "الخطة العلاجية",
+            }
+            notes_block_ar = ""
+            if data.soap_note:
+                for k, v in data.soap_note.items():
+                    if k == "_original" or not v or not isinstance(v, str):
+                        continue
+                    ar_label = soap_ar_labels.get(k, soap_ar_labels.get(k.upper(), k))
+                    notes_block_ar += f"- {ar_label}: {v}\n"
+            if data.summary_text:
+                notes_block_ar += f"\nملخص الزيارة:\n{data.summary_text}"
+
+            prompt = (
+                f"أنت طبيب متخصص بارع في كتابة الخطابات الطبية الرسمية باللغة العربية الفصحى.\n\n"
+                f"المطلوب: اكتب خطاباً طبياً رسمياً كاملاً باللغة العربية الفصحى فقط.\n\n"
+                f"⚠️ تعليمات صارمة:\n"
+                f"- لا تستخدم أي حروف أو اختصارات إنجليزية إطلاقاً (مثل A: أو O: أو P: أو SOAP أو Dr. أو أي كلمة إنجليزية)\n"
+                f"- اكتب جميع المصطلحات والعناوين باللغة العربية الكاملة\n"
+                f"- لا تضع نقطتين بعد حروف مفردة مثل A: أو P:\n\n"
+                f"بيانات الخطاب:\n"
+                f"- اسم المريض: {data.patient_name}\n"
+                f"- الطبيب المُرسَل إليه: {data.receiving_doctor_name or 'الزميل الطبيب'}\n"
+                f"- الطبيب المُرسِل: {data.doctor_info or current_user.get('name', 'الطبيب')}\n"
+                f"- دور الطبيب المُرسِل: {role_label}\n"
+                f"- تاريخ الخطاب: {today}\n\n"
+                f"ملاحظات الكشف الطبي:\n{notes_block_ar or 'لا توجد ملاحظات محددة'}\n\n"
+                f"اكتب الخطاب كاملاً بأسلوب طبي رسمي يشمل:\n"
+                f"1. التحية والمقدمة\n"
+                f"2. سبب الإحالة أو الاستشارة مع ذكر المريض والحالة\n"
+                f"3. الملاحظات السريرية الرئيسية والتشخيص\n"
+                f"4. الخطة العلاجية أو التوصيات\n"
+                f"5. الخاتمة والتوقيع\n\n"
+                f"تذكر: الخطاب يجب أن يكون مهنياً وكاملاً باللغة العربية الفصحى فقط بدون أي أحرف أو كلمات إنجليزية."
+            )
+        else:
+            prompt = (
+                f"You are an expert physician skilled in writing formal medical letters in professional English.\n\n"
+                f"Write a complete formal medical letter with the following details:\n\n"
+                f"- Patient Name: {data.patient_name}\n"
+                f"- To: Dr. {data.receiving_doctor_name or 'Colleague'}\n"
+                f"- From: {data.doctor_info or current_user.get('name', 'Physician')}\n"
+                f"- Sender Role: {role_label}\n"
+                f"- Date: {today}\n\n"
+                f"Clinical Notes:\n{notes_block or 'No specific notes available'}\n\n"
+                f"Write the full letter professionally including:\n"
+                f"1. Salutation and introduction\n"
+                f"2. Reason for referral/consultation mentioning the patient and condition\n"
+                f"3. Key clinical findings and diagnosis\n"
+                f"4. Treatment plan or recommendations\n"
+                f"5. Closing and signature\n\n"
+                f"The letter must be professional, complete, and suitable for sharing with the receiving physician."
+            )
+
+        response = await client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=1500
+        )
+        letter_text = response.choices[0].message.content.strip()
+        return {"letter": letter_text, "date": today}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"فشل توليد الخطاب: {str(e)}")

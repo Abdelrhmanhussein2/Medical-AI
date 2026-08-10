@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 class TemplateField(BaseModel):
     label: str = Field(..., min_length=1, max_length=100)
+    defaultValue: Optional[str] = Field(None, max_length=2000)
 
 class TemplateCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=150)
@@ -38,3 +39,7 @@ class PatientFillResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class TemplateFillExtractRequest(BaseModel):
+    template_id: UUID
+    transcript: str

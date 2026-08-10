@@ -2,6 +2,37 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 
+const COUNTRIES = [
+  // Most Used / Defaults
+  { code: 'EG', nameAr: 'مصر', nameEn: 'Egypt', prefix: '+20', defaultPhone: '+201012345678' },
+  // GCC
+  { code: 'SA', nameAr: 'المملكة العربية السعودية', nameEn: 'Saudi Arabia', prefix: '+966', defaultPhone: '+966501234567' },
+  { code: 'AE', nameAr: 'الإمارات العربية المتحدة', nameEn: 'United Arab Emirates', prefix: '+971', defaultPhone: '+971501234567' },
+  { code: 'KW', nameAr: 'الكويت', nameEn: 'Kuwait', prefix: '+965', defaultPhone: '+96550123456' },
+  { code: 'QA', nameAr: 'قطر', nameEn: 'Qatar', prefix: '+974', defaultPhone: '+97450123456' },
+  { code: 'OM', nameAr: 'عمان', nameEn: 'Oman', prefix: '+968', defaultPhone: '+96890123456' },
+  { code: 'BH', nameAr: 'البحرين', nameEn: 'Bahrain', prefix: '+973', defaultPhone: '+97330123456' },
+  // Levant & Iraq
+  { code: 'JO', nameAr: 'الأردن', nameEn: 'Jordan', prefix: '+962', defaultPhone: '+962701234567' },
+  { code: 'PS', nameAr: 'فلسطين', nameEn: 'Palestine', prefix: '+970', defaultPhone: '+970591234567' },
+  { code: 'LB', nameAr: 'لبنان', nameEn: 'Lebanon', prefix: '+961', defaultPhone: '+9613123456' },
+  { code: 'SY', nameAr: 'سوريا', nameEn: 'Syria', prefix: '+963', defaultPhone: '+963912345678' },
+  { code: 'IQ', nameAr: 'العراق', nameEn: 'Iraq', prefix: '+964', defaultPhone: '+9647012345678' },
+  // North Africa
+  { code: 'MA', nameAr: 'المغرب', nameEn: 'Morocco', prefix: '+212', defaultPhone: '+212612345678' },
+  { code: 'DZ', nameAr: 'الجزائر', nameEn: 'Algeria', prefix: '+213', defaultPhone: '+213512345678' },
+  { code: 'TN', nameAr: 'تونس', nameEn: 'Tunisia', prefix: '+216', defaultPhone: '+21651234567' },
+  { code: 'LY', nameAr: 'ليبيا', nameEn: 'Libya', prefix: '+218', defaultPhone: '+218912345678' },
+  { code: 'SD', nameAr: 'السودان', nameEn: 'Sudan', prefix: '+249', defaultPhone: '+249912345678' },
+  // East Africa & Yemen
+  { code: 'YE', nameAr: 'اليمن', nameEn: 'Yemen', prefix: '+967', defaultPhone: '+967701234567' },
+  { code: 'SO', nameAr: 'الصومال', nameEn: 'Somalia', prefix: '+252', defaultPhone: '+25261234567' },
+  { code: 'DJ', nameAr: 'جيبوتي', nameEn: 'Djibouti', prefix: '+253', defaultPhone: '+25377123456' },
+  { code: 'MR', nameAr: 'موريتانيا', nameEn: 'Mauritania', prefix: '+222', defaultPhone: '+22241234567' },
+  { code: 'KM', nameAr: 'جزر القمر', nameEn: 'Comoros', prefix: '+269', defaultPhone: '+2693212345' },
+  { code: 'OTHER', nameAr: 'أخرى', nameEn: 'Other', prefix: '+', defaultPhone: '+12025550143' }
+];
+
 export default function Appointments({ setActivePage }) {
   const { appointments, patients, currentUser, addAppointment, updateAppointmentStatus, updateAppointment, addPatient } = useApp();
   const { t, isArabic } = useLanguage();
@@ -31,6 +62,7 @@ export default function Appointments({ setActivePage }) {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [isCreatingNewPatient, setIsCreatingNewPatient] = useState(false);
   const [newPatientName, setNewPatientName] = useState('');
+  const [newPatientCountry, setNewPatientCountry] = useState('EG');
   const [newPatientPhone, setNewPatientPhone] = useState('');
 
   const [date, setDate] = useState('');
@@ -277,9 +309,18 @@ export default function Appointments({ setActivePage }) {
         return;
       }
       try {
+        let finalPhone = newPatientPhone.trim();
+        const country = COUNTRIES.find(c => c.code === newPatientCountry);
+        if (country && !finalPhone.startsWith('+')) {
+          if (finalPhone.startsWith('0')) {
+            finalPhone = country.prefix + finalPhone.slice(1);
+          } else {
+            finalPhone = country.prefix + finalPhone;
+          }
+        }
         const created = await addPatient({
           name: newPatientName,
-          phone: newPatientPhone,
+          phone: finalPhone,
         });
         finalPatientId = created.id;
         finalPhone = created.phone;
@@ -313,6 +354,7 @@ export default function Appointments({ setActivePage }) {
       setIsCreatingNewPatient(false);
       setNewPatientName('');
       setNewPatientPhone('');
+      setNewPatientCountry('EG');
       setDate('');
       setTime('');
       setDuration(30);
@@ -678,14 +720,29 @@ export default function Appointments({ setActivePage }) {
                         />
                       </div>
                       <div>
+                        <label class="block text-[10px] font-bold text-secondary mb-1">{isArabic ? 'بلد المراجع' : 'Patient Country'}</label>
+                        <select
+                          value={newPatientCountry}
+                          onChange={(e) => setNewPatientCountry(e.target.value)}
+                          class="w-full px-3 py-1.5 bg-white border border-border-subtle rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                        >
+                          {COUNTRIES.map((c) => (
+                            <option key={c.code} value={c.code}>
+                              {isArabic ? `${c.nameAr} (${c.prefix})` : `${c.nameEn} (${c.prefix})`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
                         <label class="block text-[10px] font-bold text-secondary mb-1">{isArabic ? 'رقم هاتف المراجع *' : 'Patient Phone Number *'}</label>
                         <input
                           type="text"
                           required
                           value={newPatientPhone}
                           onChange={(e) => setNewPatientPhone(e.target.value)}
-                          placeholder="0501234567"
-                          class="w-full px-3 py-1.5 bg-white border border-border-subtle rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                          placeholder={COUNTRIES.find(c => c.code === newPatientCountry)?.defaultPhone || '+201012345678'}
+                          class="w-full px-3 py-1.5 bg-white border border-border-subtle rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary ltr text-left"
+                          dir="ltr"
                         />
                       </div>
                     </div>

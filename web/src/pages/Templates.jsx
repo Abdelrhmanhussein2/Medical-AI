@@ -28,6 +28,9 @@ export default function Templates() {
   const [suggestions, setSuggestions] = useState({}); // { fieldIndex: [suggestions] }
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(null);
 
+  // Which field's defaultValue is in edit mode (expanded textarea)
+  const [expandedDefaultValue, setExpandedDefaultValue] = useState(null);
+
   useEffect(() => {
     fetchTemplates();
   }, []);
@@ -92,9 +95,15 @@ export default function Templates() {
     setActiveSuggestionIndex(null);
   };
 
+  const handleFieldDefaultValueChange = (index, value) => {
+    const newFields = [...fields];
+    newFields[index].defaultValue = value;
+    setFields(newFields);
+  };
+
   const addFieldInput = () => {
     if (fields.length < 10) {
-      setFields([...fields, { label: '' }]);
+      setFields([...fields, { label: '', defaultValue: '' }]);
     }
   };
 
@@ -199,7 +208,7 @@ export default function Templates() {
       if (res.ok) {
         const fieldsList = await res.json();
         if (fieldsList && fieldsList.length > 0) {
-          setFields(fieldsList.map(label => ({ label })));
+          setFields(fieldsList.map(f => ({ label: f.label, defaultValue: f.defaultValue || '' })));
           setPromptText('');
           setShowAiHelper(false);
         } else {
@@ -226,15 +235,17 @@ export default function Templates() {
     setIsGeneratingAi(true);
     try {
       const token = sessionStorage.getItem("accessToken");
-      const res = await fetch(`/api/v1/templates/ai-suggest?name=${encodeURIComponent(templateName)}`, {
+      const res = await fetch(`/api/v1/templates/ai-suggest?name=${encodeURIComponent(templateName)}&_t=${Date.now()}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
         }
       });
       if (res.ok) {
         const suggestedList = await res.json();
         if (suggestedList && suggestedList.length > 0) {
-          setFields(suggestedList.map(label => ({ label })));
+          setFields(suggestedList.map(f => ({ label: f.label, defaultValue: f.defaultValue || '' })));
           setShowAiHelper(false);
         } else {
           setError(isArabic ? 'لم نتمكن من توليد حقول لهذا الاسم، جرب اسماً آخر.' : 'Could not generate fields for this name. Try another name.');
@@ -253,7 +264,7 @@ export default function Templates() {
     setModalMode('add');
     setEditingTemplateId(null);
     setTemplateName('');
-    setFields([{ label: '' }]);
+    setFields([{ label: '', defaultValue: '' }]);
     setError('');
     setShowAiHelper(false);
     setPromptText('');
@@ -264,7 +275,7 @@ export default function Templates() {
     setModalMode('edit');
     setEditingTemplateId(tmpl.id);
     setTemplateName(tmpl.name);
-    setFields(tmpl.fields.map(f => ({ label: f.label })));
+    setFields(tmpl.fields.map(f => ({ label: f.label, defaultValue: f.defaultValue || '' })));
     setError('');
     setShowAiHelper(false);
     setPromptText('');
@@ -544,10 +555,43 @@ export default function Templates() {
                 <label className="block text-xs font-bold text-secondary mb-2">
                   {isArabic ? 'حقول القالب (بحد أقصى 10 حقول)' : 'Fields (Max 10 fields)'}
                 </label>
-                <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
                   {fields.map((field, idx) => (
-                    <div key={idx} className="relative flex items-center gap-2">
-                      <div className="flex-1 relative">
+                    <div key={idx} className="bg-white border border-border-subtle rounded-2xl overflow-hidden shadow-sm">
+                      {/* Field header */}
+                      <div className="flex items-center justify-between px-3 py-2 bg-primary/5 border-b border-border-subtle/50">
+                        <label className="text-[10px] font-bold text-primary tracking-wide">
+                          {isArabic ? `الحقل ${idx + 1}` : `Field ${idx + 1}`}
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedDefaultValue(expandedDefaultValue === idx ? null : idx)}
+                            className={`text-[10px] font-bold flex items-center gap-0.5 cursor-pointer transition-colors ${expandedDefaultValue === idx ? 'text-primary' : 'text-primary/50 hover:text-primary'}`}
+                          >
+                            <span className="material-symbols-outlined text-[14px]">
+                              {expandedDefaultValue === idx ? 'check_circle' : 'edit'}
+                            </span>
+                            {expandedDefaultValue === idx
+                              ? (isArabic ? 'تم' : 'Done')
+                              : (isArabic ? 'تعديل' : 'Edit')
+                            }
+                          </button>
+                          {fields.length > 1 && (
+                            <button 
+                              type="button"
+                              onClick={() => removeFieldInput(idx)}
+                              className="text-on-surface-variant/40 hover:text-error transition-colors"
+                              title={isArabic ? 'حذف الحقل' : 'Delete field'}
+                            >
+                              <span className="material-symbols-outlined text-[15px]">delete</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Field name input */}
+                      <div className="relative px-3 pt-3 pb-2">
                         <input 
                           type="text" 
                           value={field.label}
@@ -557,13 +601,14 @@ export default function Templates() {
                               setActiveSuggestionIndex(idx);
                             }
                           }}
-                          placeholder={isArabic ? `اسم الحقل ${idx + 1} (مثلاً: شكوى المراجع، العلاج)` : `Field name ${idx + 1}`}
-                          className="w-full bg-surface-container border border-border-subtle px-3 py-2 rounded-xl text-sm focus:outline-none focus:border-primary font-medium"
+                          placeholder={isArabic ? `اسم الحقل (مثلاً: خطوات التأهيل، العلاج)` : `Field Name (e.g. Rehabilitation Steps)`}
+                          className="w-full bg-surface-container/40 border border-border-subtle/70 px-3 py-2 rounded-xl text-sm focus:outline-none focus:border-primary font-bold text-right"
                           required
+                          dir="rtl"
                         />
-                        {/* Autocomplete suggestions dropdown — appears above the field */}
+                        {/* Autocomplete suggestions dropdown */}
                         {activeSuggestionIndex === idx && suggestions[idx] && suggestions[idx].length > 0 && (
-                          <div className="absolute left-0 right-0 bottom-full mb-1 bg-white border border-border-subtle rounded-xl shadow-xl z-50 max-h-48 overflow-y-auto py-1">
+                          <div className="absolute left-3 right-3 bottom-full mb-1 bg-white border border-border-subtle rounded-xl shadow-xl z-50 max-h-48 overflow-y-auto py-1">
                             {suggestions[idx].map((sug, i) => (
                               <button
                                 key={i}
@@ -578,16 +623,40 @@ export default function Templates() {
                           </div>
                         )}
                       </div>
-                      
-                      {fields.length > 1 && (
-                        <button 
-                          type="button"
-                          onClick={() => removeFieldInput(idx)}
-                          className="text-on-surface-variant hover:text-error transition-colors p-1"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">remove_circle</span>
-                        </button>
-                      )}
+
+                      {/* Default value — always visible, edit on click */}
+                      <div className="px-3 pb-3">
+                        {expandedDefaultValue === idx ? (
+                          /* Edit mode */
+                          <div>
+                            <textarea
+                              rows="7"
+                              autoFocus
+                              value={field.defaultValue || ''}
+                              onChange={e => handleFieldDefaultValueChange(idx, e.target.value)}
+                              placeholder={isArabic ? 'اكتب الخطوات أو القيمة الافتراضية بالتفصيل...' : 'Write detailed steps or default value...'}
+                              className="w-full bg-surface-container/30 border border-primary/50 px-3 py-2.5 rounded-xl text-[13px] focus:outline-none focus:border-primary font-normal resize-none text-right leading-[1.9]"
+                              dir="rtl"
+                            />
+                          </div>
+                        ) : (
+                          /* View mode - full text always visible */
+                          <div className="rounded-xl bg-surface-container/20 border border-border-subtle/40 px-3 py-2.5">
+                            {field.defaultValue ? (
+                              <p
+                                className="text-[13px] text-on-surface/85 leading-[1.9] font-normal text-right whitespace-pre-line"
+                                dir="rtl"
+                              >
+                                {field.defaultValue}
+                              </p>
+                            ) : (
+                              <p className="text-[12px] text-on-surface-variant/40 italic text-right" dir="rtl">
+                                {isArabic ? 'لا توجد قيمة افتراضية — اضغط تعديل لإضافتها' : 'No default value — click Edit to add'}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

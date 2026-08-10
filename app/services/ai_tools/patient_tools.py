@@ -37,6 +37,9 @@ async def tool_search_my_patients(fn_args: dict, owner_id: str, conn) -> dict:
     # Remove spaces from query for a normalized comparison
     # This handles cases like "عبد الرحمن" vs "عبدالرحمن"
     q_no_spaces = q.replace(" ", "")
+    # Split into individual tokens to search for each word separately
+    q_tokens = [t for t in q.split() if len(t) >= 2]
+    
     patients = await conn.fetch(
         """
         SELECT id, name, phone, date_of_birth
@@ -47,10 +50,30 @@ async def tool_search_my_patients(fn_args: dict, owner_id: str, conn) -> dict:
             OR phone ILIKE $2
             OR REPLACE(name, ' ', '') ILIKE $3
           )
-        LIMIT 10
+        LIMIT 15
         """,
         UUID(owner_id), f"%{q}%", f"%{q_no_spaces}%"
     )
+    
+    # If not found with full query, try each individual word token
+    if not patients and q_tokens:
+        for token in q_tokens:
+            patients = await conn.fetch(
+                """
+                SELECT id, name, phone, date_of_birth
+                FROM patients
+                WHERE doctor_id = $1
+                  AND (
+                    name ILIKE $2
+                    OR REPLACE(name, ' ', '') ILIKE $2
+                  )
+                LIMIT 10
+                """,
+                UUID(owner_id), f"%{token}%"
+            )
+            if patients:
+                break
+    
     return {
         "patients": [
             {
@@ -143,6 +166,39 @@ async def tool_add_new_patient(fn_args: dict, owner_id: str, conn) -> dict:
                 d_obj = datetime.strptime(p_dob, "%Y-%m-%d").date()
             except ValueError:
                 pass
+
+        # ── Duplicate Guard ──────────────────────────────────────────────────
+        # Search for any patient with a very similar name (token-by-token).
+        # This catches cases where the same person was stored in Arabic and
+        # now the AI is trying to add them again with an English/different spelling.
+        name_tokens = [t for t in p_name.replace("-", " ").split() if len(t) >= 2]
+        existing = None
+        if name_tokens:
+            for token in name_tokens:
+                existing = await conn.fetchrow(
+                    """
+                    SELECT id, name FROM patients
+                    WHERE doctor_id = $1
+                      AND (name ILIKE $2 OR REPLACE(name,' ','') ILIKE $2)
+                    LIMIT 1
+                    """,
+                    UUID(owner_id), f"%{token}%"
+                )
+                if existing:
+                    break
+
+        if existing:
+            return {
+                "status": "error",
+                "message": (
+                    f"يبدو أن مريضاً بهذا الاسم موجود بالفعل في السجلات: \"{existing['name']}\" (id: {existing['id']}). "
+                    f"يرجى استخدام هذا المريض الموجود بدلاً من إضافة مريض جديد. "
+                    f"إذا كان مريضاً مختلفاً تماماً، تأكد من الطبيب أولاً."
+                ),
+                "existing_patient_id": str(existing['id']),
+                "existing_patient_name": existing['name']
+            }
+        # ─────────────────────────────────────────────────────────────────────
 
         row = await conn.fetchrow(
             """

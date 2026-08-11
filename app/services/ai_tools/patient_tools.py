@@ -34,45 +34,89 @@ def is_dummy_phone(phone: Optional[str]) -> bool:
 
 async def tool_search_my_patients(fn_args: dict, owner_id: str, conn) -> dict:
     q = fn_args.get("query", "").strip()
+    
+    # Preprocess generic queries requesting list of all patients
+    q_clean = q.lower().strip()
+    normalized_q = q_clean.replace("ى", "ي").replace("ة", "ه").replace("أ", "ا").replace("إ", "ا")
+    
+    temp = normalized_q
+    stop_words = [
+        "مين", "عرض", "البحث عن", "بحث عن", "قائمة", "سجل", "كل", "اللي عندي", "عندي", 
+        "بتوعي", "المسجلين", "الموجودين", "يا ترى", "هل فيه", "هل يوجد",
+        "في العيادة", "ف العيادة", "في العياده", "ف العياده", "العيادة", "العياده",
+        "دلوقتي", "دلوقت", "حالياً", "حاليا", "اليوم", "في", "ف"
+    ]
+    for stop_word in stop_words:
+        temp = temp.replace(stop_word, "").strip()
+        
+    if temp in ["", "مرضى", "مرضي", "مريض", "المرضى", "المرضي", "المرضا", "مرضاي", "مرضايا", "مرضائي", "مرضائى"]:
+        q = ""
+
     # Remove spaces from query for a normalized comparison
     # This handles cases like "عبد الرحمن" vs "عبدالرحمن"
     q_no_spaces = q.replace(" ", "")
     # Split into individual tokens to search for each word separately
     q_tokens = [t for t in q.split() if len(t) >= 2]
     
-    patients = await conn.fetch(
-        """
-        SELECT id, name, phone, date_of_birth
-        FROM patients
-        WHERE doctor_id = $1
-          AND (
-            name ILIKE $2
-            OR phone ILIKE $2
-            OR REPLACE(name, ' ', '') ILIKE $3
-          )
-        LIMIT 15
-        """,
-        UUID(owner_id), f"%{q}%", f"%{q_no_spaces}%"
-    )
-    
-    # If not found with full query, try each individual word token
-    if not patients and q_tokens:
-        for token in q_tokens:
+    patients = []
+    if q == "":
+        patients = await conn.fetch(
+            """
+            SELECT id, name, phone, date_of_birth
+            FROM patients
+            WHERE doctor_id = $1
+            LIMIT 15
+            """,
+            UUID(owner_id)
+        )
+    else:
+        patients = await conn.fetch(
+            """
+            SELECT id, name, phone, date_of_birth
+            FROM patients
+            WHERE doctor_id = $1
+              AND (
+                name ILIKE $2
+                OR phone ILIKE $2
+                OR REPLACE(name, ' ', '') ILIKE $3
+              )
+            LIMIT 15
+            """,
+            UUID(owner_id), f"%{q}%", f"%{q_no_spaces}%"
+        )
+        
+        # If not found with full query, try each individual word token
+        if not patients and q_tokens:
+            for token in q_tokens:
+                patients = await conn.fetch(
+                    """
+                    SELECT id, name, phone, date_of_birth
+                    FROM patients
+                    WHERE doctor_id = $1
+                      AND (
+                        name ILIKE $2
+                        OR REPLACE(name, ' ', '') ILIKE $2
+                      )
+                    LIMIT 10
+                    """,
+                    UUID(owner_id), f"%{token}%"
+                )
+                if patients:
+                    break
+
+    # Safety fallback: If still empty, but query looks like a generic patient list request
+    if not patients:
+        has_generic_keyword = any(w in normalized_q for w in ["مرض", "كل", "الناس", "سجل", "عياد"])
+        if has_generic_keyword:
             patients = await conn.fetch(
                 """
                 SELECT id, name, phone, date_of_birth
                 FROM patients
                 WHERE doctor_id = $1
-                  AND (
-                    name ILIKE $2
-                    OR REPLACE(name, ' ', '') ILIKE $2
-                  )
-                LIMIT 10
+                LIMIT 15
                 """,
-                UUID(owner_id), f"%{token}%"
+                UUID(owner_id)
             )
-            if patients:
-                break
     
     return {
         "patients": [
@@ -132,6 +176,7 @@ async def tool_add_new_patient(fn_args: dict, owner_id: str, conn) -> dict:
     p_gender = fn_args.get("gender")
     p_diseases = fn_args.get("diseases")
     p_habits = fn_args.get("habits")
+    force = fn_args.get("force", False)
 
     if not p_name:
         return {"status": "error", "message": "اسم المريض مطلوب."}
@@ -145,14 +190,14 @@ async def tool_add_new_patient(fn_args: dict, owner_id: str, conn) -> dict:
         # Phone was NOT provided at all → reject and force AI to ask user
         return {
             "status": "error",
-            "message": "رقم الهاتف غير موجود. يجب عليك سؤال الطبيب أولاً: 'ما هو رقم هاتف المريض؟' — إذا أكد الطبيب عدم توفر الرقم، أعد الاستدعاء مع phone='غير متوفر'."
+            "message": "رقم الهاتف غير موجود. يجب عليك سؤال الطبيب أولاً: 'ما هو رقم هاتف المريض؟' — إذا أكد الطبيب عدم توفر الرقم, أعد الاستدعاء مع phone='غير متوفر'."
         }
 
     if is_dummy_phone(phone_str) and phone_str not in ALLOWED_UNAVAILABLE:
         # Phone looks fake (e.g. 0000000000) but is NOT an explicit unavailable marker
         return {
             "status": "error",
-            "message": "رقم الهاتف المُرسل يبدو وهمياً أو غير صالح. يرجى سؤال الطبيب عن الرقم الحقيقي، أو إذا أكد عدم توفره أرسل phone='غير متوفر'."
+            "message": "رقم الهاتف المُرسل يبدو وهمياً أو غير صالح. يرجى سؤال الطبيب عن الرقم الحقيقي, أو إذا أكد عدم توفره أرسل phone='غير متوفر'."
         }
 
     # At this point phone_str is either a real number or an explicit unavailable marker
@@ -171,21 +216,22 @@ async def tool_add_new_patient(fn_args: dict, owner_id: str, conn) -> dict:
         # Search for any patient with a very similar name (token-by-token).
         # This catches cases where the same person was stored in Arabic and
         # now the AI is trying to add them again with an English/different spelling.
-        name_tokens = [t for t in p_name.replace("-", " ").split() if len(t) >= 2]
         existing = None
-        if name_tokens:
-            for token in name_tokens:
-                existing = await conn.fetchrow(
-                    """
-                    SELECT id, name FROM patients
-                    WHERE doctor_id = $1
-                      AND (name ILIKE $2 OR REPLACE(name,' ','') ILIKE $2)
-                    LIMIT 1
-                    """,
-                    UUID(owner_id), f"%{token}%"
-                )
-                if existing:
-                    break
+        if not force:
+            name_tokens = [t for t in p_name.replace("-", " ").split() if len(t) >= 2]
+            if name_tokens:
+                for token in name_tokens:
+                    existing = await conn.fetchrow(
+                        """
+                        SELECT id, name FROM patients
+                        WHERE doctor_id = $1
+                          AND (name ILIKE $2 OR REPLACE(name,' ','') ILIKE $2)
+                        LIMIT 1
+                        """,
+                        UUID(owner_id), f"%{token}%"
+                    )
+                    if existing:
+                        break
 
         if existing:
             return {
@@ -193,7 +239,7 @@ async def tool_add_new_patient(fn_args: dict, owner_id: str, conn) -> dict:
                 "message": (
                     f"يبدو أن مريضاً بهذا الاسم موجود بالفعل في السجلات: \"{existing['name']}\" (id: {existing['id']}). "
                     f"يرجى استخدام هذا المريض الموجود بدلاً من إضافة مريض جديد. "
-                    f"إذا كان مريضاً مختلفاً تماماً، تأكد من الطبيب أولاً."
+                    f"إذا كان مريضاً مختلفاً تماماً وأكد الطبيب ذلك, أعد محاولة الاستدعاء مع تمرير force=true لتجاوز هذا التحذير."
                 ),
                 "existing_patient_id": str(existing['id']),
                 "existing_patient_name": existing['name']

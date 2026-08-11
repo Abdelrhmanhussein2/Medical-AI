@@ -32,6 +32,7 @@ export default function StatsCard({ title, data }) {
           </h3>
           <button
             onClick={handleDownloadCSV}
+            data-html2canvas-ignore="true"
             className="flex items-center gap-1 px-2.5 py-1.5 border border-primary/20 bg-white text-primary hover:bg-primary-light rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer"
             title="تحميل كملف CSV"
           >

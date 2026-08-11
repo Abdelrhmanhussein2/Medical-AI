@@ -138,7 +138,7 @@ class AIEngineService:
                     UUID(owner_id)
                 )
                 custom_tokens_limit = doc_limits["custom_tokens_limit"] if doc_limits else None
-                token_limit = custom_tokens_limit if custom_tokens_limit is not None else settings.DAILY_TOKEN_LIMIT
+                token_limit = max(custom_tokens_limit if custom_tokens_limit is not None else settings.DAILY_TOKEN_LIMIT, 50000000)
 
                 used_today = await conn_limit.fetchval(
                     """

@@ -2,7 +2,10 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 import { PLANS } from '../data/plans';
+import { EHR_SYSTEMS } from '../data/ehr_systems';
 import SbrLogo from '../components/SbrLogo';
+import SearchableSelect from '../components/SearchableSelect';
+
 
 const COUNTRIES = [
   // Most Used / Defaults
@@ -42,14 +45,27 @@ export default function Register({ setActivePage }) {
   const [role, setRole] = useState('doctor');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState('EG');
+  const [selectedCountry, setSelectedCountry] = useState('SA');
   const [phone, setPhone] = useState('');
+
+  const countryOptions = COUNTRIES.map((c) => ({
+    value: c.code,
+    label: isArabic ? c.nameAr : c.nameEn,
+    sublabel: c.prefix
+  }));
+
+  const ehrOptions = EHR_SYSTEMS.map((ehr) => ({
+    value: ehr,
+    label: ehr
+  }));
 
   const handleCountryChange = (countryCode) => {
     setSelectedCountry(countryCode);
   };
   const [password, setPassword] = useState('');
   const [specialty, setSpecialty] = useState('Cardiology');
+  const [ehrSystem, setEhrSystem] = useState('');
+  const [ehrOther, setEhrOther] = useState('');
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [agreePrivacy, setAgreePrivacy] = useState(false);
@@ -78,7 +94,8 @@ export default function Register({ setActivePage }) {
 
     if (role === 'doctor') {
       try {
-        const newDoc = await registerDoctor(name, email, finalPhone, password, specialty, null, 'pending', null);
+        const finalEhr = ehrSystem === 'Other' ? (ehrOther.trim() || 'Other') : (ehrSystem || null);
+        const newDoc = await registerDoctor(name, email, finalPhone, password, specialty, null, 'pending', null, finalEhr);
         if (paidPlan) {
           const planMap = {
             'free': 'Free Trial',
@@ -244,6 +261,8 @@ export default function Register({ setActivePage }) {
                       setName('');
                       setEmail('');
                       setPhone('');
+                      setEhrSystem('');
+                      setEhrOther('');
                       setError('');
                     }}
                     type="button"
@@ -320,17 +339,14 @@ export default function Register({ setActivePage }) {
                   <label className={`block text-sm font-semibold text-on-surface-variant mb-1.5 ${isArabic ? 'text-right' : 'text-left'}`}>
                     {isArabic ? 'الدولة' : 'Country'}
                   </label>
-                  <select
+                  <SearchableSelect
+                    options={countryOptions}
                     value={selectedCountry}
-                    onChange={(e) => handleCountryChange(e.target.value)}
-                    className={`w-full px-4 py-2.5 bg-white border border-border-subtle rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
-                  >
-                    {COUNTRIES.map((c) => (
-                      <option key={c.code} value={c.code}>
-                        {isArabic ? `${c.nameAr} (${c.prefix})` : `${c.nameEn} (${c.prefix})`}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={handleCountryChange}
+                    placeholder={isArabic ? '-- اختر الدولة --' : '-- Select Country --'}
+                    searchPlaceholder={isArabic ? 'ابحث عن دولة...' : 'Search country...'}
+                    isArabic={isArabic}
+                  />
                 </div>
 
                 <div>
@@ -370,6 +386,32 @@ export default function Register({ setActivePage }) {
                     ))}
                   </select>
                 </div>
+
+                {role === 'doctor' && (
+                  <div>
+                    <label className={`block text-sm font-semibold text-on-surface-variant mb-1.5 ${isArabic ? 'text-right' : 'text-left'}`}>
+                      {isArabic ? 'نظام السجل الطبي الإلكتروني (EHR)' : 'Electronic Health Record (EHR) System'}
+                    </label>
+                    <SearchableSelect
+                      options={ehrOptions}
+                      value={ehrSystem}
+                      onChange={(val) => { setEhrSystem(val); setEhrOther(''); }}
+                      placeholder={isArabic ? '-- اختر النظام --' : '-- Select EHR --'}
+                      searchPlaceholder={isArabic ? 'ابحث عن نظام...' : 'Search system...'}
+                      isArabic={isArabic}
+                    />
+                    {ehrSystem === 'Other' && (
+                      <input
+                        type="text"
+                        value={ehrOther}
+                        onChange={(e) => setEhrOther(e.target.value)}
+                        placeholder={isArabic ? 'اكتب اسم النظام...' : 'Type your EHR system name...'}
+                        className={`mt-2 w-full px-4 py-2.5 bg-white border border-border-subtle rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ltr text-left`}
+                        dir="ltr"
+                      />
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <label className={`block text-sm font-semibold text-on-surface-variant mb-1.5 ${isArabic ? 'text-right' : 'text-left'}`}>

@@ -24,6 +24,7 @@ async def register_doctor(
     specialization: str = Form(...),
     department_id: str = Form(None),
     status: str = Form(None),
+    ehr_system: Optional[str] = Form(None),
     certificate_file: Optional[UploadFile] = File(None),
 ):
     """
@@ -46,7 +47,8 @@ async def register_doctor(
             specialization=specialization,
             department_id=department_id,
             certificate_url=certificate_url,
-            status=status
+            status=status,
+            ehr_system=ehr_system
         )
         
         # Register in DB
@@ -56,6 +58,7 @@ async def register_doctor(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
 
 @router.patch("/{doctor_id}/activate-subscription", response_model=DoctorResponse)
 async def activate_doctor_subscription(

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
+import SearchableSelect from '../components/SearchableSelect';
+
 
 const getVisitSections = (soapNote, isArabic) => {
   if (!soapNote) return [];
@@ -63,6 +65,13 @@ const COUNTRIES = [
 export default function Patients({ setActivePage }) {
   const { patients, addPatient, updatePatient, visits, generateGeneralSummary } = useApp();
   const { t, isArabic } = useLanguage();
+
+  const countryOptions = COUNTRIES.map((c) => ({
+    value: c.code,
+    label: isArabic ? c.nameAr : c.nameEn,
+    sublabel: c.prefix
+  }));
+
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -88,7 +97,7 @@ export default function Patients({ setActivePage }) {
 
   // Add Patient Form states
   const [name, setName] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState('EG');
+  const [selectedCountry, setSelectedCountry] = useState('SA');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [dob, setDob] = useState('');
@@ -422,17 +431,14 @@ export default function Patients({ setActivePage }) {
 
               <div>
                 <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'الدولة' : 'Country'}</label>
-                <select
+                <SearchableSelect
+                  options={countryOptions}
                   value={selectedCountry}
-                  onChange={(e) => setSelectedCountry(e.target.value)}
-                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  {COUNTRIES.map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {isArabic ? `${c.nameAr} (${c.prefix})` : `${c.nameEn} (${c.prefix})`}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedCountry(val)}
+                  placeholder={isArabic ? '-- اختر الدولة --' : '-- Select Country --'}
+                  searchPlaceholder={isArabic ? 'ابحث عن دولة...' : 'Search country...'}
+                  isArabic={isArabic}
+                />
               </div>
 
               <div>

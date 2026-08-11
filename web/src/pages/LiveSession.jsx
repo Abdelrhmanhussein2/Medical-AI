@@ -401,176 +401,22 @@ export default function LiveSession({ appointmentId, setActivePage }) {
     if (whatsappSendType === 'pdf') {
       try {
         setWhatsappStatusMsg(isAr ? 'جاري تحميل موديول الـ PDF...' : 'Loading PDF engine...');
+        const html2pdf = await loadHtml2Pdf();
 
+        setWhatsappStatusMsg(isAr ? 'جاري رسم وتوليد التقرير الطبي الـ PDF...' : 'Generating PDF report...');
+        // Always generate in English ('en') for WhatsApp to prevent any Arabic RTL text reversal bugs
+        const htmlContent = getPdfHtml(whatsappTarget, 'en');
 
-        // --- Build PDF purely using jsPDF (no html2canvas, no blank page issues) ---
-        const jspdfUrl = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-        const jspdf = await new Promise((resolve, reject) => {
-          if (window.jspdf) { resolve(window.jspdf); return; }
-          const s = document.createElement('script');
-          s.src = jspdfUrl;
-          s.onload = () => resolve(window.jspdf);
-          s.onerror = reject;
-          document.head.appendChild(s);
-        });
-
-        const { jsPDF } = jspdf;
-        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-
-        // Set RTL support via text alignment — jsPDF does RTL via alignment
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 15;
-        const contentWidth = pageWidth - margin * 2;
-        let yPos = margin;
-
-        const addText = (text, opts = {}) => {
-          const {
-            fontSize = 11,
-            fontStyle = 'normal',
-            color = [30, 41, 59],
-            align = 'right',
-            lineHeight = 6,
-            maxWidth = contentWidth,
-            wrap = true
-          } = opts;
-          doc.setFontSize(fontSize);
-          doc.setTextColor(...color);
-          try { doc.setFont('helvetica', fontStyle); } catch (_) {}
-
-          const lines = wrap ? doc.splitTextToSize(text || '', maxWidth) : [text];
-          const xPos = align === 'right' ? pageWidth - margin : margin;
-          
-          // Page break check
-          if (yPos + lines.length * lineHeight > pageHeight - margin) {
-            doc.addPage();
-            yPos = margin;
-          }
-
-          doc.text(lines, xPos, yPos, { align });
-          yPos += lines.length * lineHeight + 2;
-          return lines.length * lineHeight + 2;
+        const opt = {
+          margin:       10,
+          filename:     whatsappTarget === 'note' ? 'Clinical_Report.pdf' : 'Patient_Instructions.pdf',
+          image:        { type: 'jpeg', quality: 0.98 },
+          html2canvas:  { scale: 2, useCORS: true },
+          jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
 
-        const addRect = (h, color = [248, 250, 252]) => {
-          if (yPos + h > pageHeight - margin) { doc.addPage(); yPos = margin; }
-          doc.setFillColor(...color);
-          doc.roundedRect(margin, yPos - 4, contentWidth, h + 6, 2, 2, 'F');
-        };
-
-        const addHLine = (colorArr = [226, 232, 240]) => {
-          doc.setDrawColor(...colorArr);
-          doc.setLineWidth(0.3);
-          doc.line(margin, yPos, pageWidth - margin, yPos);
-          yPos += 4;
-        };
-
-        // ===== HEADER =====
-        doc.setFillColor(26, 86, 219);
-        doc.rect(0, 0, pageWidth, 18, 'F');
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(255, 255, 255);
-        doc.text('مِسبار AI  |  SBR AI', pageWidth - margin, 12, { align: 'right' });
-        doc.setFontSize(9);
-        doc.text(isAr ? 'ملخص زيارة طبية' : 'Medical Visit Summary', margin, 12, { align: 'left' });
-        yPos = 26;
-
-        // ===== DOC TITLE =====
-        addText(docTitle, { fontSize: 14, fontStyle: 'bold', color: [15, 23, 42], align: 'center' });
-        yPos += 2;
-        addHLine();
-
-        // ===== META GRID =====
-        doc.setFontSize(10);
-        doc.setTextColor(51, 65, 85);
-        const col1X = pageWidth - margin;
-        const col2X = pageWidth / 2 + 5;
-        const metaY = yPos;
-        // Right column
-        doc.setFont('helvetica', 'bold'); doc.text(isAr ? 'اسم المريض:' : 'Patient:', col1X, metaY, { align: 'right' });
-        doc.setFont('helvetica', 'normal'); doc.text(patient?.name || (isAr ? 'غير معروف' : 'Unknown'), col1X - 28, metaY, { align: 'right' });
-        doc.setFont('helvetica', 'bold'); doc.text(isAr ? 'الطبيب المعالج:' : 'Physician:', col1X, metaY + 7, { align: 'right' });
-        doc.setFont('helvetica', 'normal'); doc.text(currentUser?.name || (isAr ? 'دكتور' : 'Doctor'), col1X - 35, metaY + 7, { align: 'right' });
-        // Left column
-        doc.setFont('helvetica', 'bold'); doc.text(isAr ? 'التاريخ:' : 'Date:', col2X, metaY, { align: 'right' });
-        doc.setFont('helvetica', 'normal'); doc.text(dateStr, col2X - 18, metaY, { align: 'right' });
-        doc.setFont('helvetica', 'bold'); doc.text(isAr ? 'الهاتف:' : 'Phone:', col2X, metaY + 7, { align: 'right' });
-        doc.setFont('helvetica', 'normal'); doc.text(patient?.phone || 'N/A', col2X - 18, metaY + 7, { align: 'right' });
-        yPos = metaY + 16;
-        addHLine([203, 213, 225]);
-
-        // ===== CONTENT =====
-        if (whatsappTarget === 'note') {
-          if (summaryText) {
-            addText(isAr ? 'ملخص الجلسة:' : 'Session Summary:', { fontSize: 11, fontStyle: 'bold', color: [26, 86, 219] });
-            addText(summaryText, { fontSize: 10, color: [75, 85, 99] });
-            yPos += 2;
-          }
-
-          const sections = Object.entries(editedSoapNote || soapNote || {})
-            .filter(([key, val]) => key !== '_original' && typeof val !== 'object' && val && val.trim() && !isPlaceholderText(val));
-
-          if (sections.length > 0) {
-            addText(isAr ? 'تفاصيل التقرير الطبي:' : 'Clinical Note Details:', { fontSize: 11, fontStyle: 'bold', color: [26, 86, 219] });
-            sections.forEach(([key, val]) => {
-              const norm = key.trim().toLowerCase();
-              let label = key;
-              const map = { s: { ar: 'الشكوى المرضية', en: 'Subjective (S)' }, o: { ar: 'الفحص الإكلينيكي', en: 'Objective (O)' }, a: { ar: 'التشخيص الطبي', en: 'Assessment (A)' }, p: { ar: 'الخطة العلاجية', en: 'Plan (P)' } };
-              if (map[norm]) label = isAr ? map[norm].ar : map[norm].en;
-              addText(`• ${label}:`, { fontSize: 10, fontStyle: 'bold', color: [30, 58, 138] });
-              addText(val, { fontSize: 10, color: [51, 65, 85] });
-              yPos += 1;
-            });
-          }
-        } else {
-          const soapAssessmentKey = Object.keys(soapNote || {}).find(k => {
-            const lk = k.toLowerCase().trim();
-            return lk === 'a' || lk === 'assessment' || lk.includes('التشخيص') || lk.includes('التقييم');
-          });
-          const soapAssessment = soapAssessmentKey ? soapNote[soapAssessmentKey] : null;
-          const soapPlanKey = Object.keys(soapNote || {}).find(k => {
-            const lk = k.toLowerCase().trim();
-            return lk === 'p' || lk === 'plan' || lk.includes('الخطة') || lk.includes('الخطه');
-          });
-          const soapPlan = soapPlanKey ? soapNote[soapPlanKey] : null;
-
-          if (soapAssessment || patientSummary) {
-            addText(isAr ? '1. التشخيص وملخص الحالة:' : '1. Diagnosis & Summary:', { fontSize: 11, fontStyle: 'bold', color: [26, 86, 219] });
-            if (soapAssessment) addText(`${isAr ? 'التشخيص: ' : 'Diagnosis: '}${soapAssessment}`, { fontSize: 10, fontStyle: 'bold', color: [15, 23, 42] });
-            if (patientSummary) addText(patientSummary, { fontSize: 10, color: [51, 65, 85] });
-            yPos += 2;
-          }
-          if (soapPlan) {
-            addText(isAr ? '2. الخطة العلاجية المقترحة:' : '2. Proposed Treatment Plan:', { fontSize: 11, fontStyle: 'bold', color: [245, 158, 11] });
-            addText(soapPlan, { fontSize: 10, color: [69, 26, 3] });
-            yPos += 2;
-          }
-          const actualInstructions = instructionsFormatted || '';
-          if (actualInstructions) {
-            addText(isAr ? '3. تعليمات وإرشادات الطبيب المعالج:' : '3. Physician Instructions:', { fontSize: 11, fontStyle: 'bold', color: [16, 185, 129] });
-            addText(actualInstructions, { fontSize: 10, color: [22, 101, 52] });
-            yPos += 2;
-          }
-          if (tasks && tasks.length > 0) {
-            addText(isAr ? '4. مهام المتابعة:' : '4. Follow-up Tasks:', { fontSize: 11, fontStyle: 'bold', color: [236, 72, 153] });
-            tasks.forEach(t => addText(`• ${t}`, { fontSize: 10, color: [77, 7, 82] }));
-          }
-        }
-
-        // ===== FOOTER =====
-        const footerY = pageHeight - 20;
-        doc.setDrawColor(226, 232, 240);
-        doc.setLineWidth(0.3);
-        doc.line(margin, footerY, pageWidth - margin, footerY);
-        doc.setFontSize(8);
-        doc.setTextColor(148, 163, 184);
-        doc.text(isAr ? 'تم توليد هذا التقرير بأمان بواسطة منصة مِسبار للذكاء الاصطناعي الطبي — SBR AI' : 'Generated securely by SBR AI Medical Intelligence Platform', pageWidth / 2, footerY + 5, { align: 'center' });
-        doc.setFontSize(9);
-        doc.setTextColor(71, 85, 105);
-        doc.text(isAr ? `توقيع الطبيب: ${currentUser?.name || ''}` : `Physician: ${currentUser?.name || ''}`, margin, footerY + 12, { align: 'left' });
-
-        const pdfBlob = doc.output('blob');
+        // Pass the HTML string directly to html2pdf which renders it correctly in a clean virtual context
+        const pdfBlob = await html2pdf().set(opt).from(htmlContent).output('blob');
         console.log('[PDF Debug] Blob size:', pdfBlob.size, 'type:', pdfBlob.type);
 
         setWhatsappStatusMsg(isAr ? 'جاري رفع وإرسال الـ PDF عبر الواتساب...' : 'Uploading and sending PDF over WhatsApp...');
@@ -588,9 +434,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
           body: JSON.stringify({
             phone: cleaned,
             base64_data: base64Data,
-            file_name: whatsappTarget === 'note' 
-              ? (isAr ? 'التقرير_الطبي.pdf' : 'Clinical_Report.pdf')
-              : (isAr ? 'تعليمات_المريض.pdf' : 'Patient_Instructions.pdf')
+            file_name: whatsappTarget === 'note' ? 'Clinical_Report.pdf' : 'Patient_Instructions.pdf'
           })
         });
 
@@ -882,7 +726,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
     win.print();
   };
 
-  const generatePdfDocument = (target, lang) => {
+  const getPdfHtml = (target, lang) => {
     const isAr = lang === 'ar';
     const dateStr = new Date().toLocaleDateString(isAr ? 'ar-EG' : 'en-US', {
       year: 'numeric',
@@ -1226,14 +1070,33 @@ export default function LiveSession({ appointmentId, setActivePage }) {
             <p style="margin: 0; font-size: 10px;">${currentUser?.name || ''}</p>
           </div>
         </div>
-        
-        <script>
-          window.onload = function() {
-            window.print();
-          }
-        </script>
       </body>
       </html>
+    `;
+    return printHtml;
+  };
+
+  const loadHtml2Pdf = async () => {
+    const html2pdfUrl = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    return new Promise((resolve, reject) => {
+      if (window.html2pdf) { resolve(window.html2pdf); return; }
+      const s = document.createElement('script');
+      s.src = html2pdfUrl;
+      s.onload = () => resolve(window.html2pdf);
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  };
+
+  const generatePdfDocument = (target, lang) => {
+    const isAr = lang === 'ar';
+    const htmlContent = getPdfHtml(target, lang);
+    const printHtml = htmlContent + `
+      <script>
+        window.onload = function() {
+          window.print();
+        }
+      </script>
     `;
 
     const printWindow = window.open('', '_blank', 'width=800,height=900');

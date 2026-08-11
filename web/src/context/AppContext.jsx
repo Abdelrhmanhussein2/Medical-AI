@@ -201,7 +201,7 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const registerDoctor = async (name, email, phone, password, specialization = 'General', departmentId = null, status = 'approved', certificateFile = null) => {
+  const registerDoctor = async (name, email, phone, password, specialization = 'General', departmentId = null, status = 'approved', certificateFile = null, ehrSystem = null) => {
     const formData = new FormData();
     formData.append('name', name);
     formData.append('email', email);
@@ -215,6 +215,9 @@ export const AppProvider = ({ children }) => {
     }
     if (status) {
       formData.append('status', status);
+    }
+    if (ehrSystem) {
+      formData.append('ehr_system', ehrSystem);
     }
     if (certificateFile) {
       formData.append('certificate_file', certificateFile);

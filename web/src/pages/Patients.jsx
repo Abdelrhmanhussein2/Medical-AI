@@ -369,11 +369,11 @@ export default function Patients({ setActivePage }) {
                   </td>
                   <td className={`hidden md:table-cell px-6 py-4 whitespace-nowrap ${isArabic ? 'text-right' : 'text-left'}`}>
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
-                      patient.gender === 'male' 
-                        ? 'bg-primary-light text-primary' 
-                        : 'bg-surface-container-high text-secondary'
+                      (patient.gender === 'female' || patient.gender === 'أنثى')
+                        ? 'bg-surface-container-high text-secondary' 
+                        : 'bg-primary-light text-primary'
                     }`}>
-                      {patient.gender === 'male' ? (isArabic ? 'ذكر' : 'Male') : (isArabic ? 'أنثى' : 'Female')}
+                      {(patient.gender === 'female' || patient.gender === 'أنثى') ? (isArabic ? 'أنثى' : 'Female') : (isArabic ? 'ذكر' : 'Male')}
                     </span>
                   </td>
                   <td className={`hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-secondary font-mono ${isArabic ? 'text-right' : 'text-left'}`}>
@@ -571,9 +571,9 @@ export default function Patients({ setActivePage }) {
                       </div>
                       <h4 className="font-button text-base text-on-surface font-bold">{selectedPatient.name}</h4>
                       <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${
-                        selectedPatient.gender === 'male' ? 'bg-primary-light text-primary' : 'bg-surface-container-high text-secondary'
+                        (selectedPatient.gender === 'female' || selectedPatient.gender === 'أنثى') ? 'bg-surface-container-high text-secondary' : 'bg-primary-light text-primary'
                       }`}>
-                        {selectedPatient.gender === 'male' ? t('male') : t('female')}
+                        {(selectedPatient.gender === 'female' || selectedPatient.gender === 'أنثى') ? t('female') : t('male')}
                       </span>
                     </div>
                     

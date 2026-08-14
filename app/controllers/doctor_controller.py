@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, status, Depends
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, status, Depends, Request
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from uuid import UUID
@@ -17,19 +17,36 @@ class SubscriptionActivate(BaseModel):
 
 @router.post("/register", response_model=DoctorResponse, status_code=status.HTTP_201_CREATED)
 async def register_doctor(
+    request: Request,
     name: str = Form(...),
     email: EmailStr = Form(...),
     phone: str = Form(...),
     password: Optional[str] = Form(None),
     specialization: str = Form(...),
     department_id: str = Form(None),
-    status: str = Form(None),
+    status_val: str = Form(None, alias="status"),
     ehr_system: Optional[str] = Form(None),
     certificate_file: Optional[UploadFile] = File(None),
 ):
     """
-    Register a new doctor. Uploads certificate file and creates a pending record.
+    Register a new doctor with rate limiting. Uploads certificate file and creates record.
     """
+    from app.core.redis import redis_client
+    client_ip = request.client.host if request.client else "unknown"
+    ip_key = f"register_attempts:{client_ip}"
+
+    if not redis_client.redis:
+        await redis_client.connect()
+
+    count = await redis_client.redis.incr(ip_key)
+    if count == 1:
+        await redis_client.redis.expire(ip_key, 3600)  # 1 hour window
+    if count > 5:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="تجاوزت الحد المسموح به لطلبات التسجيل. يرجى المحاولة بعد ساعة."
+        )
+
     try:
         # Save file if provided
         certificate_url = None
@@ -47,7 +64,7 @@ async def register_doctor(
             specialization=specialization,
             department_id=department_id,
             certificate_url=certificate_url,
-            status=status,
+            status=status_val,
             ehr_system=ehr_system
         )
         
@@ -57,7 +74,9 @@ async def register_doctor(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        import logging
+        logging.getLogger(__name__).exception("Error registering doctor")
+        raise HTTPException(status_code=500, detail="حدث خطأ داخلي. يرجى المحاولة لاحقاً.")
 
 
 @router.patch("/{doctor_id}/activate-subscription", response_model=DoctorResponse)

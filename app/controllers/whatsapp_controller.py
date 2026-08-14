@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
-from app.core.dependencies import get_current_user
+from app.core.config import settings
+from app.core.dependencies import get_current_user, require_admin
 from app.services.whatsapp_service import WhatsAppService
 
 logger = logging.getLogger("whatsapp_controller")
@@ -19,12 +20,27 @@ def get_whatsapp_service() -> WhatsAppService:
     return WhatsAppService()
 
 @router.post("/webhook")
-async def evolution_webhook(payload: Dict[str, Any], service: WhatsAppService = Depends(get_whatsapp_service)):
+@router.post("/webhook/messages-upsert")
+async def evolution_webhook(
+    request: Request,
+    payload: Dict[str, Any],
+    service: WhatsAppService = Depends(get_whatsapp_service)
+):
     """
-    Webhook receiver for Evolution API.
+    Webhook receiver for Evolution API with security check.
     Listens for 'messages.upsert' events, checks for active patient sessions,
     and replies/alerts accordingly.
     """
+    incoming_key = (
+        request.headers.get("apikey")
+        or request.headers.get("x-api-key")
+        or request.headers.get("global_api_key")
+        or request.query_params.get("apikey")
+    )
+    if settings.EVOLUTION_API_KEY and settings.EVOLUTION_API_KEY != "change-me":
+        if incoming_key and incoming_key != settings.EVOLUTION_API_KEY:
+            logger.warning(f"Webhook rejected: invalid API key from {request.client.host}")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     event_type = payload.get("event")
     instance = payload.get("instance")
     
@@ -103,9 +119,14 @@ async def send_custom_message(
     service: WhatsAppService = Depends(get_whatsapp_service)
 ):
     """
-    Endpoint for doctors to send an arbitrary WhatsApp message to any phone number
-    using the connected Evolution API instance.
+    Endpoint for doctors/admins/departments to send a custom WhatsApp message.
     """
+    if current_user.get("role") not in ("doctor", "admin", "department"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="غير مصرح لك بإرسال الرسائل عبر الواتساب."
+        )
+
     success = await service.send_message(req.phone, req.text)
     if not success:
         raise HTTPException(
@@ -126,9 +147,14 @@ async def send_whatsapp_document(
     service: WhatsAppService = Depends(get_whatsapp_service)
 ):
     """
-    Endpoint for doctors to send a PDF document (base64) to any phone number
-    using the connected Evolution API instance.
+    Endpoint for doctors/admins/departments to send a PDF document (base64).
     """
+    if current_user.get("role") not in ("doctor", "admin", "department"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="غير مصرح لك بإرسال الملفات عبر الواتساب."
+        )
+
     success = await service.send_document(req.phone, req.base64_data, req.file_name)
     if not success:
         raise HTTPException(
@@ -155,7 +181,10 @@ async def get_whatsapp_logs(
     return logs
 
 @router.get("/qr-code", response_class=HTMLResponse)
-async def get_qr_page(service: WhatsAppService = Depends(get_whatsapp_service)):
+async def get_qr_page(
+    service: WhatsAppService = Depends(get_whatsapp_service),
+    current_user: dict = Depends(require_admin)
+):
     """
     Renders a clean HTML page displaying the WhatsApp connection QR code
     fetched directly from the Evolution API instance.

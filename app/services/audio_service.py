@@ -75,13 +75,32 @@ class AudioService:
                 detail=f"نوع الملف غير مدعوم. الأنواع المدعومة هي: {', '.join(ALLOWED_EXTENSIONS)}"
             )
 
-        # 2. Security check: Validate file size
+        # 2. Security check: Validate file size & magic bytes MIME type
         contents = await file.read()
         if len(contents) > MAX_AUDIO_SIZE:
             logger.warning(f"Rejected upload exceeding size limit: {len(contents)} bytes")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="حجم الملف الصوتي كبير جداً. الحد الأقصى هو 25 ميجابايت."
+            )
+
+        # Magic bytes check for audio files
+        # WebM: 1A 45 DF A3 | Ogg: OggS | WAV: RIFF | MP3: ID3 or FF FB / FF FA | MP4/M4A: ftyp
+        header = contents[:12]
+        is_valid_magic = (
+            header.startswith(b"\x1a\x45\xdf\xa3") or  # WebM
+            header.startswith(b"OggS") or             # Ogg
+            header.startswith(b"RIFF") or             # WAV
+            header.startswith(b"ID3") or              # MP3 ID3
+            header.startswith(b"\xff\xfb") or         # MP3 raw
+            header.startswith(b"\xff\xfa") or         # MP3 raw
+            b"ftyp" in header                         # MP4 / M4A
+        )
+        if not is_valid_magic:
+            logger.warning(f"Rejected upload with invalid magic bytes: {filename}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="محتوى الملف لا يطابق ملف صوتي صالح."
             )
 
         if len(contents) == 0:

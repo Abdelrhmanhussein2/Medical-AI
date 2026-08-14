@@ -125,11 +125,30 @@ async def tool_get_patient_visits(fn_args: dict, owner_id: str, conn) -> dict:
         logger.exception(f"Error in get_patient_visits: {e}")
         return {"status": "error", "message": f"حدث خطأ أثناء استرجاع الزيارات: {str(e)}"}
 
+def infer_gender(name: str, given_gender: Optional[str] = None) -> str:
+    if given_gender:
+        g = str(given_gender).strip().lower()
+        if g in ["female", "أنثى", "انثى", "f", "woman", "بنت", "سيدة"]:
+            return "female"
+        if g in ["male", "ذكر", "m", "man", "ولد", "رجل"]:
+            return "male"
+
+    first_name = name.strip().split()[0] if name else ""
+    female_names = {
+        "فاطمة", "مريم", "سارة", "زينب", "آية", "نور", "هبة", "منار", "أميرة", "هدى", 
+        "شيماء", "منى", "رنا", "سلمى", "أسماء", "رضوى", "داليا", "مي", "ندى", "ياسمين", 
+        "رحمة", "إيمان", "نهى", "ريم", "مروة", "خلود", "عائشة", "خديجة", "سمية", "أمينة",
+        "يارا", "دينا", "ريهام", "غادة", "عبير", "وفاء", "صفاء", "سناء", "إسراء", "دعاء"
+    }
+    if first_name in female_names or first_name.endswith("ة"):
+        return "female"
+    return "male"
+
 async def tool_add_new_patient(fn_args: dict, owner_id: str, conn) -> dict:
     p_name = fn_args.get("name")
     p_phone = fn_args.get("phone")
     p_dob = fn_args.get("date_of_birth")
-    p_gender = fn_args.get("gender")
+    p_gender = infer_gender(p_name or "", fn_args.get("gender"))
     p_diseases = fn_args.get("diseases")
     p_habits = fn_args.get("habits")
 
@@ -168,36 +187,57 @@ async def tool_add_new_patient(fn_args: dict, owner_id: str, conn) -> dict:
                 pass
 
         # ── Duplicate Guard ──────────────────────────────────────────────────
-        # Search for any patient with a very similar name (token-by-token).
-        # This catches cases where the same person was stored in Arabic and
-        # now the AI is trying to add them again with an English/different spelling.
-        name_tokens = [t for t in p_name.replace("-", " ").split() if len(t) >= 2]
-        existing = None
-        if name_tokens:
-            for token in name_tokens:
-                existing = await conn.fetchrow(
+        force_create = fn_args.get("force_create") or fn_args.get("force") or False
+        
+        if not force_create:
+            # 1. Exact Phone Check (if real phone provided)
+            if p_phone and p_phone not in ALLOWED_UNAVAILABLE:
+                existing_by_phone = await conn.fetchrow(
                     """
-                    SELECT id, name FROM patients
-                    WHERE doctor_id = $1
-                      AND (name ILIKE $2 OR REPLACE(name,' ','') ILIKE $2)
+                    SELECT id, name, phone FROM patients
+                    WHERE doctor_id = $1 AND phone = $2
                     LIMIT 1
                     """,
-                    UUID(owner_id), f"%{token}%"
+                    UUID(owner_id), p_phone
                 )
-                if existing:
-                    break
+                if existing_by_phone:
+                    return {
+                        "status": "error",
+                        "message": (
+                            f"يوجد مريض آخر في السجلات بنفس رقم الهاتف هذا ({p_phone}): \"{existing_by_phone['name']}\" (id: {existing_by_phone['id']}). "
+                            f"يرجى استخدام المريض الموجود أو تغيير رقم الهاتف."
+                        ),
+                        "existing_patient_id": str(existing_by_phone['id']),
+                        "existing_patient_name": existing_by_phone['name']
+                    }
 
-        if existing:
-            return {
-                "status": "error",
-                "message": (
-                    f"يبدو أن مريضاً بهذا الاسم موجود بالفعل في السجلات: \"{existing['name']}\" (id: {existing['id']}). "
-                    f"يرجى استخدام هذا المريض الموجود بدلاً من إضافة مريض جديد. "
-                    f"إذا كان مريضاً مختلفاً تماماً، تأكد من الطبيب أولاً."
-                ),
-                "existing_patient_id": str(existing['id']),
-                "existing_patient_name": existing['name']
-            }
+            # 2. Full Name Exact Match Check (normalized without spaces)
+            clean_p_name = p_name.replace(" ", "").strip()
+            existing_by_name = await conn.fetchrow(
+                """
+                SELECT id, name, phone FROM patients
+                WHERE doctor_id = $1
+                  AND REPLACE(name, ' ', '') ILIKE $2
+                LIMIT 1
+                """,
+                UUID(owner_id), clean_p_name
+            )
+            
+            if existing_by_name:
+                # If phone is provided and is different from the existing patient's phone, allow adding
+                existing_phone = (existing_by_name['phone'] or '').strip()
+                if p_phone and p_phone not in ALLOWED_UNAVAILABLE and existing_phone and p_phone != existing_phone:
+                    logger.info(f"Adding new patient '{p_name}' despite similar name because phone number is different ({p_phone} vs {existing_phone}).")
+                else:
+                    return {
+                        "status": "error",
+                        "message": (
+                            f"يبدو أن مريضاً بهذا الاسم موجود بالفعل في السجلات: \"{existing_by_name['name']}\" (id: {existing_by_name['id']}). "
+                            f"إذا كان هذا هو نفس المريض، استخدم حسابه الحالي. أما إذا كان مريضاً جديداً برقم هاتف مختلف، يمكنك إضافته بتحديد force_create=true."
+                        ),
+                        "existing_patient_id": str(existing_by_name['id']),
+                        "existing_patient_name": existing_by_name['name']
+                    }
         # ─────────────────────────────────────────────────────────────────────
 
         row = await conn.fetchrow(

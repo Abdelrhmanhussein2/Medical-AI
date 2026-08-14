@@ -112,6 +112,23 @@ export const SessionProvider = ({ children }) => {
   const timerRef = useRef(null);
   const chunkTimerRef = useRef(null);
   const isRecordingRef = useRef(false);
+  const transcriptSyncDebounceRef = useRef(null);
+
+  const updateTranscriptText = (newText) => {
+    setTranscriptText(newText);
+    const activeSessionId = sessionId;
+    if (activeSessionId && isOnline) {
+      if (transcriptSyncDebounceRef.current) {
+        clearTimeout(transcriptSyncDebounceRef.current);
+      }
+      transcriptSyncDebounceRef.current = setTimeout(() => {
+        apiFetch(`/sessions/${activeSessionId}/transcript`, {
+          method: 'PATCH',
+          body: JSON.stringify({ transcript_raw: newText, duration_seconds: duration })
+        }).catch(err => console.error("Failed to sync edited transcript to backend", err));
+      }, 500);
+    }
+  };
 
   // Load active session metadata from localStorage on startup (to recover after reload)
   useEffect(() => {
@@ -256,6 +273,12 @@ export const SessionProvider = ({ children }) => {
       } else {
         setIsManualMode(false);
         setIsPaused(false);
+        if (transcriptText && isOnline) {
+          apiFetch(`/sessions/${currentSessionId}/transcript`, {
+            method: 'PATCH',
+            body: JSON.stringify({ transcript_raw: transcriptText, duration_seconds: duration })
+          }).catch(err => console.error("Failed to pre-sync transcript text", err));
+        }
       }
 
       // 2. Initialize Microphone Stream
@@ -312,32 +335,34 @@ export const SessionProvider = ({ children }) => {
     try {
       setAppointmentId(appId);
       setPatient(patientObj);
-      setDuration(0);
-      setTranscriptText('');
-      setSummaryDone(false);
-      setSoapNote(null);
-      setSummaryText('');
-      setPatientSummary('');
-      setPrescriptions([]);
-      setTasks([]);
-      setShowSummaryError(false);
       setIsManualMode(true);
+      setShowSummaryError(false);
 
-      let currentSessionId = null;
+      let currentSessionId = sessionId;
 
-      // 1. Initialize backend session
-      if (isOnline) {
-        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
-        const session = await apiFetch('/sessions/', {
-          method: 'POST',
-          body: JSON.stringify({
-            doctor_id: currentUser.id,
-            appointment_id: appId || null,
-            patient_id: patientObj?.id || null
-          })
-        });
-        setSessionId(session.id);
-        currentSessionId = session.id;
+      if (!currentSessionId) {
+        setDuration(0);
+        setTranscriptText('');
+        setSummaryDone(false);
+        setSoapNote(null);
+        setSummaryText('');
+        setPatientSummary('');
+        setPrescriptions([]);
+        setTasks([]);
+
+        if (isOnline) {
+          const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
+          const session = await apiFetch('/sessions/', {
+            method: 'POST',
+            body: JSON.stringify({
+              doctor_id: currentUser.id,
+              appointment_id: appId || null,
+              patient_id: patientObj?.id || null
+            })
+          });
+          setSessionId(session.id);
+          currentSessionId = session.id;
+        }
       }
 
       isRecordingRef.current = true;
@@ -792,6 +817,18 @@ export const SessionProvider = ({ children }) => {
       if (updatedSoap !== undefined) setSoapNote(updatedSoap);
       if (updatedSummaryText !== undefined) setSummaryText(updatedSummaryText);
       if (updatedPatientSummary !== undefined) setPatientSummary(updatedPatientSummary);
+
+      const activeData = localStorage.getItem("active_bg_recording_session");
+      if (activeData) {
+        try {
+          const parsed = JSON.parse(activeData);
+          if (updatedSoap !== undefined) parsed.soapNote = updatedSoap;
+          if (updatedSummaryText !== undefined) parsed.summaryText = updatedSummaryText;
+          if (updatedPatientSummary !== undefined) parsed.patientSummary = updatedPatientSummary;
+          localStorage.setItem("active_bg_recording_session", JSON.stringify(parsed));
+        } catch (e) {}
+      }
+
       return result;
     } catch (err) {
       console.error("Failed to save edited notes:", err);
@@ -833,7 +870,7 @@ export const SessionProvider = ({ children }) => {
       forceCloseSession,
       getPatientSessions,
       loadSessionByAppointment,
-      setTranscriptText,
+      setTranscriptText: updateTranscriptText,
       startManualSession,
       isManualMode,
       setIsManualMode,

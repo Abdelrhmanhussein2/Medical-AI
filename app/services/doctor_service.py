@@ -21,8 +21,9 @@ class DoctorService:
         Saves the uploaded certificate locally and returns the path/URL.
         In a real app, this might upload to S3.
         """
-        file_ext = os.path.splitext(file.filename)[1]
-        safe_filename = f"{email.replace('@', '_').replace('.', '_')}{file_ext}"
+        from uuid import uuid4
+        file_ext = os.path.splitext(file.filename)[1] if file.filename else ".pdf"
+        safe_filename = f"{uuid4()}{file_ext}"
         file_path = os.path.join(UPLOAD_DIR, safe_filename)
         
         async with aiofiles.open(file_path, 'wb') as out_file:

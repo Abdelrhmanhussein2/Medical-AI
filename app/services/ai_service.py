@@ -6,6 +6,13 @@ from typing import Optional
 from app.core.config import settings
 
 
+def _sanitize_for_prompt(text: str, max_length: int = 15000) -> str:
+    if not text:
+        return ""
+    cleaned = text[:max_length]
+    return f"<user_content>\n{cleaned}\n</user_content>"
+
+
 async def summarize_session_transcript(transcript: str, patient_name: str = "المريض", summary_format: str = "soap") -> dict:
     """
     يرسل النص الكامل للجلسة لـ OpenAI ويرجع ملخص منظم.
@@ -76,10 +83,10 @@ Return ONLY valid JSON with this exact structure:
 - Do NOT extract or recommend any prescriptions. Keep the "prescriptions" array completely empty [].
 """
 
-        user_prompt = f"""Patient Name: {patient_name}
+        user_prompt = f"""Patient Name: {_sanitize_for_prompt(patient_name, 100)}
 
 Session Transcript:
-{transcript}
+{_sanitize_for_prompt(transcript)}
 
 Please analyze this consultation and return the structured JSON summary."""
 

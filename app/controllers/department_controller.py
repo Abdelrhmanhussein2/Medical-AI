@@ -5,14 +5,17 @@ from pydantic import BaseModel
 from app.schemes.doctor_schema import DoctorResponse
 from app.schemes.department_schema import DepartmentDashboardStats, DepartmentResponse, DepartmentCreate
 from app.services.department_service import department_service
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_admin
 
 router = APIRouter(prefix="/departments", tags=["Departments"])
 
 @router.post("/", response_model=DepartmentResponse, status_code=status.HTTP_201_CREATED)
-async def create_department(dept: DepartmentCreate):
+async def create_department(
+    dept: DepartmentCreate,
+    current_user: dict = Depends(require_admin)
+):
     """
-    Create a new department with an account.
+    Create a new department with an account. Restricted to system administrators.
     """
     try:
         return await department_service.create_department(dept)

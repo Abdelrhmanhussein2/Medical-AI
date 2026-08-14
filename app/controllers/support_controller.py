@@ -1,4 +1,5 @@
-import random
+import secrets
+from html import escape
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
 from app.services.email_service import email_service
@@ -15,8 +16,14 @@ class TicketRequest(BaseModel):
 
 @router.post("/ticket")
 async def create_support_ticket(req: TicketRequest):
-    # Generate auto ticket number
-    ticket_num = f"TKT-{random.randint(100000, 999999)}"
+    # Generate auto ticket number securely
+    ticket_num = f"TKT-{secrets.token_hex(4).upper()}"
+    
+    # Sanitize user inputs for HTML templates
+    safe_name = escape(req.name)
+    safe_email = escape(req.email)
+    safe_phone = escape(req.phone)
+    safe_message = escape(req.message)
     
     # Translate ticket type for presentation
     type_map = {
@@ -25,7 +32,7 @@ async def create_support_ticket(req: TicketRequest):
         "inquiry": "استفسار",
         "technical": "مشكلة تقنية"
     }
-    type_ar = type_map.get(req.ticket_type, req.ticket_type)
+    type_ar = escape(type_map.get(req.ticket_type, req.ticket_type))
 
     # 1. Send copy to the user
     user_subject = f"تأكيد استلام طلبك رقم {ticket_num} - SBR AI"
@@ -90,7 +97,7 @@ async def create_support_ticket(req: TicketRequest):
                 <h2>مركز المساعدة - SBR AI</h2>
             </div>
             <div class="content">
-                <p>مرحباً <strong>{req.name}</strong>،</p>
+                <p>مرحباً <strong>{safe_name}</strong>،</p>
                 <p>شكراً لتواصلك معنا. لقد تم استلام طلبك بنجاح، وتم فتح تيكت دعم فني جديد بالرقم التلقائي التالي:</p>
                 
                 <div class="ticket-details">
@@ -101,7 +108,7 @@ async def create_support_ticket(req: TicketRequest):
                 
                 <p><strong>نص رسالتك:</strong></p>
                 <blockquote style="background: #f8fafc; border-right: 4px solid #cbd5e1; padding: 10px; margin: 10px 0; font-style: italic;">
-                    {req.message}
+                    {safe_message}
                 </blockquote>
                 
                 <p>سيقوم فريق الدعم الفني بمراجعة طلبك والرد عليك في أقرب وقت ممكن.</p>
@@ -174,15 +181,15 @@ async def create_support_ticket(req: TicketRequest):
                 
                 <div class="ticket-details">
                     <p><strong>رقم التيكت:</strong> {ticket_num}</p>
-                    <p><strong>اسم المرسل:</strong> {req.name}</p>
-                    <p><strong>البريد الإلكتروني:</strong> {req.email}</p>
-                    <p><strong>رقم الهاتف:</strong> {req.phone}</p>
+                    <p><strong>اسم المرسل:</strong> {safe_name}</p>
+                    <p><strong>البريد الإلكتروني:</strong> {safe_email}</p>
+                    <p><strong>رقم الهاتف:</strong> {safe_phone}</p>
                     <p><strong>نوع الطلب:</strong> {type_ar}</p>
                 </div>
                 
                 <p><strong>نص الرسالة:</strong></p>
                 <p style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; white-space: pre-wrap;">
-                    {req.message}
+                    {safe_message}
                 </p>
             </div>
         </div>

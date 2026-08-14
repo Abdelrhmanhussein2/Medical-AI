@@ -72,23 +72,30 @@ class CompleteRequest(BaseModel):
 async def create_session(data: SessionCreate, current_user: dict = Depends(get_current_user)):
     """إنشاء جلسة جديدة عند بدء التسجيل"""
     role = current_user.get("role")
-    if role == "doctor" and str(current_user["id"]) != str(data.doctor_id):
-        raise HTTPException(status_code=403, detail="لا يمكنك إنشاء جلسات لأطباء آخرين.")
+    if role == "doctor":
+        effective_doctor_id = str(current_user["id"])
     elif role == "department":
+        if not data.doctor_id:
+            raise HTTPException(status_code=400, detail="doctor_id مطلوب")
+        effective_doctor_id = str(data.doctor_id)
         from app.core.database import db
         async with db.pool.acquire() as conn:
             belongs = await conn.fetchval(
                 "SELECT EXISTS(SELECT 1 FROM doctors WHERE id = $1 AND department_id = $2)", 
-                UUID(str(data.doctor_id)), UUID(str(current_user["id"]))
+                UUID(effective_doctor_id), UUID(str(current_user["id"]))
             )
             if not belongs:
                 raise HTTPException(status_code=403, detail="الطبيب لا ينتمي لقسمك.")
-    elif role not in ("admin", "doctor", "department"):
+    elif role == "admin":
+        if not data.doctor_id:
+            raise HTTPException(status_code=400, detail="doctor_id مطلوب")
+        effective_doctor_id = str(data.doctor_id)
+    else:
         raise HTTPException(status_code=403, detail="غير مصرح لك بالوصول.")
 
     try:
         session = await SessionService.create_session(
-            doctor_id=data.doctor_id,
+            doctor_id=effective_doctor_id,
             appointment_id=data.appointment_id,
             patient_id=data.patient_id
         )
@@ -98,7 +105,9 @@ async def create_session(data: SessionCreate, current_user: dict = Depends(get_c
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        import logging
+        logging.getLogger(__name__).exception("Error creating session")
+        raise HTTPException(status_code=500, detail="حدث خطأ داخلي. يرجى المحاولة لاحقاً.")
 
 
 @router.patch("/{session_id}/transcript")

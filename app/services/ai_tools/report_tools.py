@@ -14,25 +14,51 @@ async def tool_get_clinic_stats(fn_args: dict, owner_id: str, conn) -> dict:
           (SELECT COUNT(DISTINCT p.id) FROM patients p LEFT JOIN appointments a ON p.id = a.patient_id WHERE p.doctor_id = $1 OR a.doctor_id = $1) as total_patients_all_time,
           (SELECT COUNT(*) FROM appointments WHERE doctor_id = $1) as total_appointments_all_time,
           (SELECT COUNT(*) FROM appointments WHERE doctor_id = $1 AND date_trunc('month', appointment_date) = date_trunc('month', CURRENT_DATE)) as appointments_this_month,
-          (SELECT COUNT(*) FROM visits WHERE doctor_id = $1 AND date_trunc('month', visit_date) = date_trunc('month', CURRENT_DATE)) as completed_visits_this_month,
-          (SELECT COALESCE(SUM(duration_seconds), 0) FROM sessions WHERE doctor_id = $1) as total_session_seconds
+          (SELECT COUNT(*) FROM appointments WHERE doctor_id = $1 AND date_trunc('month', appointment_date) = date_trunc('month', CURRENT_DATE) AND status = 'cancelled') as cancelled_this_month
         """,
         UUID(owner_id)
     )
+    
+    from app.services.subscription_service import SubscriptionService
+    sub = await SubscriptionService.get_active_subscription(UUID(owner_id), False)
+    
+    allowed_minutes = 60
+    used_minutes = 0
+    allowed_messages = 100
+    used_messages = 0
+    
+    if sub:
+        allowed_minutes = sub.get("allowed_minutes") or 60
+        used_minutes = sub.get("used_minutes") or 0
+        allowed_messages = sub.get("allowed_messages") or 100
+        used_messages = sub.get("used_messages") or 0
+    else:
+        total_session_seconds = await conn.fetchval(
+            "SELECT COALESCE(SUM(duration_seconds), 0) FROM sessions WHERE doctor_id = $1",
+            UUID(owner_id)
+        )
+        used_minutes = int((total_session_seconds or 0) // 60)
+        
+        whatsapp_sent = await conn.fetchval(
+            "SELECT COUNT(*) FROM whatsapp_message_log WHERE doctor_id = $1",
+            UUID(owner_id)
+        )
+        used_messages = whatsapp_sent or 0
+
     if not stats:
         return {
             "إجمالي المرضى": 0,
             "إجمالي المواعيد": 0,
-            "مواعيد هذا الشهر": 0,
-            "الزيارات المكتملة هذا الشهر": 0,
-            "دقائق الذكاء الاصطناعي المستهلكة": 0
+            "المواعيد الملغاة هذا الشهر": 0,
+            "دقائق الاستشارة الذكية": f"{used_minutes} / {allowed_minutes}",
+            "عدد رسائل الاستشارة الذكية": f"{used_messages} / {allowed_messages}"
         }
     return {
         "إجمالي المرضى": stats["total_patients_all_time"] or 0,
         "إجمالي المواعيد": stats["total_appointments_all_time"] or 0,
-        "مواعيد هذا الشهر": stats["appointments_this_month"] or 0,
-        "الزيارات المكتملة هذا الشهر": stats["completed_visits_this_month"] or 0,
-        "دقائق الذكاء الاصطناعي المستهلكة": int((stats["total_session_seconds"] or 0) // 60)
+        "المواعيد الملغاة هذا الشهر": stats["cancelled_this_month"] or 0,
+        "دقائق الاستشارة الذكية": f"{used_minutes} / {allowed_minutes}",
+        "عدد رسائل الاستشارة الذكية": f"{used_messages} / {allowed_messages}"
     }
 
 def safe_uuid(val: Any) -> Optional[UUID]:
@@ -175,10 +201,32 @@ async def tool_get_monthly_report(fn_args: dict, owner_id: str, conn) -> dict:
             "SELECT COUNT(*) FROM appointments WHERE doctor_id = $1 AND appointment_date >= $2 AND appointment_date < $3 AND status = 'no_show'",
             UUID(owner_id), start_date, end_date
         )
-        total_visits = await conn.fetchval(
-            "SELECT COUNT(*) FROM visits WHERE doctor_id = $1 AND visit_date >= $2 AND visit_date < $3",
-            UUID(owner_id), start_date, end_date
-        )
+
+        from app.services.subscription_service import SubscriptionService
+        sub = await SubscriptionService.get_active_subscription(UUID(owner_id), False)
+        
+        allowed_minutes = 60
+        used_minutes = 0
+        allowed_messages = 100
+        used_messages = 0
+        
+        if sub:
+            allowed_minutes = sub.get("allowed_minutes") or 60
+            used_minutes = sub.get("used_minutes") or 0
+            allowed_messages = sub.get("allowed_messages") or 100
+            used_messages = sub.get("used_messages") or 0
+        else:
+            total_session_seconds = await conn.fetchval(
+                "SELECT COALESCE(SUM(duration_seconds), 0) FROM sessions WHERE doctor_id = $1 AND created_at >= $2 AND created_at < $3",
+                UUID(owner_id), start_date, end_date
+            )
+            used_minutes = int((total_session_seconds or 0) // 60)
+            
+            whatsapp_sent = await conn.fetchval(
+                "SELECT COUNT(*) FROM whatsapp_message_log WHERE doctor_id = $1 AND created_at >= $2 AND created_at < $3",
+                UUID(owner_id), start_date, end_date
+            )
+            used_messages = whatsapp_sent or 0
 
         month_name_ar = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"]
         total_appts = total_appts or 0
@@ -191,9 +239,9 @@ async def tool_get_monthly_report(fn_args: dict, owner_id: str, conn) -> dict:
             "total_appointments": total_appts,
             "completed_appointments": completed or 0,
             "cancelled_appointments": cancelled or 0,
-            "no_show": no_show,
-            "total_visits": total_visits or 0,
-            "no_show_rate": f"{round((no_show / total_appts * 100) if total_appts > 0 else 0, 1)}%"
+            "no_show_rate": f"{round((no_show / total_appts * 100) if total_appts > 0 else 0, 1)}%",
+            "ai_minutes": f"{used_minutes} / {allowed_minutes}",
+            "sent_messages": f"{used_messages} / {allowed_messages}"
         }
     except Exception as e:
         logger.exception(f"Error in get_monthly_report: {e}")

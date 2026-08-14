@@ -258,7 +258,7 @@ export default function DoctorSubscription() {
               <div className="p-6 border-b border-border-subtle">
                 <h2 className="text-lg font-bold text-on-surface">{t('usage_stats')}</h2>
                 <p className="text-secondary text-sm mt-1">
-                  {isArabic ? 'حدود الذكاء الاصطناعي المتاحة لدورة الفوترة الحالية.' : 'Your AI limits for the current billing cycle.'}
+                  {isArabic ? 'حدود الاستخدام المتاحة لدورة الفوترة الحالية.' : 'Your limits for the current billing cycle.'}
                 </p>
               </div>
               <div className="p-6">
@@ -270,7 +270,7 @@ export default function DoctorSubscription() {
                       <div>
                         <h3 className="text-sm font-bold text-on-surface flex items-center gap-2">
                           <span className="material-symbols-outlined text-[18px] text-primary">mic</span>
-                          {isArabic ? 'دقائق الذكاء الاصطناعي المستخدمة' : 'AI Voice Minutes Used'}
+                          {isArabic ? 'دقائق الاستشارة الذكية المستخدمة' : 'Smart Consultation Minutes Used'}
                         </h3>
                         <p className="text-xs text-secondary mt-0.5">
                           {isArabic
@@ -331,7 +331,7 @@ export default function DoctorSubscription() {
                       <div>
                         <h3 className="text-sm font-bold text-on-surface flex items-center gap-2">
                           <span className="material-symbols-outlined text-[18px] text-secondary">chat</span>
-                          {isArabic ? 'رسائل الذكاء الاصطناعي المستخدمة' : 'AI Messages Used'}
+                          {isArabic ? 'الرسائل المستخدمة' : 'Messages Used'}
                         </h3>
                         <p className="text-xs text-secondary mt-0.5">
                           {isArabic

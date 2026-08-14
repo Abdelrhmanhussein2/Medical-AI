@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_MODEL: str = "gpt-4o-mini"
-    DAILY_TOKEN_LIMIT: int = 100000
+    DAILY_TOKEN_LIMIT: int = 50000000
     GEMINI_API_KEY: Optional[str] = None
     CHAT_ENCRYPTION_KEY: str
 

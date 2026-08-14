@@ -133,6 +133,7 @@ async def tool_reschedule_appointment(fn_args: dict, owner_id: str, conn) -> dic
         if "UPDATE 1" in res:
             try:
                 from datetime import datetime, timedelta
+                from app.core.database import db
                 from app.services.whatsapp.reminder_repository import ReminderRepository
                 
                 appt_dt = datetime.combine(new_d, new_t)

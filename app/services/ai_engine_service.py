@@ -256,6 +256,7 @@ class AIEngineService:
                 current_user_msg=user_msg,
                 last_ai_msg=last_ai_msg,
                 previous_user_msg=previous_user_msg,
+                patient_info=patient_info
             )
             if not tools:
                 tools = None

@@ -150,20 +150,54 @@ async def tool_get_patient_visits(fn_args: dict, owner_id: str, conn) -> dict:
         return {"status": "error", "message": f"معرف المريض (patient_id) غير صالح: '{pid}'. يجب أن يكون بصيغة UUID. يرجى البحث عن المريض أولاً للحصول على الـ UUID الحقيقي."}
 
     try:
+        # 1. Fetch from visits table
         visits = await conn.fetch(
             """
-            SELECT visit_date, diagnosis, notes, description
+            SELECT visit_date as vdate, diagnosis, notes, description
             FROM visits
             WHERE patient_id = $1 AND doctor_id = $2
-            ORDER BY visit_date DESC LIMIT 5
+            ORDER BY visit_date DESC LIMIT 10
             """,
             pid_uuid, UUID(owner_id)
         )
+        
+        # 2. Fetch completed/summarized sessions for this patient
+        sessions = await conn.fetch(
+            """
+            SELECT created_at::date as vdate, summary_text as diagnosis, 'جلسة استشارة كشف مباشرة' as description
+            FROM sessions
+            WHERE patient_id = $1 AND doctor_id = $2 AND status IN ('completed', 'summarized')
+            ORDER BY created_at DESC LIMIT 10
+            """,
+            pid_uuid, UUID(owner_id)
+        )
+
+        all_visits = []
+        for v in visits:
+            all_visits.append({
+                "date": str(v['vdate']),
+                "diagnosis": v['diagnosis'] or 'غير محدد',
+                "description": v['description'] or v['notes'] or 'زيارة مسجلة'
+            })
+        for s in sessions:
+            all_visits.append({
+                "date": str(s['vdate']),
+                "diagnosis": s['diagnosis'] or 'جلسة استشارة',
+                "description": s['description']
+            })
+
+        if not all_visits:
+            return {
+                "status": "success",
+                "message": "لا توجد أي زيارات سابقة أو جلسات كشف مسجلة لهذا المريض حتى الآن.",
+                "total_visits": 0,
+                "visits": []
+            }
+
         return {
-            "visits": [
-                {"date": str(v['visit_date']), "description": v['description'], "diagnosis": v['diagnosis']}
-                for v in visits
-            ]
+            "status": "success",
+            "total_visits": len(all_visits),
+            "visits": all_visits
         }
     except Exception as e:
         logger.exception(f"Error in get_patient_visits: {e}")
@@ -232,7 +266,6 @@ async def tool_add_new_patient(fn_args: dict, owner_id: str, conn) -> dict:
                 pass
 
         # ── Duplicate Guard ──────────────────────────────────────────────────
-<<<<<<< HEAD
         force_create = fn_args.get("force_create") or fn_args.get("force") or False
         
         if not force_create:
@@ -284,39 +317,6 @@ async def tool_add_new_patient(fn_args: dict, owner_id: str, conn) -> dict:
                         "existing_patient_id": str(existing_by_name['id']),
                         "existing_patient_name": existing_by_name['name']
                     }
-=======
-        # Search for any patient with a very similar name (token-by-token).
-        # This catches cases where the same person was stored in Arabic and
-        # now the AI is trying to add them again with an English/different spelling.
-        existing = None
-        if not force:
-            name_tokens = [t for t in p_name.replace("-", " ").split() if len(t) >= 2]
-            if name_tokens:
-                for token in name_tokens:
-                    existing = await conn.fetchrow(
-                        """
-                        SELECT id, name FROM patients
-                        WHERE doctor_id = $1
-                          AND (name ILIKE $2 OR REPLACE(name,' ','') ILIKE $2)
-                        LIMIT 1
-                        """,
-                        UUID(owner_id), f"%{token}%"
-                    )
-                    if existing:
-                        break
-
-        if existing:
-            return {
-                "status": "error",
-                "message": (
-                    f"يبدو أن مريضاً بهذا الاسم موجود بالفعل في السجلات: \"{existing['name']}\" (id: {existing['id']}). "
-                    f"يرجى استخدام هذا المريض الموجود بدلاً من إضافة مريض جديد. "
-                    f"إذا كان مريضاً مختلفاً تماماً وأكد الطبيب ذلك, أعد محاولة الاستدعاء مع تمرير force=true لتجاوز هذا التحذير."
-                ),
-                "existing_patient_id": str(existing['id']),
-                "existing_patient_name": existing['name']
-            }
->>>>>>> be1d812223e1c183c9290ce6f061e1d304e02f28
         # ─────────────────────────────────────────────────────────────────────
 
         row = await conn.fetchrow(

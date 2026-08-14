@@ -47,6 +47,11 @@ export const AppProvider = ({ children }) => {
   // Load user and bundles on mount
   useEffect(() => {
     sessionStorage.removeItem("accessToken"); // Securely clear any legacy token stored in sessionStorage
+    // Clear any legacy localStorage auth data (from old code versions)
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("accesstoken");
+    localStorage.removeItem("currentUser");
+    localStorage.removeItem("access_token");
     verifySession();
 
     const loadBundles = async () => {
@@ -189,8 +194,22 @@ export const AppProvider = ({ children }) => {
       // Even if the backend call fails, proceed with local logout
       console.warn("Backend logout notification failed:", err.message);
     } finally {
+      // Clear sessionStorage auth data
       sessionStorage.removeItem("accessToken");
       sessionStorage.removeItem("currentUser");
+      // Clear any legacy localStorage auth data
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("accesstoken");
+      localStorage.removeItem("currentUser");
+      localStorage.removeItem("access_token");
+      // Clear all medical session data from localStorage
+      const keysToRemove = Object.keys(localStorage).filter(k =>
+        k.startsWith("instructions_formatted_") ||
+        k.startsWith("instructions_raw_") ||
+        k === "notes_hidden_sections" ||
+        k === "active_bg_recording_session"
+      );
+      keysToRemove.forEach(k => localStorage.removeItem(k));
       setCurrentUser(null);
       setPatients([]);
       setOrganizations([]);

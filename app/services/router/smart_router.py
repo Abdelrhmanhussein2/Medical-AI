@@ -91,6 +91,9 @@ _ROUTER_SYSTEM_PROMPT_TEMPLATE = """\
 5. needs_patient_id: true إذا الأداة تحتاج patient_id ولم يُذكر في السياق.
 
 ━━ قواعد التمييز بين النوايا المتشابهة ━━
+- "زيارات سابقة / كشوفات سابقة / تاريخ مرضي / هل له زيارات" → get_patient_visits (مع search_my_patients إذا لم يكن المريض مربوطاً بالطلب)
+- "ملف المريض / بياناته بالكامل / ملفه الطبي / بروفايل" → get_patient_full_profile (مع search_my_patients إذا لم يكن المريض مربوطاً بالطلب)
+- "مواعيد قادمة / مواعيد / ميعاد قادم / هل له ميعاد قريب" → get_my_appointments (مع search_my_patients إذا لم يكن المريض مربوطاً بالطلب)
 - "الغ / الغي / إلغاء / كنسل" → cancel_appointment (إلغاء نهائي)
 - "أجل / تأجيل / غير الموعد / تغيير الموعد" → reschedule_appointment (تغيير الوقت)
 - "رسالة ترحيبية / ترحيب / تأكيد حجز بالواتس / ابعت تأكيد موعد بالواتساب" → send_appointment_welcome_message (تأكيد الحجز للمريض بالواتساب)
@@ -178,21 +181,20 @@ class SmartRouter:
         current_user_msg: str,
         last_ai_msg: Optional[str],
         previous_user_msg: Optional[str] = None,
+        patient_info: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
         Builds the routing context for the LLM.
 
-        Includes three layers (from oldest to newest):
-        1. previous_user_msg  — the original intent (e.g. "احجز لمحمد مسعد")
-           This is critical for multi-turn flows so the router knows why the
-           doctor is now sending a follow-up like a name or phone number.
-        2. last_ai_msg        — what the assistant asked (trimmed to 300 chars)
-        3. current_user_msg   — the doctor's actual current response
-
-        We deliberately exclude the full history to avoid stale keywords from
-        old messages polluting the current intent analysis.
+        Includes four layers (from oldest to newest):
+        1. patient_info       — context of the current patient thread if bound
+        2. previous_user_msg  — the original intent (e.g. "احجز لمحمد مسعد")
+        3. last_ai_msg        — what the assistant asked (trimmed to 300 chars)
+        4. current_user_msg   — the doctor's actual current response
         """
         parts: list[str] = []
+        if patient_info and patient_info.get("name"):
+            parts.append(f"[المريض المحدد للمحادثة الحالية]: الاسم: {patient_info.get('name')}, patient_id: {patient_info.get('id')}")
         if previous_user_msg:
             parts.append(f"[الطلب الأصلي للطبيب]:\n{previous_user_msg.strip()[:200]}")
         if last_ai_msg:
@@ -329,6 +331,7 @@ class SmartRouter:
         current_user_msg: str,
         last_ai_msg: Optional[str] = None,
         previous_user_msg: Optional[str] = None,
+        patient_info: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
         """
         Main entry point. Determines the set of tool schemas to pass to the
@@ -341,6 +344,7 @@ class SmartRouter:
                                 multi-turn flows so the router knows the
                                 original intent (e.g. booking) when the doctor
                                 replies with just a name or phone number.
+            patient_info      : Context of the current patient thread if bound.
 
         Returns:
             A list of tool JSON schemas ready to be passed to the main LLM.
@@ -353,7 +357,7 @@ class SmartRouter:
 
         # ── Step 1: Build routing context ──────────────────────────────────
         routing_context = cls._build_routing_context(
-            current_user_msg, last_ai_msg, previous_user_msg
+            current_user_msg, last_ai_msg, previous_user_msg, patient_info
         )
         preview = current_user_msg[:70] + "…" if len(current_user_msg) > 70 else current_user_msg
         _dbg(f"🚀 Routing: '{preview}'")

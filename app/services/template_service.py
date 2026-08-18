@@ -240,7 +240,7 @@ class TemplateService:
                     with open(saved_file_path, "rb") as audio_file:
                         transcription = await client.audio.transcriptions.create(
                             file=(unique_name, audio_file.read()),
-                            model="whisper-1",
+                            model="gpt-4o-transcribe",
                             response_format="text"
                         )
                         transcribed = str(transcription).strip()

@@ -13,6 +13,9 @@ def _sanitize_for_prompt(text: str, max_length: int = 15000) -> str:
     return f"<user_content>\n{cleaned}\n</user_content>"
 
 
+
+
+
 async def summarize_session_transcript(transcript: str, patient_name: str = "المريض", summary_format: str = "soap") -> dict:
     """
     يرسل النص الكامل للجلسة لـ OpenAI ويرجع ملخص منظم.

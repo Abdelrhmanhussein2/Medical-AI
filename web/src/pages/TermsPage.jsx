@@ -6,244 +6,223 @@ import { Link } from 'react-router-dom';
 export default function TermsPage() {
   const { isArabic, lang, setLang } = useLanguage();
 
-  const sections = [
-    {
-      titleAr: '1. استخدام المنصة',
-      titleEn: '1. Use of the Platform',
-      bodyAr: `SBR AI منصة تقنية تهدف إلى مساعدة المستخدمين في التوثيق وتنظيم سير العمل باستخدام تقنيات الذكاء الاصطناعي.
-
-يمكن لأي شخص إنشاء حساب واستخدام المنصة، ولا تتحقق SBR AI من صفة المستخدم المهنية أو كونه طبيبًا أو مقدم رعاية صحية.
-
-الحساب شخصي ومخصص للمستخدم المسجل، ولا يجوز مشاركة بيانات الدخول أو استخدام الحساب من قبل أشخاص آخرين.`,
-      bodyEn: `SBR AI is a technology platform designed to help users document and organize workflows using AI technologies.
-
-Anyone can create an account and use the platform; SBR AI does not verify the professional status of users or whether they are physicians or healthcare providers.
-
-The account is personal and intended for the registered user only. Sharing login credentials or allowing others to use the account is not permitted.`,
-    },
-    {
-      titleAr: '2. طبيعة خدمات SBR AI',
-      titleEn: '2. Nature of SBR AI Services',
-      bodyAr: `SBR AI هي أداة مساعدة تقنية ولا تُعد بديلًا عن الطبيب أو مقدم الرعاية الصحية أو الحكم والخبرة الطبية المتخصصة.
-
-لا تتحمل SBR AI مسؤولية التشخيص أو العلاج أو القرارات الطبية التي يتخذها المستخدم.
-
-أي معلومات أو اقتراحات أو مخرجات قد تنتجها تقنيات الذكاء الاصطناعي في المنصة يجب مراجعتها والتحقق منها من قبل المستخدم المختص قبل الاعتماد عليها أو استخدامها في أي قرار طبي.
-
-المسؤولية النهائية عن مراجعة المخرجات واستخدامها تقع على عاتق المستخدم.`,
-      bodyEn: `SBR AI is a technical assistance tool and is not a substitute for a physician, healthcare provider, or specialized medical judgment.
-
-SBR AI bears no responsibility for diagnoses, treatments, or medical decisions made by the user.
-
-Any information, suggestions, or outputs produced by the platform's AI technologies must be reviewed and verified by the competent user before being relied upon or used in any medical decision.
-
-Final responsibility for reviewing and using outputs rests with the user.`,
-    },
-    {
-      titleAr: '3. التسجيل الصوتي وموافقة المراجعين',
-      titleEn: '3. Audio Recording and Patient Consent',
-      bodyAr: `قد تتيح المنصة للمستخدم تسجيل المحادثات الصوتية لأغراض التوثيق والتحليل وإنشاء المخرجات المدعومة بالذكاء الاصطناعي.
- 
-يتحمل الطبيب أو العيادة أو المستخدم المسؤولية الكاملة عن الحصول على الموافقات والتصاريح اللازمة من المراجعين أو الأشخاص الذين يتم تسجيلهم قبل استخدام خاصية التسجيل، والالتزام بالأنظمة واللوائح المعمول بها.`,
-      bodyEn: `The platform may allow users to record audio conversations for documentation, analysis, and AI-powered output generation.
- 
-The physician, clinic, or user bears full responsibility for obtaining the necessary consents and permissions from patients or persons being recorded prior to using the recording feature, and for complying with applicable regulations.`,
-    },
-    {
-      titleAr: '4. المحتوى والمدخلات',
-      titleEn: '4. Content and Inputs',
-      bodyAr: `تتيح SBR AI حاليًا معالجة التسجيلات الصوتية التي يتم إنشاؤها من خلال المنصة.
- 
-ولا تتيح المنصة للمستخدم رفع ملفات أو صور أو مستندات أخرى إلى الخدمة، ما لم يتم توفير هذه الوظائف مستقبلًا.
- 
-يتحمل المستخدم مسؤولية المحتوى والبيانات التي يقوم بإدخالها أو تسجيلها من خلال المنصة، والتأكد من أن استخدامه للمنصة لا ينتهك حقوق الآخرين أو الأنظمة المعمول بها.`,
-      bodyEn: `SBR AI currently supports processing of audio recordings created through the platform.
- 
-The platform does not allow users to upload files, images, or other documents to the service unless such features are provided in the future.
- 
-The user is responsible for the content and data they input or record through the platform, and for ensuring that their use of the platform does not violate the rights of others or applicable regulations.`,
-    },
-    {
-      titleAr: '5. بيانات المستخدم والمراجعين',
-      titleEn: '5. User and Patient Data',
-      bodyAr: `لا تكتسب SBR AI ملكية بيانات المستخدم أو بيانات المراجعين لمجرد إدخالها أو معالجتها من خلال المنصة.
- 
-تظل البيانات المقدمة من المستخدم خاضعة للحقوق والالتزامات الموضحة في سياسة الخصوصية الخاصة بـ SBR AI.
- 
-يجوز لـSBR AI استخدام بيانات محددة لأغراض تطوير وتحسين تقنيات الذكاء الاصطناعي الخاصة بها، وذلك بعد اتخاذ إجراءات مناسبة لإزالة أو إخفاء المعلومات التي يمكن أن تحدد هوية المراجعين، وفقًا لما توضحه سياسة الخصوصية.`,
-      bodyEn: `SBR AI does not acquire ownership of user or patient data merely by virtue of it being entered or processed through the platform.
- 
-Data submitted by the user remains subject to the rights and obligations described in SBR AI's Privacy Policy.
- 
-SBR AI may use specific data for the purpose of developing and improving its AI technologies, after taking appropriate steps to remove or anonymize information that could identify patients, as outlined in the Privacy Policy.`,
-    },
-    {
-      titleAr: '6. الملكية الفكرية',
-      titleEn: '6. Intellectual Property',
-      bodyAr: `جميع حقوق الملكية الفكرية المتعلقة بمنصة SBR AI، بما في ذلك البرمجيات والتصميمات والواجهة والعلامات التجارية والشعارات والمحتوى المملوك للمنصة، تظل ملكًا لـSBR AI أو الجهات المرخصة لها، ولا يمنح استخدام المنصة المستخدم أي حق ملكية فيها.`,
-      bodyEn: `All intellectual property rights related to the SBR AI platform, including software, designs, interfaces, trademarks, logos, and platform-owned content, remain the property of SBR AI or its licensors. Use of the platform does not grant the user any ownership rights therein.`,
-    },
-    {
-      titleAr: '7. الاستخدامات المحظورة',
-      titleEn: '7. Prohibited Uses',
-      bodyAr: `لا يجوز للمستخدم استخدام المنصة:
-• بطريقة غير قانونية.
-• بطريقة تضر بالمنصة أو مستخدميها.
-• لمحاولة اختراق أو تعطيل أو تجاوز أنظمة الحماية.
-• لمشاركة الحساب أو بيانات الدخول مع أشخاص آخرين.
-• للوصول غير المصرح به إلى حسابات أو بيانات الآخرين.
-• لأي غرض ينتهك حقوق أو خصوصية الآخرين.`,
-      bodyEn: `The user may not use the platform:
-• In an unlawful manner.
-• In a way that harms the platform or its users.
-• To attempt to breach, disable, or circumvent security systems.
-• To share the account or login credentials with others.
-• For unauthorized access to accounts or data of others.
-• For any purpose that violates the rights or privacy of others.`,
-    },
-    {
-      titleAr: '8. تعليق أو إنهاء الحساب',
-      titleEn: '8. Account Suspension or Termination',
-      bodyAr: `تحتفظ SBR AI بالحق في تعليق أو إنهاء حساب المستخدم عند وجود مخالفة لهذه الشروط، بما في ذلك إساءة استخدام المنصة أو مشاركة الحساب أو الاستخدام غير القانوني أو محاولة اختراق أو تجاوز أنظمة المنصة.
-
-ويجوز اتخاذ إجراءات فورية عند الضرورة لحماية المنصة أو المستخدمين أو البيانات.`,
-      bodyEn: `SBR AI reserves the right to suspend or terminate a user account in the event of a violation of these terms, including misuse of the platform, account sharing, unlawful use, or attempts to breach or bypass the platform's systems.
-
-Immediate action may be taken when necessary to protect the platform, users, or data.`,
-    },
-    {
-      titleAr: '9. الخدمات والجهات الخارجية',
-      titleEn: '9. Third-Party Services',
-      bodyAr: `قد تعتمد SBR AI على خدمات ومزودين خارجيين لتشغيل بعض أجزاء المنصة، بما في ذلك خدمات البنية التحتية ومعالجة البيانات والذكاء الاصطناعي والدفع.
-
-يتم التعامل مع هذه الخدمات وفقًا لطبيعة كل خدمة ومتطلبات تشغيل المنصة وسياسة الخصوصية.
-
-ولا تقوم SBR AI بتخزين بيانات البطاقات البنكية الخاصة بالمستخدمين، حيث تتم معالجة المدفوعات من خلال مزود خدمة دفع خارجي.`,
-      bodyEn: `SBR AI may rely on third-party services and providers to operate parts of the platform, including infrastructure, data processing, AI, and payment services.
-
-These services are handled in accordance with the nature of each service, the platform's operational requirements, and the Privacy Policy.
-
-SBR AI does not store users' bank card data; payments are processed through a third-party payment service provider.`,
-    },
-    {
-      titleAr: '10. توفر الخدمة',
-      titleEn: '10. Service Availability',
-      bodyAr: `تسعى SBR AI إلى توفير المنصة بصورة مستقرة وموثوقة، إلا أنه قد تحدث فترات توقف مؤقت أو صيانة أو أعطال تقنية أو انقطاع في بعض الخدمات.
-
-ولا تضمن SBR AI أن تكون المنصة متاحة دون انقطاع أو خالية من الأخطاء في جميع الأوقات.`,
-      bodyEn: `SBR AI strives to provide the platform in a stable and reliable manner; however, temporary outages, maintenance, technical failures, or service interruptions may occur.
-
-SBR AI does not guarantee that the platform will be available without interruption or free of errors at all times.`,
-    },
-    {
-      titleAr: '11. الاشتراكات والمدفوعات',
-      titleEn: '11. Subscriptions and Payments',
-      bodyAr: `تخضع الاشتراكات المدفوعة والأسعار ومدة الاشتراك والإلغاء والاسترجاع إلى سياسة الاسترجاع والإلغاء المنشورة على منصة SBR AI.`,
-      bodyEn: `Paid subscriptions, pricing, subscription duration, cancellation, and refunds are governed by the Refund and Cancellation Policy published on the SBR AI platform.`,
-    },
-    {
-      titleAr: '12. مسؤولية المستخدم',
-      titleEn: '12. User Responsibility',
-      bodyAr: `المستخدم مسؤول عن الحفاظ على سرية بيانات الدخول الخاصة بحسابه وعن جميع الأنشطة التي تتم من خلال الحساب.
-
-كما يتحمل المستخدم مسؤولية استخدام المنصة بطريقة قانونية ومناسبة لطبيعة استخدامه.`,
-      bodyEn: `The user is responsible for maintaining the confidentiality of their account login credentials and for all activities that occur through the account.
-
-The user is also responsible for using the platform in a lawful manner appropriate to the nature of their use.`,
-    },
-    {
-      titleAr: '13. حدود المسؤولية',
-      titleEn: '13. Limitation of Liability',
-      bodyAr: `لا تتحمل SBR AI مسؤولية القرارات الطبية أو المهنية التي يتخذها المستخدم بناءً على مخرجات المنصة.
-
-كما لا تتحمل SBR AI مسؤولية الأضرار الناتجة عن سوء استخدام المنصة أو الاعتماد غير المناسب على مخرجات الذكاء الاصطناعي أو عدم مراجعة المستخدم للمعلومات الناتجة عن الخدمة.`,
-      bodyEn: `SBR AI is not responsible for medical or professional decisions made by the user based on platform outputs.
-
-SBR AI is also not responsible for damages resulting from misuse of the platform, inappropriate reliance on AI outputs, or the user's failure to review information produced by the service.`,
-    },
-    {
-      titleAr: '14. حذف الحساب والبيانات',
-      titleEn: '14. Account and Data Deletion',
-      bodyAr: `يمكن للمستخدم طلب حذف حسابه وفق الإجراءات التي توفرها SBR AI.
-
-بعد حذف الحساب، قد تحتفظ SBR AI ببعض البيانات المرتبطة بالحساب لمدة تصل إلى شهرين لأغراض تشغيلية أو أمنية أو قانونية، وبعد انتهاء فترة الاحتفاظ يتم حذف البيانات وفق إجراءات SBR AI المعمول بها.`,
-      bodyEn: `The user may request deletion of their account through procedures provided by SBR AI.
-
-After account deletion, SBR AI may retain some account-related data for up to two months for operational, security, or legal purposes. After the retention period, data is deleted according to SBR AI's applicable procedures.`,
-    },
-    {
-      titleAr: '15. تعديل الشروط',
-      titleEn: '15. Modification of Terms',
-      bodyAr: `تحتفظ SBR AI بحقها في تعديل هذه الشروط والأحكام من وقت لآخر بما يتناسب مع تطور المنصة أو الخدمات أو المتطلبات القانونية.
-
-سيتم نشر النسخة المحدثة على الموقع مع توضيح تاريخ آخر تحديث.`,
-      bodyEn: `SBR AI reserves the right to modify these terms and conditions from time to time in line with the evolution of the platform, services, or legal requirements.
-
-The updated version will be published on the website with the date of the last update clearly indicated.`,
-    },
-    {
-      titleAr: '16. التواصل',
-      titleEn: '16. Contact',
-      bodyAr: `للاستفسارات المتعلقة بهذه الشروط أو استخدام المنصة، يمكن التواصل مع SBR AI عبر:
-
-contact@sbr-ai.com`,
-      bodyEn: `For inquiries regarding these terms or use of the platform, contact SBR AI at:
-
-contact@sbr-ai.com`,
-    },
-  ];
+  const alignmentClass = isArabic ? 'text-right' : 'text-left';
+  const rtlDir = isArabic ? 'rtl' : 'ltr';
+  const lastUpdated = isArabic 
+    ? 'آخر تحديث: 10 أغسطس 2026' 
+    : 'Last updated: August 10, 2026';
 
   return (
-    <div dir={isArabic ? 'rtl' : 'ltr'} className="min-h-screen bg-bg-canvas font-body-md">
+    <div dir={rtlDir} className="min-h-screen bg-[#F9FAFB] font-body-md relative pb-20">
+      {/* Background decoration */}
+      <div className="absolute top-0 left-0 right-0 h-[280px] bg-gradient-to-b from-[#006973]/5 to-transparent pointer-events-none"></div>
+
       {/* Navbar */}
-      <nav className="fixed w-full top-0 z-50 backdrop-blur-xl bg-white/90 border-b border-border-subtle">
-        <div className="max-w-container-max mx-auto px-4 sm:px-8 flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center gap-2">
-            <SbrLogo size={32} color="#24564C" showText={true} textClass="text-primary" />
+      <nav className="fixed w-full top-0 z-50 backdrop-blur-xl bg-white/90 border-b border-[#E5E7EB]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 flex items-center justify-between h-16">
+          <Link to="/" className="flex items-center gap-2 transition-transform active:scale-95">
+            <SbrLogo size={32} color="#006973" showText={true} textClass="text-[#006973] font-black" />
           </Link>
-          <button
-            onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}
-            className="flex items-center gap-1 px-3 py-1.5 border border-border-subtle bg-white text-secondary hover:text-primary rounded-lg text-xs font-bold transition-colors cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[16px]">language</span>
-            {lang === 'ar' ? 'English' : 'العربية'}
-          </button>
+          
+          <div className="flex items-center gap-4">
+            <Link 
+              to="/privacy" 
+              className="text-xs font-bold text-[#4B5563] hover:text-[#006973] transition-colors"
+            >
+              {isArabic ? 'سياسة الخصوصية' : 'Privacy Policy'}
+            </Link>
+            
+            <button
+              onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}
+              className="flex items-center gap-1 px-3 py-1.5 border border-[#D1D5DB] bg-white text-[#4B5563] hover:text-[#006973] hover:border-[#006973]/35 rounded-lg text-xs font-bold shadow-sm transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">language</span>
+              <span>{lang === 'ar' ? 'English' : 'العربية'}</span>
+            </button>
+          </div>
         </div>
       </nav>
 
-      {/* Content */}
-      <main className="pt-24 pb-20 max-w-3xl mx-auto px-4 sm:px-8">
-        <div className="mb-8">
-          <p className="text-xs text-secondary font-semibold mb-2">{isArabic ? 'آخر تحديث: يُضاف التاريخ' : 'Last updated: date to be added'}</p>
-          <h1 className="text-3xl font-display-lg font-bold text-on-surface leading-tight">
-            {isArabic ? 'الشروط والأحكام' : 'Terms & Conditions'}
+      {/* Main Container */}
+      <main className="pt-24 max-w-4xl mx-auto px-4 sm:px-6 relative z-10">
+        
+        {/* Header Block */}
+        <div className={`mb-8 pb-6 border-b border-[#E5E7EB] ${alignmentClass}`}>
+          <span className="inline-block text-[10px] uppercase font-extrabold tracking-wider text-primary bg-[#006973]/10 px-3 py-1 rounded-full mb-3">
+            {lastUpdated}
+          </span>
+          <h1 className="text-3xl sm:text-4xl font-bold text-[#111827] tracking-tight">
+            {isArabic ? 'الشروط وأحكام الخدمة' : 'Terms & Conditions of Service'}
           </h1>
-          <p className="text-secondary text-sm mt-3 leading-relaxed">
-            {isArabic
-              ? 'باستخدام منصة SBR AI أو إنشاء حساب عليها، فإنك توافق على الالتزام بهذه الشروط والأحكام. إذا كنت لا توافق على أي من هذه الشروط، يرجى عدم استخدام المنصة.'
-              : 'By using the SBR AI platform or creating an account on it, you agree to comply with these terms and conditions. If you do not agree to any of these terms, please do not use the platform.'}
+          <p className="text-[#6B7280] text-sm mt-2 leading-relaxed">
+            {isArabic 
+              ? 'يرجى قراءة شروط الخدمة بعناية قبل استخدام منصة مسبار للذكاء الاصطناعي الطبي.' 
+              : 'Please read our Terms of Service carefully before utilizing the SBR Medical AI Platform.'}
           </p>
         </div>
 
-        <div className="space-y-8">
-          {sections.map((sec, i) => (
-            <div key={i} className="bg-white border border-border-subtle rounded-xl p-6 shadow-sm">
-              <h2 className="font-headline-md text-base text-primary font-bold mb-3">
-                {isArabic ? sec.titleAr : sec.titleEn}
-              </h2>
-              <p className="text-sm text-on-surface-variant leading-relaxed whitespace-pre-line">
-                {isArabic ? sec.bodyAr : sec.bodyEn}
-              </p>
-            </div>
-          ))}
+        {/* Warning Alert banner (Medical Disclaimer) */}
+        <div className={`mb-8 p-5 bg-[#ef4444]/5 border border-[#ef4444]/15 rounded-2xl flex gap-3 ${alignmentClass}`}>
+          <span className="material-symbols-outlined text-[#ef4444] text-2xl shrink-0">gavel</span>
+          <div className="space-y-1">
+            <p className="text-sm font-bold text-[#ef4444]">
+              {isArabic ? 'تنبيه طبي وقانوني هام جداً (المادة 12)' : 'Critical Medical & Legal Notice (Section 12)'}
+            </p>
+            <p className="text-xs text-[#4B5563] leading-relaxed text-justify">
+              {isArabic
+                ? 'مخرجات الذكاء الاصطناعي التي تولدها المنصة (مثل الملاحظات الطبية وتقارير الزيارة) قد تحتوي على أخطاء أو معلومات غير دقيقة أو ناقصة. بصفتك طبيبًا أو ممارسًا صحيًا مرخصًا نظامًا، تقع على عاتقك المسؤولية المهنية والقانونية والشرعية الكاملة بمفردك لمراجعة وتدقيق واعتماد كل مخرج قبل إدراجه في السجل الطبي للمريض أو الاعتماد عليه في أي قرار علاجي، سريري، أو فواتير.'
+                : 'AI-generated outputs (such as clinical notes and SOAP summaries) may contain errors or inaccuracies. As a licensed healthcare practitioner, you bear sole professional and legal responsibility to review, verify, edit, and approve all outputs before integrating them into medical files or relying on them for clinical decisions.'}
+            </p>
+          </div>
         </div>
 
-        <div className="mt-12 text-center">
-          <Link to="/" className="inline-flex items-center gap-2 text-primary font-semibold text-sm hover:underline">
+        {/* Terms Document Body */}
+        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 sm:p-10 shadow-sm">
+          {isArabic ? (
+            /* =========================================================================
+               ======================== TERMS CONTENT (ARABIC) =========================
+               ========================================================================= */
+            <div className="space-y-8 text-[#374151] leading-relaxed text-justify text-sm">
+              
+              {/* Section 1 */}
+              <div className="space-y-3">
+                <h2 className="text-lg font-bold text-[#111827] border-r-4 border-[#006973] pr-3">١. من نحن</h2>
+                <p>
+                  تُقدم خدمات منصة مسبار (SBR AI) كأداة ذكاء اصطناعي للمساعدة في التوثيق الطبي وتنظيم سير العمل بالعيادات والمستشفيات، وتخضع الاتفاقية بالكامل للأنظمة السارية في المملكة العربية السعودية.
+                </p>
+              </div>
+
+              {/* Section 2 */}
+              <div className="space-y-3">
+                <h2 className="text-lg font-bold text-[#111827] border-r-4 border-[#006973] pr-3">٢. شروط الحساب والتسجيل</h2>
+                <ul className="list-disc list-inside space-y-2 pr-2 text-xs text-[#4B5563]">
+                  <li>يجب أن تكون طبيباً أو ممارساً صحياً مرخصاً نظاماً في المملكة العربية السعودية، أو عيادة/منشأة طبية مرخصة للعمل في القطاع الصحي.</li>
+                  <li>يلتزم العميل بالحفاظ على سرية معلومات الدخول وحماية الحساب. العميل مسؤول بالكامل عن أي أنشطة تتم من خلال حسابه.</li>
+                  <li>يُمنع منعاً باتاً انتحال شخصية الغير، أو مشاركة تفاصيل الحساب أو كلمات المرور مع أي أفراد آخرين خارج المنشأة المصرح لها.</li>
+                </ul>
+              </div>
+
+              {/* Section 3 */}
+              <div className="space-y-3">
+                <h2 className="text-lg font-bold text-[#111827] border-r-4 border-[#006973] pr-3">٣. سياسة الاستخدام المقبول للخدمة</h2>
+                <p className="font-semibold text-xs text-[#111827]">أ. يلتزم العميل بعدم استخدام الخدمة أو السماح للغير بـ:</p>
+                <ul className="list-disc list-inside space-y-1.5 pr-2 text-xs text-[#4B5563]">
+                  <li>محاولة اختراق، تعطيل، أو تجاوز تدابير الحماية والأمان الخاصة بالمنصة.</li>
+                  <li>تنفيذ هجمات حجب الخدمة (DDoS) أو فحص المنصة للبحث عن ثغرات بهدف استغلالها.</li>
+                  <li>محاولة الهندسة العكسية للبرمجيات أو استخراج الكود المصدري للمنصة.</li>
+                  <li>تجاوز حدود الاستخدام المفروضة أو استخدام المنصة لتطوير منتج منافس.</li>
+                </ul>
+
+                <p className="font-semibold text-xs text-[#111827] mt-3">ب. المحتوى والبيانات الطبية المرفوعة:</p>
+                <ul className="list-disc list-inside space-y-1.5 pr-2 text-xs text-[#4B5563]">
+                  <li>يتحمل الطبيب أو المنشأة الطبية المسؤولية الكاملة والشرعية عن الحصول على موافقة المرضى المسبقة قبل إجراء أي تسجيل صوتي للمحادثة الطبية وفقاً للأنظمة الطبية المعمول بها بالمملكة.</li>
+                  <li>يجب ألا يحتوي المحتوى المرفوع على برمجيات ضارة، أو مواد تنتهك الملكية الفكرية، أو بيانات تم جمعها بطريقة غير قانونية.</li>
+                </ul>
+              </div>
+
+              {/* Section 4 */}
+              <div className="space-y-3">
+                <h2 className="text-lg font-bold text-[#111827] border-r-4 border-[#006973] pr-3">٤. الرسوم والاشتراكات وأحكام الدفع</h2>
+                <ul className="list-disc list-inside space-y-2 pr-2 text-xs text-[#4B5563]">
+                  <li>يلتزم العميل بسداد رسوم الاشتراك الشهري المحددة للباقة المختارة عبر وسائل الدفع المعتمدة.</li>
+                  <li>تتجدد الاشتراكات تلقائياً شهرياً في تاريخ الفوترة، ما لم يقم العميل بإلغاء التجديد من لوحة التحكم أو بمراسلتنا قبل موعد التجديد.</li>
+                  <li>جميع الرسوم المدفوعة غير قابلة للاسترداد بعد بدء دورة الفوترة، باستثناء وجود خطأ تقني واضح ومثبت من جانبنا في سحب الرسوم، أو الإلغاء خلال ٢٤ ساعة من الدفع الأول دون استخدام الخدمة.</li>
+                  <li>في حال عدم سداد الرسوم المستحقة وتأخر السداد لأكثر من ٧ أيام، يحق للمنصة تعليق الحساب مؤقتاً حتى يتم السداد بالكامل.</li>
+                </ul>
+              </div>
+
+              {/* Section 5 */}
+              <div className="space-y-3">
+                <h2 className="text-lg font-bold text-[#111827] border-r-4 border-[#006973] pr-3">٥. ملكية البيانات وحقوق الفكرية</h2>
+                <ul className="list-disc list-inside space-y-1.5 pr-2 text-xs text-[#4B5563]">
+                  <li><strong className="text-[#111827]">بيانات العميل والمرضى:</strong> تظل جميع البيانات والنصوص والتسجيلات المرفوعة ملكاً خالصاً للعميل أو مرضاه. لا تكتسب المنصة أي حقوق ملكية عليها.</li>
+                  <li><strong className="text-[#111827]">ملكية المنصة:</strong> جميع البرمجيات، الواجهات، التصاميم، التقنيات، والعلامات التجارية لـ SBR AI تظل ملكاً فكرياً وحصرياً للمنصة ومحمية بموجب أنظمة الملكية الفكرية في المملكة.</li>
+                </ul>
+              </div>
+
+              {/* Section 6 */}
+              <div className="space-y-3">
+                <h2 className="text-lg font-bold text-[#111827] border-r-4 border-[#006973] pr-3">٦. المسؤولية وإخلاء المسؤولية الطبية</h2>
+                <ul className="list-disc list-inside space-y-2 pr-2 text-xs text-[#4B5563]">
+                  <li>منصة مسبار هي أداة مساعدة لتوثيق الجلسات الطبية وتوفير الوقت للكوادر الطبية؛ وهي ليست بديلاً عن الطبيب ولا تقدم تشخيصاً طبياً أو قرارات علاجية.</li>
+                  <li>لا تتحمل المنصة أي مسؤولية قانونية عن الأخطاء الطبية أو التشخيص الخاطئ أو القرارات السريرية التي يتخذها الطبيب اعتماداً على مخرجات الذكاء الاصطناعي دون مراجعة وتدقيق مهني.</li>
+                  <li>العميل مسؤول قانونياً ومهنياً أمام الجهات الرقابية الطبية (مثل وزارة الصحة والهيئة السعودية للتخصصات الصحية) عن محتوى ودقة السجلات الطبية التي يعتمدها.</li>
+                </ul>
+              </div>
+
+              {/* Section 7 */}
+              <div className="space-y-3">
+                <h2 className="text-lg font-bold text-[#111827] border-r-4 border-[#006973] pr-3">٧. القانون الحاكم وتسوية النزاعات</h2>
+                <p>
+                  تخضع هذه الشروط والأحكام وتُفسر بالكامل وفقاً للأنظمة واللوائح المعمول بها في المملكة العربية السعودية. وفي حال نشوء أي نزاع يتعذر حله ودياً، ينعقد الاختصاص القضائي الحصري للمحاكم والجهات القضائية المختصة في المملكة العربية السعودية للفصل فيه.
+                </p>
+              </div>
+
+            </div>
+          ) : (
+            /* =========================================================================
+               ======================== TERMS CONTENT (ENGLISH) ========================
+               ========================================================================= */
+            <div className="space-y-8 text-[#374151] leading-relaxed text-justify text-sm">
+              
+              {/* Section 1 */}
+              <div className="space-y-3">
+                <h2 className="text-lg font-bold text-[#111827] border-l-4 border-[#006973] pl-3">1. Scope of Service</h2>
+                <p>
+                  SBR AI provides clinical documentation assistance powered by artificial intelligence. These services are provided under the laws of the Kingdom of Saudi Arabia.
+                </p>
+              </div>
+
+              {/* Section 2 */}
+              <div className="space-y-3">
+                <h2 className="text-lg font-bold text-[#111827] border-l-4 border-[#006973] pl-3">2. Account Registration & Security</h2>
+                <ul className="list-disc list-inside space-y-2 pl-2 text-xs text-[#4B5563]">
+                  <li>You must be a licensed healthcare practitioner or registered clinical entity in Saudi Arabia.</li>
+                  <li>You are solely responsible for protecting your account credentials. Sharing passwords outside authorized staff is strictly prohibited.</li>
+                </ul>
+              </div>
+
+              {/* Section 3 */}
+              <div className="space-y-3">
+                <h2 className="text-lg font-bold text-[#111827] border-l-4 border-[#006973] pl-3">3. Acceptable Use Policy</h2>
+                <p className="font-semibold text-xs text-[#111827]">You agree not to:</p>
+                <ul className="list-disc list-inside space-y-1.5 pl-2 text-xs text-[#4B5563]">
+                  <li>Attempt to bypass security features, reverse-engineer, or audit our systems for vulnerabilities.</li>
+                  <li>Upload any files containing malware, viruses, or infringing intellectual property.</li>
+                  <li>Record audio consultations without acquiring proper patient consent.</li>
+                </ul>
+              </div>
+
+              {/* Section 4 */}
+              <div className="space-y-3">
+                <h2 className="text-lg font-bold text-[#111827] border-l-4 border-[#006973] pl-3">4. Fees & Payments</h2>
+                <ul className="list-disc list-inside space-y-1.5 pl-2 text-xs text-[#4B5563]">
+                  <li>Subscriptions renew automatically monthly unless cancelled prior to renewal date.</li>
+                  <li>Paid fees are non-refundable except under confirmed billing errors or cancellation within 24 hours without service use.</li>
+                  <li>We reserve the right to suspend access if fees remain unpaid for more than 7 days.</li>
+                </ul>
+              </div>
+
+              {/* Section 6 */}
+              <div className="space-y-3">
+                <h2 className="text-lg font-bold text-[#111827] border-l-4 border-[#006973] pl-3">5. Disclaimer of Liability & Governing Law</h2>
+                <p>
+                  SBR AI is a support tool and does not provide medical decisions. You are solely responsible for reviewing outputs. These Terms are governed strictly by KSA law, and any disputes will fall under KSA jurisdiction.
+                </p>
+              </div>
+
+            </div>
+          )}
+        </div>
+
+        {/* Footer Navigation */}
+        <div className="mt-12 text-center border-t border-[#E5E7EB] pt-8">
+          <Link to="/" className="inline-flex items-center gap-2 text-[#006973] font-bold text-sm hover:underline transition-all hover:gap-3">
             <span className="material-symbols-outlined text-[18px]">{isArabic ? 'arrow_forward' : 'arrow_back'}</span>
             {isArabic ? 'العودة إلى الصفحة الرئيسية' : 'Back to Home'}
           </Link>
         </div>
+
       </main>
     </div>
   );

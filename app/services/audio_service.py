@@ -130,19 +130,28 @@ class AudioService:
         relative_audio_path = f"/uploads/audio/{unique_name}"
         transcription_text = ""
 
-        # 4. Perform OpenAI Whisper transcription
+        # 4. Perform OpenAI GPT-4o Transcribe
         try:
             from openai import AsyncOpenAI
             client = AsyncOpenAI(api_key=api_key.strip())
             with open(saved_file_path, "rb") as audio_file:
-                transcription = await client.audio.transcriptions.create(
-                    file=(unique_name, audio_file.read()),
-                    model="whisper-1",
-                    response_format="text"
-                )
-                transcription_text = str(transcription).strip()
+                audio_bytes = audio_file.read()
+                try:
+                    transcription = await client.audio.transcriptions.create(
+                        file=(unique_name, audio_bytes),
+                        model="gpt-4o-transcribe",
+                        response_format="text"
+                    )
+                    transcription_text = str(transcription).strip()
+                except Exception:
+                    transcription = await client.audio.transcriptions.create(
+                        file=(unique_name, audio_bytes),
+                        model="gpt-4o-mini-transcribe",
+                        response_format="text"
+                    )
+                    transcription_text = str(transcription).strip()
         except Exception as e:
-            logger.exception(f"Error transcribing audio with OpenAI Whisper: {e}")
+            logger.exception(f"Error transcribing audio message with gpt-4o-transcribe: {e}")
             transcription_text = "[تسجيل صوتي]"
 
         if not transcription_text:

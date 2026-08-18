@@ -68,7 +68,7 @@ export default function Landing({ setActivePage }) {
         <div className="max-w-container-max mx-auto px-margin-desktop flex items-center justify-between h-16">
           <div className="flex items-center gap-stack-lg">
             <a className="flex items-center gap-stack-sm group" href="#">
-              <SbrLogo size={36} color="#24564C" showText={true} textClass="text-primary" />
+              <SbrLogo size={36} color="#006973" showText={true} textClass="text-primary" />
             </a>
             <div className="hidden md:flex items-center gap-stack-lg ml-stack-lg font-body-md text-body-md">
               <a className="text-on-surface-variant hover:text-primary-hover transition-colors" href="#platform">

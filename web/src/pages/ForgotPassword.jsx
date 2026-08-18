@@ -135,7 +135,7 @@ export default function ForgotPassword({ setActivePage }) {
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8 flex flex-col items-center">
           <div className="mb-4">
-            <SbrLogo size={48} color="#24564C" showText={true} textClass="text-primary" />
+            <SbrLogo size={48} color="#006973" showText={true} textClass="text-primary" />
           </div>
           <h2 className="font-display-lg text-2xl md:text-3xl text-primary font-bold">
             {isArabic ? 'استعادة كلمة المرور' : 'Reset Password'}

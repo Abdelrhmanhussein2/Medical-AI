@@ -163,7 +163,7 @@ export default function Checkout() {
         </button>
         
         <div className="flex items-center gap-4">
-          <SbrLogo size={36} color="#24564C" showText={true} textClass="text-primary" />
+          <SbrLogo size={36} color="#006973" showText={true} textClass="text-primary" />
         </div>
       </header>
 

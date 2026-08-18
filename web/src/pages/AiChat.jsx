@@ -207,7 +207,7 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
       </head>
       <body>
         <div class="header-container">
-          <div class="logo-text">مِسبار AI</div>
+          <img src="${window.location.origin}/logo_full.png" alt="Logo" style="height: 38px; width: auto; object-fit: contain;" />
           <div class="report-badge">تقرير إحصائيات العيادة</div>
         </div>
         
@@ -236,10 +236,11 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
           ${contentHtml}
         </div>
         
-        <div class="footer-container">
-          <div>
-            <p style="margin: 0 0 5px 0;">تم توليد هذا التقرير الإحصائي الطبي بأمان بواسطة منصة مسبار للذكاء الاصطناعي.</p>
-            <p style="margin: 0; font-size: 9px; color: #94a3b8;">SBR AI - Smarter Care Better Outcomes</p>
+        <div class="footer-container" style="justify-content: flex-start;">
+          <div class="doctor-signature">
+            <p style="margin: 0; font-weight: bold; color: #334155;">توقيع الطبيب المعالج:</p>
+            <div class="signature-line"></div>
+            <p style="margin: 0; font-size: 10px;">${currentUser?.name || 'دكتور العيادة'}</p>
           </div>
         </div>
         

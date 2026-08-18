@@ -321,7 +321,7 @@ export const SessionProvider = ({ children }) => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
           mediaRecorderRef.current.stop();
         }
-      }, 15000);
+      }, 3000);
 
     } catch (err) {
       console.error("Failed to start session recording:", err);
@@ -421,7 +421,7 @@ export const SessionProvider = ({ children }) => {
           if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
             mediaRecorderRef.current.stop();
           }
-        }, 15000);
+        }, 3000);
       }
 
     } catch (err) {
@@ -453,7 +453,7 @@ export const SessionProvider = ({ children }) => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
           mediaRecorderRef.current.stop();
         }
-      }, 15000);
+      }, 3000);
     }
   };
 
@@ -652,6 +652,9 @@ export const SessionProvider = ({ children }) => {
           body: JSON.stringify({ patient_name: patient?.name || 'المراجع', summary_format: activeFormat })
         });
 
+        if (result.transcript_raw) {
+          setTranscriptText(result.transcript_raw);
+        }
         setSummaryText(result.summary_text || '');
         if (result.soap_note) {
           result.soap_note._original = { ...result.soap_note };
@@ -695,6 +698,9 @@ export const SessionProvider = ({ children }) => {
         method: 'POST',
         body: JSON.stringify({ patient_name: patient?.name || 'المراجع', summary_format: activeFormat })
       });
+      if (result.transcript_raw) {
+        setTranscriptText(result.transcript_raw);
+      }
       setSummaryText(result.summary_text || '');
       if (result.soap_note) {
         result.soap_note._original = { ...result.soap_note };

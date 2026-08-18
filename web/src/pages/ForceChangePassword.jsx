@@ -80,7 +80,7 @@ export default function ForceChangePassword({ setActivePage }) {
           
           <div className={`max-w-md space-y-8 relative z-10 ${isArabic ? 'text-right' : 'text-left'}`}>
             <div className="flex items-center gap-3">
-              <SbrLogo size={56} color="#24564C" showText={true} textClass="text-primary" />
+              <SbrLogo size={56} color="#006973" showText={true} textClass="text-primary" />
             </div>
             <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-white border border-border-subtle rounded-full text-xs font-semibold text-primary shadow-sm">
               <span className="material-symbols-outlined text-[16px]">verified_user</span>
@@ -106,7 +106,7 @@ export default function ForceChangePassword({ setActivePage }) {
           <div className="mx-auto w-full max-w-sm">
             <div className="text-center mb-8 flex flex-col items-center">
               <div className="mb-4 lg:hidden">
-                <SbrLogo size={44} color="#24564C" showText={true} textClass="text-primary" />
+                <SbrLogo size={44} color="#006973" showText={true} textClass="text-primary" />
               </div>
               <h2 className="font-display-lg text-headline-lg text-primary font-bold">
                 {isArabic ? 'تغيير كلمة المرور' : 'Change Password'}

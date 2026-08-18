@@ -119,22 +119,39 @@ class SessionService:
         except Exception as e:
             raise RuntimeError(f"Failed to save chunk file: {str(e)}")
             
-        # 3. إرسال لـ OpenAI Whisper
+        # 3. إرسال لـ OpenAI gpt-4o-transcribe لتفريغ الجزء الصوتي بذكاء عالي
         chunk_text = ""
         try:
             from openai import AsyncOpenAI
             client = AsyncOpenAI(api_key=openai_key.strip())
             with open(saved_file_path, "rb") as audio_file:
-                transcription = await client.audio.transcriptions.create(
-                    file=(unique_name, audio_file.read()),
-                    model="whisper-1",
-                    response_format="text"
-                )
-                chunk_text = str(transcription).strip()
+                audio_bytes = audio_file.read()
+                try:
+                    transcription = await client.audio.transcriptions.create(
+                        file=(unique_name, audio_bytes),
+                        model="gpt-4o-transcribe",
+                        response_format="text"
+                    )
+                    chunk_text = str(transcription).strip()
+                except Exception:
+                    try:
+                        transcription = await client.audio.transcriptions.create(
+                            file=(unique_name, audio_bytes),
+                            model="gpt-4o-mini-transcribe",
+                            response_format="text"
+                        )
+                        chunk_text = str(transcription).strip()
+                    except Exception:
+                        transcription = await client.audio.transcriptions.create(
+                            file=(unique_name, audio_bytes),
+                            model="whisper-1",
+                            response_format="text"
+                        )
+                        chunk_text = str(transcription).strip()
         except Exception as e:
             if os.path.exists(saved_file_path):
                 os.remove(saved_file_path)
-            raise RuntimeError(f"OpenAI Whisper transcription failed: {str(e)}")
+            raise RuntimeError(f"OpenAI chunk transcription failed: {str(e)}")
             
         # 4. مسح الملف المؤقت من القرص فوراً
         if os.path.exists(saved_file_path):
@@ -197,8 +214,8 @@ class SessionService:
         
         if not transcript.strip():
             transcript = "لم يتم تسجيل أي نص في هذه الجلسة."
-        
-        # إرسال للـ AI
+
+        # إرسال للـ AI للتلخيص وإنشاء SOAP Note
         ai_result = await summarize_session_transcript(transcript, patient_name, summary_format)
         
         # حفظ النتيجة

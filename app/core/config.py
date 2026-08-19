@@ -2,6 +2,7 @@ from pydantic_settings import BaseSettings
 from typing import Optional
 
 class Settings(BaseSettings):
+    ENV: str = "production"
     DATABASE_URL: str
     SECRET_KEY: str
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -28,6 +29,13 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: Optional[str] = None
     SMTP_FROM_NAME: str = "SBR AI Platform"
     FRONTEND_URL: str = "http://localhost:3000"
+
+    # ──────────── Moyasar Payment Gateway ────────────
+    MOYASAR_SECRET_KEY: str = ""          # sk_test_... or sk_live_...
+    MOYASAR_PUBLISHABLE_KEY: str = ""     # pk_test_... or pk_live_...
+    MOYASAR_WEBHOOK_SECRET: str = ""      # From Moyasar Dashboard → Webhooks
+    MOYASAR_CURRENCY: str = "SAR"         # SAR, USD, KWD, BHD
+    MOYASAR_API_BASE: str = "https://api.moyasar.com/v1"
 
     class Config:
         env_file = ".env"

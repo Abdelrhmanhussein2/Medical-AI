@@ -22,6 +22,7 @@ import TermsPage from './pages/TermsPage';
 import PrivacyPage from './pages/PrivacyPage';
 import HelpPage from './pages/HelpPage';
 import RefundPolicyPage from './pages/RefundPolicyPage';
+import PaymentCallback from './pages/PaymentCallback';
 
 // Admin pages (Code-Split using React.lazy)
 const AdminOverview = React.lazy(() => import('./pages/admin/AdminOverview'));
@@ -183,6 +184,7 @@ function AppContent() {
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/help" element={<HelpPage />} />
           <Route path="/refund-policy" element={<RefundPolicyPage />} />
+          <Route path="/payment/callback" element={<PaymentCallback />} />
 
           <Route path="/change-password" element={
             <ProtectedRoute>

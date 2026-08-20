@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 from typing import Any, Optional
 from fastapi import HTTPException, status
 from app.core.database import db
-from app.core.encryption import encrypt_text
+from app.core.encryption import encrypt_text, encrypt_binary
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -168,13 +168,14 @@ class AudioService:
         async with db.pool.acquire() as connection:
             await AudioService._assert_thread_owner(connection, thread_id, owner_id, owner_type)
             encrypted_content = encrypt_text(transcription_text)
+            encrypted_audio = encrypt_binary(contents) if contents else None
 
             async with connection.transaction():
                 query = """
                     INSERT INTO chat_messages (
-                        thread_id, sender_type, content, is_audio, audio_duration, audio_file_path
+                        thread_id, sender_type, content, is_audio, audio_duration, audio_file_path, audio_data
                     )
-                    VALUES ($1, $2, $3, $4, $5, $6)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)
                     RETURNING *
                 """
                 row = await connection.fetchrow(
@@ -184,7 +185,8 @@ class AudioService:
                     encrypted_content,
                     True,
                     duration_val,
-                    relative_audio_path
+                    relative_audio_path,
+                    encrypted_audio
                 )
 
                 update_thread_query = """

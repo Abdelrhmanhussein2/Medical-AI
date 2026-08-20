@@ -94,11 +94,12 @@ class SessionService:
             raise ValueError("OpenAI API Key is not configured.")
 
         # 1. التحقق من وجود الجلسة أولاً
-        check_query = "SELECT id, transcript_raw FROM sessions WHERE id = $1"
+        check_query = "SELECT id, doctor_id, transcript_raw FROM sessions WHERE id = $1"
         async with db.pool.acquire() as conn:
             row = await conn.fetchrow(check_query, UUID(session_id))
             if not row:
                 raise ValueError("Session not found")
+        doctor_id = row["doctor_id"]
         
         # 2. حفظ الملف الصوتي مؤقتاً
         filename = getattr(file, "filename", None) or ""
@@ -161,7 +162,28 @@ class SessionService:
         if not chunk_text or chunk_text.startswith("Subtitles by") or chunk_text.startswith("Amara.org"):
             chunk_text = ""
             
-        # 5. تحديث قاعدة البيانات وإلحاق النص الجديد
+        # 5. تشفير وحفظ الجزء الصوتي في جدول session_audio_chunks
+        from app.core.encryption import encrypt_binary, encrypt_text
+        encrypted_audio = encrypt_binary(contents)
+        encrypted_transcript = encrypt_text(chunk_text) if chunk_text else None
+        
+        async with db.pool.acquire() as conn:
+            chunk_index = await conn.fetchval(
+                "SELECT COALESCE(MAX(chunk_index), -1) + 1 FROM session_audio_chunks WHERE session_id = $1",
+                UUID(session_id)
+            )
+            await conn.execute(
+                """
+                INSERT INTO session_audio_chunks (session_id, doctor_id, chunk_index, audio_data, transcript)
+                VALUES ($1, $2, $3, $4, $5)
+                ON CONFLICT (session_id, chunk_index) DO UPDATE
+                    SET audio_data = EXCLUDED.audio_data,
+                        transcript = EXCLUDED.transcript
+                """,
+                UUID(session_id), UUID(str(doctor_id)), chunk_index, encrypted_audio, encrypted_transcript
+            )
+
+        # 6. تحديث قاعدة البيانات وإلحاق النص الجديد في جدول sessions
         if chunk_text:
             update_query = """
                 UPDATE sessions 

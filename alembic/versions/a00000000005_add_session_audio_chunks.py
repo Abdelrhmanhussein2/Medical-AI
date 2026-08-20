@@ -83,9 +83,17 @@ def upgrade() -> None:
 
     # ── Unique constraint: (session_id, chunk_index) must be unique ───────────
     op.execute("""
-        ALTER TABLE public.session_audio_chunks
-        ADD CONSTRAINT uq_sac_session_chunk_index
-        UNIQUE (session_id, chunk_index);
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM pg_constraint WHERE conname = 'uq_sac_session_chunk_index'
+            ) THEN
+                ALTER TABLE public.session_audio_chunks
+                ADD CONSTRAINT uq_sac_session_chunk_index
+                UNIQUE (session_id, chunk_index);
+            END IF;
+        END
+        $$;
     """)
 
 

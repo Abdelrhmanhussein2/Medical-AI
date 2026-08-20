@@ -24,6 +24,12 @@ class AppointmentBase(BaseModel):
 class AppointmentCreate(AppointmentBase):
     pass
 
+class AppointmentUpdate(BaseModel):
+    appointment_date: Optional[date] = None
+    appointment_time: Optional[time] = None
+    duration_minutes: Optional[int] = None
+    description: Optional[str] = None
+
 class AppointmentResponse(AppointmentBase):
     id: UUID
     status: AppointmentStatus

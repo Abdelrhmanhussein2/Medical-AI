@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 from typing import Any, Optional
 from fastapi import HTTPException, status
 from app.core.database import db
-from app.core.encryption import encrypt_text
+from app.core.encryption import encrypt_text, encrypt_binary
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -75,13 +75,32 @@ class AudioService:
                 detail=f"نوع الملف غير مدعوم. الأنواع المدعومة هي: {', '.join(ALLOWED_EXTENSIONS)}"
             )
 
-        # 2. Security check: Validate file size
+        # 2. Security check: Validate file size & magic bytes MIME type
         contents = await file.read()
         if len(contents) > MAX_AUDIO_SIZE:
             logger.warning(f"Rejected upload exceeding size limit: {len(contents)} bytes")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="حجم الملف الصوتي كبير جداً. الحد الأقصى هو 25 ميجابايت."
+            )
+
+        # Magic bytes check for audio files
+        # WebM: 1A 45 DF A3 | Ogg: OggS | WAV: RIFF | MP3: ID3 or FF FB / FF FA | MP4/M4A: ftyp
+        header = contents[:12]
+        is_valid_magic = (
+            header.startswith(b"\x1a\x45\xdf\xa3") or  # WebM
+            header.startswith(b"OggS") or             # Ogg
+            header.startswith(b"RIFF") or             # WAV
+            header.startswith(b"ID3") or              # MP3 ID3
+            header.startswith(b"\xff\xfb") or         # MP3 raw
+            header.startswith(b"\xff\xfa") or         # MP3 raw
+            b"ftyp" in header                         # MP4 / M4A
+        )
+        if not is_valid_magic:
+            logger.warning(f"Rejected upload with invalid magic bytes: {filename}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="محتوى الملف لا يطابق ملف صوتي صالح."
             )
 
         if len(contents) == 0:
@@ -111,19 +130,28 @@ class AudioService:
         relative_audio_path = f"/uploads/audio/{unique_name}"
         transcription_text = ""
 
-        # 4. Perform OpenAI Whisper transcription
+        # 4. Perform OpenAI GPT-4o Transcribe
         try:
             from openai import AsyncOpenAI
             client = AsyncOpenAI(api_key=api_key.strip())
             with open(saved_file_path, "rb") as audio_file:
-                transcription = await client.audio.transcriptions.create(
-                    file=(unique_name, audio_file.read()),
-                    model="whisper-1",
-                    response_format="text"
-                )
-                transcription_text = str(transcription).strip()
+                audio_bytes = audio_file.read()
+                try:
+                    transcription = await client.audio.transcriptions.create(
+                        file=(unique_name, audio_bytes),
+                        model="gpt-4o-transcribe",
+                        response_format="text"
+                    )
+                    transcription_text = str(transcription).strip()
+                except Exception:
+                    transcription = await client.audio.transcriptions.create(
+                        file=(unique_name, audio_bytes),
+                        model="gpt-4o-mini-transcribe",
+                        response_format="text"
+                    )
+                    transcription_text = str(transcription).strip()
         except Exception as e:
-            logger.exception(f"Error transcribing audio with OpenAI Whisper: {e}")
+            logger.exception(f"Error transcribing audio message with gpt-4o-transcribe: {e}")
             transcription_text = "[تسجيل صوتي]"
 
         if not transcription_text:
@@ -140,13 +168,14 @@ class AudioService:
         async with db.pool.acquire() as connection:
             await AudioService._assert_thread_owner(connection, thread_id, owner_id, owner_type)
             encrypted_content = encrypt_text(transcription_text)
+            encrypted_audio = encrypt_binary(contents) if contents else None
 
             async with connection.transaction():
                 query = """
                     INSERT INTO chat_messages (
-                        thread_id, sender_type, content, is_audio, audio_duration, audio_file_path
+                        thread_id, sender_type, content, is_audio, audio_duration, audio_file_path, audio_data
                     )
-                    VALUES ($1, $2, $3, $4, $5, $6)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)
                     RETURNING *
                 """
                 row = await connection.fetchrow(
@@ -156,7 +185,8 @@ class AudioService:
                     encrypted_content,
                     True,
                     duration_val,
-                    relative_audio_path
+                    relative_audio_path,
+                    encrypted_audio
                 )
 
                 update_thread_query = """

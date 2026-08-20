@@ -36,8 +36,6 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from groq import AsyncGroq
-
 from app.core.config import settings
 from app.services.router.tool_registry import PREREQUISITE_MAP, ROUTER_SHORT_DESCS, ToolRegistry
 
@@ -45,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 # ─── Constants ───────────────────────────────────────────────────────────────
 
-ROUTER_MODEL = "llama-3.1-8b-instant"
+ROUTER_MODEL = settings.OPENAI_MODEL if hasattr(settings, 'OPENAI_MODEL') else "gpt-4o-mini"
 
 # If LLM confidence is below this threshold, we return NO tools and let the
 # main LLM ask for clarification instead of guessing.
@@ -93,14 +91,20 @@ _ROUTER_SYSTEM_PROMPT_TEMPLATE = """\
 5. needs_patient_id: true إذا الأداة تحتاج patient_id ولم يُذكر في السياق.
 
 ━━ قواعد التمييز بين النوايا المتشابهة ━━
+- "زيارات سابقة / كشوفات سابقة / تاريخ مرضي / هل له زيارات" → get_patient_visits (مع search_my_patients إذا لم يكن المريض مربوطاً بالطلب)
+- "ملف المريض / بياناته بالكامل / ملفه الطبي / بروفايل" → get_patient_full_profile (مع search_my_patients إذا لم يكن المريض مربوطاً بالطلب)
+- "مواعيد قادمة / مواعيد / ميعاد قادم / هل له ميعاد قريب" → get_my_appointments (مع search_my_patients إذا لم يكن المريض مربوطاً بالطلب)
 - "الغ / الغي / إلغاء / كنسل" → cancel_appointment (إلغاء نهائي)
 - "أجل / تأجيل / غير الموعد / تغيير الموعد" → reschedule_appointment (تغيير الوقت)
 - "رسالة ترحيبية / ترحيب / تأكيد حجز بالواتس / ابعت تأكيد موعد بالواتساب" → send_appointment_welcome_message (تأكيد الحجز للمريض بالواتساب)
 - "كام / كم عدد / إحصائيات / أرباح / تقرير / شهري" → get_clinic_stats أو get_monthly_report (ليس search_my_patients)
 - "سجل مواعيدي / جدول مواعيدي / هات مواعيدي" → get_my_appointments أو get_today_schedule (فهذا استعراض للمواعيد وليس حجز book_appointment)
+- "مين المرضى اللي عندي / عرض المرضى / ابحث عن مريض / مرضاي" → search_my_patients (فهذا استعراض أو بحث في سجل المرضى بالعيادة، وليس استعراضاً للمواعيد get_my_appointments أو get_today_schedule إلا إذا حدد الطبيب يوماً أو موعداً معنياً مثل 'مرضى اليوم' أو 'مواعيد اليوم')
 - إذا سأل المساعد "هل تريد تسجيله كمريض جديد؟" وأجاب الطبيب بالموافقة (اه / نعم / سجل / ضيفه) → النية هي ADD_NEW_PATIENT والأداة هي add_new_patient فقط (ولا تضف book_appointment أو search_my_patients لأننا نحتاج تسجيله أولاً)
 - إذا أجاب الطبيب برقم هاتف وكان المساعد يسأل عنه لإكمال التسجيل → add_new_patient
 - إذا قال الطبيب "ضيفه / سجله / اضفه" مع "احجزله / بكره / الساعة" في نفس الرسالة، أو إذا طلب حجز موعد وذكر اسم المريض ورقم هاتفه معاً في نفس الرسالة → اختر [add_new_patient, book_appointment] معاً
+
+- إذا أجاب الطبيب بالموافقة (نعم / اه / تمام / أكد / صحيح) بعد سؤال المساعد لتأكيد تعديل أو إلغاء أو حجز موعد → اتبع الطلب الأصلي واختر الأداة المناسبة (reschedule_appointment لتعديل الموعد، أو book_appointment لحجز الموعد، أو cancel_appointment لإلغاء الموعد) مع رفع الثقة (confidence) إلى 1.0.
 
 - إذا اختار الطبيب مريضاً من قائمة (كتب اسماً بعد سؤال المساعد): تابع الطلب الأصلي الذي كان يريده
   (إذا كان يريد حجز موعد → book_appointment + search_my_patients)
@@ -177,21 +181,20 @@ class SmartRouter:
         current_user_msg: str,
         last_ai_msg: Optional[str],
         previous_user_msg: Optional[str] = None,
+        patient_info: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
         Builds the routing context for the LLM.
 
-        Includes three layers (from oldest to newest):
-        1. previous_user_msg  — the original intent (e.g. "احجز لمحمد مسعد")
-           This is critical for multi-turn flows so the router knows why the
-           doctor is now sending a follow-up like a name or phone number.
-        2. last_ai_msg        — what the assistant asked (trimmed to 300 chars)
-        3. current_user_msg   — the doctor's actual current response
-
-        We deliberately exclude the full history to avoid stale keywords from
-        old messages polluting the current intent analysis.
+        Includes four layers (from oldest to newest):
+        1. patient_info       — context of the current patient thread if bound
+        2. previous_user_msg  — the original intent (e.g. "احجز لمحمد مسعد")
+        3. last_ai_msg        — what the assistant asked (trimmed to 300 chars)
+        4. current_user_msg   — the doctor's actual current response
         """
         parts: list[str] = []
+        if patient_info and patient_info.get("name"):
+            parts.append(f"[المريض المحدد للمحادثة الحالية]: الاسم: {patient_info.get('name')}, patient_id: {patient_info.get('id')}")
         if previous_user_msg:
             parts.append(f"[الطلب الأصلي للطبيب]:\n{previous_user_msg.strip()[:200]}")
         if last_ai_msg:
@@ -207,20 +210,15 @@ class SmartRouter:
         routing_context: str,
         api_key: str,
     ) -> str:
-        """Calls the lightweight router LLM and returns its raw text output."""
+        """Calls the router LLM and returns its raw text output."""
         system_prompt = _ROUTER_SYSTEM_PROMPT_TEMPLATE.format(
             tool_manifest=cls._get_tool_manifest(),
             max_tools=MAX_TOOLS,
         )
-        
-        use_openai = settings.OPENAI_API_KEY and not settings.OPENAI_API_KEY.startswith("sk-your")
-        if use_openai:
-            from openai import AsyncOpenAI
-            client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.strip())
-            model_to_use = settings.OPENAI_MODEL or "gpt-4o-mini"
-        else:
-            client = AsyncGroq(api_key=api_key.strip())
-            model_to_use = ROUTER_MODEL
+
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.strip())
+        model_to_use = settings.OPENAI_MODEL or "gpt-4o-mini"
 
         response = await client.chat.completions.create(
             model=model_to_use,
@@ -333,6 +331,7 @@ class SmartRouter:
         current_user_msg: str,
         last_ai_msg: Optional[str] = None,
         previous_user_msg: Optional[str] = None,
+        patient_info: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
         """
         Main entry point. Determines the set of tool schemas to pass to the
@@ -345,29 +344,29 @@ class SmartRouter:
                                 multi-turn flows so the router knows the
                                 original intent (e.g. booking) when the doctor
                                 replies with just a name or phone number.
+            patient_info      : Context of the current patient thread if bound.
 
         Returns:
             A list of tool JSON schemas ready to be passed to the main LLM.
             Returns empty list when confidence is below threshold.
         """
-        api_key = settings.GROQ_API_KEY or os.environ.get("GROQ_API_KEY", "")
         has_openai = bool(settings.OPENAI_API_KEY and not settings.OPENAI_API_KEY.startswith("sk-your"))
-        if not api_key and not has_openai:
-            logger.warning("[SMART ROUTER] Neither GROQ_API_KEY nor OPENAI_API_KEY configured — returning all tools as fallback.")
+        if not has_openai:
+            logger.warning("[SMART ROUTER] OPENAI_API_KEY not configured — returning all tools as fallback.")
             return ToolRegistry.get_all_schemas()
 
         # ── Step 1: Build routing context ──────────────────────────────────
         routing_context = cls._build_routing_context(
-            current_user_msg, last_ai_msg, previous_user_msg
+            current_user_msg, last_ai_msg, previous_user_msg, patient_info
         )
         preview = current_user_msg[:70] + "…" if len(current_user_msg) > 70 else current_user_msg
         _dbg(f"🚀 Routing: '{preview}'")
         if previous_user_msg:
-            _dbg(f"📌 Original intent: '{previous_user_msg[:60]}{'…' if len(previous_user_msg) > 60 else ''}'")  
+            _dbg(f"📌 Original intent: '{previous_user_msg[:60]}{'…' if len(previous_user_msg) > 60 else ''}'")
 
         # ── Step 2: LLM intent analysis ────────────────────────────────────
         try:
-            raw_text = await cls._call_router_llm(routing_context, api_key)
+            raw_text = await cls._call_router_llm(routing_context, "")
         except Exception as exc:
             logger.exception(f"[SMART ROUTER] LLM call failed: {exc}")
             _dbg(f"{_R}❌ LLM call failed — falling back to all tools{_RST}")

@@ -275,8 +275,11 @@ SQL_STATEMENTS = [
         is_audio       BOOLEAN NOT NULL DEFAULT FALSE,
         audio_duration VARCHAR(10),
         audio_file_path TEXT,
+        audio_data     BYTEA,
         created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
     );""",
+    
+    "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS audio_data BYTEA;",
     
     # Token Usage Logs
     """CREATE TABLE IF NOT EXISTS token_usage_logs (

@@ -82,6 +82,7 @@ const deleteChunkFromDB = async (id) => {
 export const SessionProvider = ({ children }) => {
   const { refreshPatients, updateAppointmentStatus } = useApp();
   const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [duration, setDuration] = useState(0);
   const [sessionId, setSessionId] = useState(null);
   const [appointmentId, setAppointmentId] = useState(null);
@@ -102,6 +103,7 @@ export const SessionProvider = ({ children }) => {
   const [aiModelUsed, setAiModelUsed] = useState('');
   const [aiTokensUsed, setAiTokensUsed] = useState(0);
   const [showSummaryError, setShowSummaryError] = useState(false);
+  const [summaryFormat, setSummaryFormat] = useState('soap'); // 'soap' | 'multi_section'
 
   // References for Web Recording
   const mediaRecorderRef = useRef(null);
@@ -110,6 +112,23 @@ export const SessionProvider = ({ children }) => {
   const timerRef = useRef(null);
   const chunkTimerRef = useRef(null);
   const isRecordingRef = useRef(false);
+  const transcriptSyncDebounceRef = useRef(null);
+
+  const updateTranscriptText = (newText) => {
+    setTranscriptText(newText);
+    const activeSessionId = sessionId;
+    if (activeSessionId && isOnline) {
+      if (transcriptSyncDebounceRef.current) {
+        clearTimeout(transcriptSyncDebounceRef.current);
+      }
+      transcriptSyncDebounceRef.current = setTimeout(() => {
+        apiFetch(`/sessions/${activeSessionId}/transcript`, {
+          method: 'PATCH',
+          body: JSON.stringify({ transcript_raw: newText, duration_seconds: duration })
+        }).catch(err => console.error("Failed to sync edited transcript to backend", err));
+      }, 500);
+    }
+  };
 
   // Load active session metadata from localStorage on startup (to recover after reload)
   useEffect(() => {
@@ -123,6 +142,7 @@ export const SessionProvider = ({ children }) => {
         setDuration(data.duration);
         setTranscriptText(data.transcriptText || '');
         setIsRecording(data.isRecording);
+        setIsPaused(data.isPaused || false);
         setIsManualMode(data.isManualMode || false);
         setSummaryDone(data.summaryDone || false);
         setSummaryText(data.summaryText || '');
@@ -135,7 +155,7 @@ export const SessionProvider = ({ children }) => {
         
         // If it was recording and not manual, we attempt to re-initialize mediaRecorder
         if (data.isRecording && !data.isManualMode) {
-          resumeRecording(data.sessionId);
+          recoverRecordingSession(data.sessionId, data.isPaused || false);
         }
       } catch (err) {
         console.error("Failed to restore background session metadata", err);
@@ -153,6 +173,7 @@ export const SessionProvider = ({ children }) => {
         duration,
         transcriptText,
         isRecording,
+        isPaused,
         isManualMode,
         summaryDone,
         summaryText,
@@ -167,7 +188,7 @@ export const SessionProvider = ({ children }) => {
     } else {
       localStorage.removeItem("active_bg_recording_session");
     }
-  }, [sessionId, appointmentId, patient, duration, transcriptText, isRecording, isManualMode, summaryDone, summaryText, soapNote, patientSummary, prescriptions, tasks]);
+  }, [sessionId, appointmentId, patient, duration, transcriptText, isRecording, isPaused, isManualMode, summaryDone, summaryText, soapNote, patientSummary, prescriptions, tasks]);
 
   // Online / Offline monitor
   useEffect(() => {
@@ -187,7 +208,7 @@ export const SessionProvider = ({ children }) => {
 
   // Background Timer Effect
   useEffect(() => {
-    if (isRecording) {
+    if (isRecording && !isPaused) {
       timerRef.current = setInterval(() => {
         setDuration(d => d + 1);
       }, 1000);
@@ -200,7 +221,7 @@ export const SessionProvider = ({ children }) => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isRecording]);
+  }, [isRecording, isPaused]);
 
   const apiFetch = async (url, options = {}) => {
     const token = sessionStorage.getItem('accessToken');
@@ -219,32 +240,45 @@ export const SessionProvider = ({ children }) => {
     try {
       setAppointmentId(appId);
       setPatient(patientObj);
-      setDuration(0);
-      setTranscriptText('');
-      setSummaryDone(false);
-      setSoapNote(null);
-      setSummaryText('');
-      setPatientSummary('');
-      setPrescriptions([]);
-      setTasks([]);
-      setShowSummaryError(false);
-      setIsManualMode(false);
 
-      let currentSessionId = null;
+      let currentSessionId = sessionId;
 
-      // 1. Initialize backend session
-      if (isOnline) {
-        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
-        const session = await apiFetch('/sessions/', {
-          method: 'POST',
-          body: JSON.stringify({
-            doctor_id: currentUser.id,
-            appointment_id: appId || null,
-            patient_id: patientObj?.id || null
-          })
-        });
-        setSessionId(session.id);
-        currentSessionId = session.id;
+      if (!currentSessionId) {
+        setDuration(0);
+        setIsPaused(false);
+        setTranscriptText('');
+        setSummaryDone(false);
+        setSoapNote(null);
+        setSummaryText('');
+        setPatientSummary('');
+        setPrescriptions([]);
+        setTasks([]);
+        setShowSummaryError(false);
+        setIsManualMode(false);
+
+        // 1. Initialize backend session
+        if (isOnline) {
+          const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
+          const session = await apiFetch('/sessions/', {
+            method: 'POST',
+            body: JSON.stringify({
+              doctor_id: currentUser.id,
+              appointment_id: appId || null,
+              patient_id: patientObj?.id || null
+            })
+          });
+          setSessionId(session.id);
+          currentSessionId = session.id;
+        }
+      } else {
+        setIsManualMode(false);
+        setIsPaused(false);
+        if (transcriptText && isOnline) {
+          apiFetch(`/sessions/${currentSessionId}/transcript`, {
+            method: 'PATCH',
+            body: JSON.stringify({ transcript_raw: transcriptText, duration_seconds: duration })
+          }).catch(err => console.error("Failed to pre-sync transcript text", err));
+        }
       }
 
       // 2. Initialize Microphone Stream
@@ -287,7 +321,7 @@ export const SessionProvider = ({ children }) => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
           mediaRecorderRef.current.stop();
         }
-      }, 15000);
+      }, 3000);
 
     } catch (err) {
       console.error("Failed to start session recording:", err);
@@ -301,32 +335,34 @@ export const SessionProvider = ({ children }) => {
     try {
       setAppointmentId(appId);
       setPatient(patientObj);
-      setDuration(0);
-      setTranscriptText('');
-      setSummaryDone(false);
-      setSoapNote(null);
-      setSummaryText('');
-      setPatientSummary('');
-      setPrescriptions([]);
-      setTasks([]);
-      setShowSummaryError(false);
       setIsManualMode(true);
+      setShowSummaryError(false);
 
-      let currentSessionId = null;
+      let currentSessionId = sessionId;
 
-      // 1. Initialize backend session
-      if (isOnline) {
-        const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
-        const session = await apiFetch('/sessions/', {
-          method: 'POST',
-          body: JSON.stringify({
-            doctor_id: currentUser.id,
-            appointment_id: appId || null,
-            patient_id: patientObj?.id || null
-          })
-        });
-        setSessionId(session.id);
-        currentSessionId = session.id;
+      if (!currentSessionId) {
+        setDuration(0);
+        setTranscriptText('');
+        setSummaryDone(false);
+        setSoapNote(null);
+        setSummaryText('');
+        setPatientSummary('');
+        setPrescriptions([]);
+        setTasks([]);
+
+        if (isOnline) {
+          const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
+          const session = await apiFetch('/sessions/', {
+            method: 'POST',
+            body: JSON.stringify({
+              doctor_id: currentUser.id,
+              appointment_id: appId || null,
+              patient_id: patientObj?.id || null
+            })
+          });
+          setSessionId(session.id);
+          currentSessionId = session.id;
+        }
       }
 
       isRecordingRef.current = true;
@@ -340,8 +376,8 @@ export const SessionProvider = ({ children }) => {
     }
   };
 
-  // --- Resume Recording after Reload ---
-  const resumeRecording = async (activeSessionId) => {
+  // --- Recover Recording after Reload ---
+  const recoverRecordingSession = async (activeSessionId, wasPaused) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
@@ -372,18 +408,52 @@ export const SessionProvider = ({ children }) => {
       };
 
       isRecordingRef.current = true;
-      recorder.start();
       setIsRecording(true);
 
+      if (wasPaused) {
+        recorder.start();
+        recorder.pause();
+        setIsPaused(true);
+      } else {
+        recorder.start();
+        setIsPaused(false);
+        chunkTimerRef.current = setInterval(() => {
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop();
+          }
+        }, 3000);
+      }
+
+    } catch (err) {
+      console.error("Failed to recover recording stream", err);
+      setIsRecording(false);
+    }
+  };
+
+  // --- Pause Recording Stream ---
+  const pauseRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.pause();
+      setIsPaused(true);
+      if (chunkTimerRef.current) {
+        clearInterval(chunkTimerRef.current);
+        chunkTimerRef.current = null;
+      }
+    }
+  };
+
+  // --- Resume Recording Stream ---
+  const resumeRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'paused') {
+      mediaRecorderRef.current.resume();
+      setIsPaused(false);
+      
+      // Slicing audio files: stop and restart every 15s so each is a valid file
       chunkTimerRef.current = setInterval(() => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
           mediaRecorderRef.current.stop();
         }
-      }, 15000);
-
-    } catch (err) {
-      console.error("Failed to resume recording stream", err);
-      setIsRecording(false);
+      }, 3000);
     }
   };
 
@@ -391,6 +461,7 @@ export const SessionProvider = ({ children }) => {
   const stopRecording = () => {
     isRecordingRef.current = false;
     setIsRecording(false);
+    setIsPaused(false);
 
     if (chunkTimerRef.current) {
       clearInterval(chunkTimerRef.current);
@@ -529,7 +600,8 @@ export const SessionProvider = ({ children }) => {
   };
 
   // --- Finalize Session & Summarize ---
-  const endSessionAndSummarize = async () => {
+  const endSessionAndSummarize = async (format) => {
+    const activeFormat = typeof format === 'string' ? format : (summaryFormat || 'soap');
     setIsSummarizing(true);
     setShowSummaryError(false);
     
@@ -577,10 +649,16 @@ export const SessionProvider = ({ children }) => {
         // Request AI summary
         const result = await apiFetch(`/sessions/${activeSessionId}/summarize`, {
           method: 'POST',
-          body: JSON.stringify({ patient_name: patient?.name || 'المراجع' })
+          body: JSON.stringify({ patient_name: patient?.name || 'المراجع', summary_format: activeFormat })
         });
 
+        if (result.transcript_raw) {
+          setTranscriptText(result.transcript_raw);
+        }
         setSummaryText(result.summary_text || '');
+        if (result.soap_note) {
+          result.soap_note._original = { ...result.soap_note };
+        }
         setSoapNote(result.soap_note);
         setPatientSummary(result.patient_summary || '');
         setPrescriptions(result.prescriptions || []);
@@ -611,15 +689,22 @@ export const SessionProvider = ({ children }) => {
   };
 
   // --- Retry Summary if failed ---
-  const retrySummary = async () => {
+  const retrySummary = async (format) => {
     setIsSummarizing(true);
     setShowSummaryError(false);
+    const activeFormat = typeof format === 'string' ? format : (summaryFormat || 'soap');
     try {
       const result = await apiFetch(`/sessions/${sessionId}/summarize`, {
         method: 'POST',
-        body: JSON.stringify({ patient_name: patient?.name || 'المراجع' })
+        body: JSON.stringify({ patient_name: patient?.name || 'المراجع', summary_format: activeFormat })
       });
+      if (result.transcript_raw) {
+        setTranscriptText(result.transcript_raw);
+      }
       setSummaryText(result.summary_text || '');
+      if (result.soap_note) {
+        result.soap_note._original = { ...result.soap_note };
+      }
       setSoapNote(result.soap_note);
       setPatientSummary(result.patient_summary || '');
       setPrescriptions(result.prescriptions || []);
@@ -643,12 +728,7 @@ export const SessionProvider = ({ children }) => {
   // --- Clear Session States ---
   const clearActiveSession = () => {
     localStorage.removeItem("active_bg_recording_session");
-    // We keep summary results in view, but reset recording meta
-    setSessionId(null);
-    setAppointmentId(null);
-    setPatient(null);
-    setDuration(0);
-    setTranscriptText('');
+    // We keep summary results and session identifiers in view, but reset recording state
     setIsRecording(false);
     isRecordingRef.current = false;
     setIsManualMode(false);
@@ -664,9 +744,58 @@ export const SessionProvider = ({ children }) => {
     }
   };
 
+  const loadSessionByAppointment = async (apptId) => {
+    if (!apptId) return null;
+    try {
+      // 1. Get sessions for this appointment
+      const sessions = await apiFetch(`/sessions/by-appointment/${apptId}`);
+      if (sessions && sessions.length > 0) {
+        // Get the latest session
+        const sessionHeader = sessions[0];
+        
+        // 2. Fetch full session details
+        const fullSession = await apiFetch(`/sessions/${sessionHeader.id}`);
+        if (fullSession) {
+          setSessionId(fullSession.id);
+          setAppointmentId(apptId);
+          setDuration(fullSession.duration_seconds || 0);
+          setTranscriptText(fullSession.transcript_raw || '');
+          setSummaryText(fullSession.summary_text || '');
+          
+          let parsedSoap = fullSession.soap_note;
+          if (parsedSoap) {
+            parsedSoap._original = { ...parsedSoap };
+          }
+          setSoapNote(parsedSoap || null);
+          setPatientSummary(fullSession.patient_summary || '');
+          setPrescriptions(fullSession.prescriptions || []);
+          setTasks(fullSession.tasks || []);
+          setAiModelUsed(fullSession.ai_model_used || '');
+          setAiTokensUsed(fullSession.ai_tokens_used || 0);
+          
+          setSummaryDone(fullSession.status === 'summarized' || fullSession.status === 'completed');
+          setIsManualMode(false);
+          setIsRecording(false);
+          isRecordingRef.current = false;
+          setIsPaused(false);
+          return fullSession;
+        }
+      }
+      return null;
+    } catch (err) {
+      console.error("Failed to load session by appointment:", err);
+      return null;
+    }
+  };
+
   const forceCloseSession = () => {
     stopRecording();
     clearActiveSession();
+    // Explicitly clear session identifiers when leaving the page
+    setSessionId(null);
+    setAppointmentId(null);
+    setPatient(null);
+    setDuration(0);
     setIsManualMode(false);
     setSummaryDone(false);
     setSoapNote(null);
@@ -677,6 +806,40 @@ export const SessionProvider = ({ children }) => {
     setAiModelUsed('');
     setAiTokensUsed(0);
     setShowSummaryError(false);
+    setTranscriptText('');
+  };
+
+  const saveEditedNotes = async (activeSessionId, updatedSoap, updatedSummaryText, updatedPatientSummary) => {
+    if (!activeSessionId) return null;
+    try {
+      const result = await apiFetch(`/sessions/${activeSessionId}/notes`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          soap_note: updatedSoap,
+          summary_text: updatedSummaryText,
+          patient_summary: updatedPatientSummary
+        })
+      });
+      if (updatedSoap !== undefined) setSoapNote(updatedSoap);
+      if (updatedSummaryText !== undefined) setSummaryText(updatedSummaryText);
+      if (updatedPatientSummary !== undefined) setPatientSummary(updatedPatientSummary);
+
+      const activeData = localStorage.getItem("active_bg_recording_session");
+      if (activeData) {
+        try {
+          const parsed = JSON.parse(activeData);
+          if (updatedSoap !== undefined) parsed.soapNote = updatedSoap;
+          if (updatedSummaryText !== undefined) parsed.summaryText = updatedSummaryText;
+          if (updatedPatientSummary !== undefined) parsed.patientSummary = updatedPatientSummary;
+          localStorage.setItem("active_bg_recording_session", JSON.stringify(parsed));
+        } catch (e) {}
+      }
+
+      return result;
+    } catch (err) {
+      console.error("Failed to save edited notes:", err);
+      throw err;
+    }
   };
 
   return (
@@ -693,23 +856,31 @@ export const SessionProvider = ({ children }) => {
       summaryDone,
       summaryText,
       soapNote,
+      setSoapNote,
       patientSummary,
       prescriptions,
       tasks,
       aiModelUsed,
       aiTokensUsed,
       showSummaryError,
+      summaryFormat,
+      setSummaryFormat,
       startRecording,
       stopRecording,
+      pauseRecording,
+      resumeRecording,
+      isPaused,
       endSessionAndSummarize,
       retrySummary,
       clearActiveSession,
       forceCloseSession,
       getPatientSessions,
-      setTranscriptText,
+      loadSessionByAppointment,
+      setTranscriptText: updateTranscriptText,
       startManualSession,
       isManualMode,
-      setIsManualMode
+      setIsManualMode,
+      saveEditedNotes
     }}>
       {children}
     </SessionContext.Provider>

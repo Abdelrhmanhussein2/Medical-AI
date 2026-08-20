@@ -5,9 +5,10 @@ import { useLanguage } from '../context/LanguageContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import StatsCard from '../components/StatsCard';
+import html2pdf from 'html2pdf.js';
 
 export default function AiChat({ initialPatientId, initialThreadId }) {
-  const { currentUser } = useApp();
+  const { currentUser, refreshPatients, refreshAppointments } = useApp();
   const { t, isArabic } = useLanguage();
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
@@ -51,6 +52,257 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
   const timerRef = useRef(null);
   const fileInputRef = useRef(null);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
+
+  const handleDownloadPDF = (messageId) => {
+    const element = document.getElementById(`msg-content-${messageId}`);
+    if (!element) return;
+    
+    // Clone the element to print
+    const cloned = element.cloneNode(true);
+    
+    // Strip outer bubble classes
+    cloned.className = "space-y-4";
+    
+    // Remove ignore elements
+    cloned.querySelectorAll('[data-html2canvas-ignore]').forEach(el => el.remove());
+    
+    const contentHtml = cloned.innerHTML;
+    
+    const dateStr = new Date().toLocaleDateString('ar-EG', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+    
+    const printHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>تقرير العيادة الإحصائي</title>
+        <meta charset="utf-8">
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;850&display=swap');
+          body { 
+            font-family: 'Cairo', 'Inter', sans-serif; 
+            font-size: 14px; 
+            line-height: 1.8; 
+            color: #1e293b; 
+            direction: rtl; 
+            padding: 30px;
+            background-color: #ffffff;
+          }
+          .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #006973;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+          }
+          .logo-text {
+            font-size: 22px;
+            font-weight: 850;
+            color: #006973;
+            letter-spacing: 0.5px;
+          }
+          .report-badge {
+            background-color: #EAFBFD;
+            color: #006973;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            letter-spacing: 0.5px;
+            border: 1px solid rgba(20, 168, 185, 0.2);
+          }
+          .doc-title {
+            font-size: 18px;
+            color: #0f172a;
+            text-align: center;
+            margin-top: 15px;
+            margin-bottom: 25px;
+            font-weight: 800;
+          }
+          .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px 20px;
+            background-color: #F7FBFC;
+            border: 1px solid #E8F2F4;
+            border-radius: 12px;
+            padding: 15px 18px;
+            margin-bottom: 30px;
+            font-size: 13px;
+          }
+          .meta-item {
+            display: flex;
+            gap: 8px;
+          }
+          .meta-label {
+            color: #64748b;
+            font-weight: 600;
+          }
+          .meta-value {
+            color: #0f172a;
+            font-weight: bold;
+          }
+          /* Premium Table Styling */
+          table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            margin: 25px 0 !important;
+            font-size: 13.5px !important;
+            border: 1px solid #E8F2F4 !important;
+            border-radius: 12px !important;
+            overflow: hidden !important;
+          }
+          th {
+            background-color: #EAFBFD !important;
+            color: #006973 !important;
+            font-weight: 800 !important;
+            padding: 14px 18px !important;
+            border-bottom: 2px solid #006973 !important;
+            text-align: right !important;
+          }
+          td {
+            padding: 14px 18px !important;
+            border-bottom: 1px solid #E8F2F4 !important;
+            color: #334155 !important;
+            font-weight: 600 !important;
+            text-align: right !important;
+          }
+          tr:nth-child(even) {
+            background-color: #F7FBFC !important;
+          }
+          h3, h2 {
+            color: #006973 !important;
+            font-weight: 800 !important;
+            font-size: 15px !important;
+            margin-top: 15px !important;
+          }
+          .footer-container {
+            margin-top: 60px;
+            border-top: 1.5px solid #e2e8f0;
+            padding-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            font-size: 11px;
+            color: #64748b;
+          }
+          .signature-line {
+            width: 140px;
+            border-bottom: 1.5px solid #94a3b8;
+            margin-top: 30px;
+            margin-bottom: 4px;
+            display: inline-block;
+          }
+          @media print {
+            body { padding: 10px; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header-container">
+          <img src="${window.location.origin}/logo_full.png" alt="Logo" style="height: 38px; width: auto; object-fit: contain;" />
+          <div class="report-badge">تقرير إحصائيات العيادة</div>
+        </div>
+        
+        <h1 class="doc-title">تقرير مؤشرات وأداء العيادة الطبي</h1>
+        
+        <div class="meta-grid">
+          <div class="meta-item">
+            <span class="meta-label">الطبيب المعالج:</span>
+            <span class="meta-value">${currentUser?.name || 'دكتور العيادة'}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">تاريخ التصدير:</span>
+            <span class="meta-value">${dateStr}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">التخصص / العيادة:</span>
+            <span class="meta-value">العيادة العامة</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">حالة التقرير:</span>
+            <span class="meta-value" style="color: #10b981;">مكتمل ومعتمد</span>
+          </div>
+        </div>
+        
+        <div class="report-wrapper">
+          ${contentHtml}
+        </div>
+        
+        <div class="footer-container" style="justify-content: flex-start;">
+          <div class="doctor-signature">
+            <p style="margin: 0; font-weight: bold; color: #334155;">توقيع الطبيب المعالج:</p>
+            <div class="signature-line"></div>
+            <p style="margin: 0; font-size: 10px;">${currentUser?.name || 'دكتور العيادة'}</p>
+          </div>
+        </div>
+        
+        <script>
+          window.onload = function() {
+            window.print();
+            setTimeout(function() {
+              window.close();
+            }, 500);
+          }
+        </script>
+      </body>
+      </html>
+    `;
+    
+    const printWindow = window.open('', '_blank', 'width=850,height=950');
+    if (printWindow) {
+      printWindow.document.write(printHtml);
+      printWindow.document.close();
+    } else {
+      alert(isArabic ? 'تم حظر النوافذ المنبثقة من قبل المتصفح. يرجى السماح بالنوافذ المنبثقة لتنزيل التقرير.' : 'Pop-ups are blocked by your browser. Please allow pop-ups to download the report.');
+    }
+  };
+
+  const handleAiResponseActions = (aiMsg) => {
+    if (!aiMsg || !aiMsg.actions_data || !Array.isArray(aiMsg.actions_data)) return;
+    
+    // Check if any patient actions were successful
+    const hasPatientAction = aiMsg.actions_data.some(act => 
+      ['add_new_patient', 'update_patient_info', 'delete_patient'].includes(act)
+    );
+    if (hasPatientAction) {
+      console.log("AI Chat action detected: reloading patients...");
+      refreshPatients();
+      
+      // Also refresh the local threads/patients dropdown just in case
+      const fetchPatientsLocal = async () => {
+        try {
+          const token = sessionStorage.getItem("accessToken");
+          const res = await fetch('/api/v1/patients/', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setPatients(data || []);
+          }
+        } catch (err) {
+          console.error("Failed to fetch local patients list", err);
+        }
+      };
+      fetchPatientsLocal();
+    }
+    
+    // Check if any appointment actions were successful
+    const hasApptAction = aiMsg.actions_data.some(act => 
+      ['book_appointment', 'cancel_appointment', 'reschedule_appointment', 'update_appointment_status'].includes(act)
+    );
+    if (hasApptAction) {
+      console.log("AI Chat action detected: reloading appointments...");
+      refreshAppointments();
+    }
+  };
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -288,6 +540,7 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
           if (aiRes.ok) {
             const aiMsg = await aiRes.json();
             setMessages(prev => [...prev, aiMsg]);
+            handleAiResponseActions(aiMsg);
           } else {
             const errData = await aiRes.json().catch(() => ({}));
             const detail = errData.detail || (isArabic ? "حدث خطأ أثناء الاتصال بالذكاء الاصطناعي." : "An error occurred with the AI assistant.");
@@ -431,6 +684,7 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
           if (aiRes.ok) {
             const aiMsg = await aiRes.json();
             setMessages(prev => [...prev, aiMsg]);
+            handleAiResponseActions(aiMsg);
           } else {
             const errData = await aiRes.json().catch(() => ({}));
             const detail = errData.detail || (isArabic ? "حدث خطأ أثناء الاتصال بالذكاء الاصطناعي." : "An error occurred with the AI assistant.");
@@ -689,7 +943,9 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                 <h2 className="text-sm font-bold text-on-surface leading-tight">{displayTitle(activeThread.title)}</h2>
                 <div className="flex items-center gap-1.5 mt-1">
                   <div className="w-1.5 h-1.5 rounded-full bg-tertiary-container animate-pulse"></div>
-                  <span className="text-[11px] text-secondary font-medium">SBR AI Assistant Active</span>
+                  <span className="text-xs text-secondary font-semibold">
+                    {isArabic ? 'مساعد مسبار النشط' : 'SBR AI Assistant Active'}
+                  </span>
                 </div>
               </div>
             ) : (
@@ -717,12 +973,27 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
           ) : (
             <>
               <div className="flex items-center justify-center">
-                <div className="bg-surface-container px-3 py-1 rounded-full text-[10px] font-bold text-secondary tracking-wider uppercase">TODAY</div>
+                <div className="bg-surface-container px-3 py-1 rounded-full text-[10px] font-bold text-secondary tracking-wider uppercase">
+                  {isArabic ? 'اليوم' : 'TODAY'}
+                </div>
               </div>
 
               {messages.map((message) => {
                 const isAi = message.sender_type === 'ai';
                 if (isAi) {
+                  let parsed = null;
+                  try {
+                    let cleanContent = message.content.trim();
+                    if (cleanContent.startsWith('```')) {
+                      cleanContent = cleanContent.replace(/^```(json)?\n?/, '').replace(/\n?```$/, '');
+                    }
+                    parsed = JSON.parse(cleanContent);
+                  } catch (e) {
+                    // Not JSON, fallback to raw text
+                  }
+
+                  const isReport = (message.content.includes('|') && (message.content.includes('البند') || message.content.includes('التفاصيل') || message.content.includes('---'))) || (parsed && (parsed.type === 'stats' || parsed.type === 'report'));
+
                   return (
                     <div 
                       key={message.id} 
@@ -733,21 +1004,15 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                       <div className="w-8 h-8 rounded-full bg-primary-container text-white flex items-center justify-center flex-shrink-0 shadow-sm relative overflow-hidden">
                         <span className="material-symbols-outlined text-[16px] relative z-10">smart_toy</span>
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-[11px] text-secondary ml-1">SBR AI Assistant</span>
-                        <div className="bg-white border border-border-subtle p-4 rounded-2xl rounded-tl-sm shadow-sm space-y-4">
+                      <div className="flex flex-col gap-1 w-full">
+                        <span className="text-xs text-secondary font-semibold ml-1">
+                          {isArabic ? 'مساعد مسبار' : 'SBR AI Assistant'}
+                        </span>
+                        <div 
+                          id={`msg-content-${message.id}`}
+                          className="bg-white border border-border-subtle p-4 rounded-2xl rounded-tl-sm shadow-sm space-y-4"
+                        >
                           {(() => {
-                            let parsed = null;
-                            try {
-                              let cleanContent = message.content.trim();
-                              if (cleanContent.startsWith('```')) {
-                                cleanContent = cleanContent.replace(/^```(json)?\n?/, '').replace(/\n?```$/, '');
-                              }
-                              parsed = JSON.parse(cleanContent);
-                            } catch (e) {
-                              // Not JSON, fallback to raw text
-                            }
-                            
                             if (parsed && parsed.type === 'stats') {
                               return <StatsCard title={parsed.title} data={parsed.data} />;
                             }
@@ -756,15 +1021,15 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                             
                             return (
                               <div 
-                                className="text-xs text-on-surface leading-relaxed prose prose-sm max-w-none 
-                                           prose-p:my-1.5 prose-p:leading-relaxed
+                                className="text-sm md:text-[15px] font-semibold text-on-surface leading-relaxed prose prose-base max-w-none 
+                                           prose-p:my-1.5 prose-p:leading-relaxed prose-p:font-semibold prose-p:text-sm md:prose-p:text-[15px]
                                            prose-headings:my-3 prose-headings:text-primary prose-headings:font-bold
                                            prose-table:w-full prose-table:border-collapse prose-table:rounded-xl prose-table:overflow-hidden prose-table:shadow-sm prose-table:border prose-table:border-border-subtle prose-table:my-3
                                            prose-thead:bg-primary-light/50 prose-thead:text-primary prose-th:p-3 prose-th:text-right prose-th:font-bold prose-th:border-b prose-th:border-border-subtle
                                            prose-tr:border-b prose-tr:border-border-subtle prose-tr:transition-colors hover:prose-tr:bg-surface-container-low/50
-                                           prose-td:p-3 prose-td:align-middle prose-td:text-on-surface-variant
+                                           prose-td:p-3 prose-td:align-middle prose-td:text-on-surface-variant prose-td:font-semibold prose-td:text-sm md:prose-td:text-[15px]
                                            prose-strong:text-primary prose-strong:font-bold
-                                           prose-ul:list-disc prose-ul:pr-5 prose-ul:my-2 prose-li:my-0.5 prose-li:marker:text-primary/70
+                                           prose-ul:list-disc prose-ul:pr-5 prose-ul:my-2 prose-li:my-0.5 prose-li:marker:text-primary/70 prose-li:font-semibold prose-li:text-sm md:prose-li:text-[15px]
                                            text-right" 
                                 dir="rtl"
                               >
@@ -779,18 +1044,22 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                                 <div className="bg-primary-light/50 p-3 rounded-xl border border-primary/10">
                                   <div className="flex items-center gap-1.5 mb-1 text-primary">
                                     <span className="material-symbols-outlined text-[14px]">visibility</span>
-                                    <span className="font-label-caps text-[10px] font-bold">FINDING 1</span>
+                                    <span className="font-label-caps text-[10px] font-bold">
+                                      {isArabic ? 'النتيجة 1' : 'FINDING 1'}
+                                    </span>
                                   </div>
-                                  <div className="text-xs text-on-surface-variant leading-relaxed">{message.bento_data.finding1}</div>
+                                  <div className="text-sm font-semibold text-on-surface-variant leading-relaxed">{message.bento_data.finding1}</div>
                                 </div>
                               )}
                               {message.bento_data.comparison && (
                                 <div className="bg-bg-canvas p-3 rounded-xl border border-border-subtle">
                                   <div className="flex items-center gap-1.5 mb-1 text-secondary">
                                     <span className="material-symbols-outlined text-[14px]">timeline</span>
-                                    <span className="font-label-caps text-[10px] font-bold">COMPARISON</span>
+                                    <span className="font-label-caps text-[10px] font-bold">
+                                      {isArabic ? 'المقارنة' : 'COMPARISON'}
+                                    </span>
                                   </div>
-                                  <div className="text-xs text-on-surface-variant leading-relaxed">{message.bento_data.comparison}</div>
+                                  <div className="text-sm font-semibold text-on-surface-variant leading-relaxed">{message.bento_data.comparison}</div>
                                 </div>
                               )}
                             </div>
@@ -798,6 +1067,21 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
 
 
                         </div>
+
+                        {isReport && (
+                          <div 
+                            data-html2canvas-ignore="true"
+                            className={`flex ${isArabic ? 'justify-start' : 'justify-end'} mt-1`}
+                          >
+                            <button
+                              onClick={() => handleDownloadPDF(message.id)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-light text-primary hover:bg-primary-hover hover:text-white rounded-lg text-xs font-bold transition-all active:scale-95 shadow-sm"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">download</span>
+                              {isArabic ? 'تحميل التقرير كـ PDF' : 'Download Report as PDF'}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -832,7 +1116,7 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                               )}
                             </div>
                           ) : (
-                            <p className="text-xs leading-relaxed">{message.content}</p>
+                            <p className="text-sm md:text-[15px] font-semibold leading-relaxed">{message.content}</p>
                           )}
                         </div>
                       </div>
@@ -853,7 +1137,9 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                 <span className="material-symbols-outlined text-[16px]">smart_toy</span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-[11px] text-secondary ml-1">SBR AI Assistant is thinking...</span>
+                <span className="text-xs text-secondary font-semibold ml-1">
+                  {isArabic ? 'مساعد مسبار يفكر...' : 'SBR AI Assistant is thinking...'}
+                </span>
                 <div className="bg-white border border-border-subtle px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                   <div className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
@@ -902,8 +1188,8 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyDown}
                 disabled={!activeThreadId || isRecording || isUploadingAudio}
-                className="w-full bg-transparent border-none focus:ring-0 resize-none font-body-md text-xs text-on-surface py-2.5 max-h-24 min-h-[40px] outline-none disabled:opacity-50" 
-                placeholder={activeThreadId ? "Ask SBR AI or type clinical notes..." : "اختر محادثة للكتابة فيها..."} 
+                className="w-full bg-transparent border-none focus:ring-0 resize-none font-body-md text-sm md:text-[15px] font-semibold text-on-surface py-2.5 max-h-24 min-h-[40px] outline-none disabled:opacity-50" 
+                placeholder={activeThreadId ? (isArabic ? "اسأل مسبار أو اكتب ملاحظات سريرية..." : "Ask SBR AI or type clinical notes...") : (isArabic ? "اختر محادثة للكتابة فيها..." : "Select a conversation to type...")} 
                 rows="1"
               ></textarea>
               <div className="flex items-center gap-1.5 mb-0.5">
@@ -916,7 +1202,7 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                       ? 'bg-error text-white animate-bounce' 
                       : 'bg-primary-light text-primary hover:bg-primary/10'
                   }`} 
-                  title={isRecording ? "Stop Recording" : "Record Voice Message"}
+                  title={isRecording ? (isArabic ? "إيقاف التسجيل" : "Stop Recording") : (isArabic ? "تسجيل رسالة صوتية" : "Record Voice Message")}
                 >
                   <span className="material-symbols-outlined text-[20px]">{isRecording ? 'stop_circle' : 'mic'}</span>
                 </button>
@@ -925,14 +1211,19 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                   onClick={() => handleSendMessage()}
                   disabled={!activeThreadId || isRecording || isUploadingAudio}
                   className="p-2 bg-primary text-on-primary hover:bg-primary-hover transition-colors rounded-lg shadow-sm flex items-center justify-center disabled:opacity-50" 
-                  title="Send Message"
+                  title={isArabic ? "إرسال الرسالة" : "Send Message"}
                 >
                   <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>send</span>
                 </button>
               </div>
             </div>
             <div className="text-center mt-2">
-              <span className="font-body-sm text-[10px] text-secondary">AI generated content may be inaccurate. Always verify clinical information.</span>
+              <span className="font-body-sm text-[10px] text-secondary">
+                {isArabic 
+                  ? 'المحتوى الناتج عن الذكاء الاصطناعي قد يكون غير دقيق. تحقق دائماً من المعلومات السريرية.' 
+                  : 'AI generated content may be inaccurate. Always verify clinical information.'
+                }
+              </span>
             </div>
           </div>
         </div>
@@ -959,38 +1250,48 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
             <form onSubmit={handleCreateThreadSubmit} className="p-6 space-y-4">
               {currentUser?.role !== 'admin' && (
                 <div>
-                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Select Patient (Optional)</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    {isArabic ? 'اختر المراجع (اختياري)' : 'Select Patient (Optional)'}
+                  </label>
                   <select
                     value={newPatientId}
                     onChange={(e) => setNewPatientId(e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary text-on-surface cursor-pointer"
                   >
-                    <option value="">-- General Session (No specific patient) --</option>
+                    <option value="">
+                      {isArabic ? '-- جلسة عامة (لا يوجد مراجع محدد) --' : '-- General Session (No specific patient) --'}
+                    </option>
                     {patients.map(p => (
                       <option key={p.id} value={p.id}>{p.name} - {p.phone}</option>
                     ))}
                   </select>
-                  <p className="text-[10px] text-secondary mt-1 ml-1">If no patient is selected, this will be a general AI session.</p>
+                  <p className="text-[10px] text-secondary mt-1 ml-1">
+                    {isArabic ? 'في حال لم يتم تحديد مراجع، ستكون هذه الجلسة جلسة ذكاء اصطناعي عامة.' : 'If no patient is selected, this will be a general AI session.'}
+                  </p>
                 </div>
               )}
               
               <div className="pt-2 border-t border-border-subtle">
-                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Custom Title (Optional)</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                  {isArabic ? 'عنوان مخصص (اختياري)' : 'Custom Title (Optional)'}
+                </label>
                 <input
                   type="text"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder={newPatientId ? "e.g. MRI Review" : "e.g. Medical Guidelines Query"}
+                  placeholder={newPatientId ? (isArabic ? "مثال: مراجعة الرنين المغناطيسي" : "e.g. MRI Review") : (isArabic ? "مثال: الاستفسار عن الإرشادات الطبية" : "e.g. Medical Guidelines Query")}
                   className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-on-surface-variant mb-1">Department / Specialty (Optional)</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                  {isArabic ? 'القسم / التخصص (اختياري)' : 'Department / Specialty (Optional)'}
+                </label>
                 <input
                   type="text"
                   value={newDept}
                   onChange={(e) => setNewDept(e.target.value)}
-                  placeholder="e.g. Neurology, Cardiology"
+                  placeholder={isArabic ? "مثال: الأعصاب، أمراض القلب" : "e.g. Neurology, Cardiology"}
                   className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
                 />
               </div>
@@ -1001,13 +1302,13 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                   onClick={() => setShowNewModal(false)}
                   className="flex-1 bg-white border border-border-subtle text-secondary py-2 rounded-lg text-xs hover:bg-surface-container-low transition-colors"
                 >
-                  Cancel
+                  {isArabic ? 'إلغاء' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   className="flex-1 bg-primary hover:bg-primary-hover text-on-primary font-bold py-2 rounded-lg text-xs transition-colors shadow-sm"
                 >
-                  Create Chat
+                  {isArabic ? 'إنشاء المحادثة' : 'Create Chat'}
                 </button>
               </div>
             </form>

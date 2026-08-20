@@ -9,24 +9,55 @@ import time
 from jose import jwt
 from app.core.config import settings
 
+from app.core.security import get_password_hash
+from app.core.validators import validate_password_strength
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.get("/me", response_model=Token)
-async def get_me(current_user: dict = Depends(get_current_user)):
+async def get_me(response: Response, current_user: dict = Depends(get_current_user)):
     """
-    Get logged-in user profile from secure cookie.
+    Get logged-in user profile from secure cookie and refresh the cookie.
     """
     role = current_user.get("role")
-    return auth_service.create_token(current_user, role)
+    token_dict = auth_service.create_token(current_user, role)
+    
+    # Refresh HttpOnly cookie to extend session (sliding expiration)
+    response.set_cookie(
+        key="access_token",
+        value=token_dict.access_token,
+        httponly=True,
+        samesite="lax",
+        secure=True,
+        max_age=1800  # 30 mins
+    )
+    return token_dict
 
 @router.post("/login", response_model=Token)
-async def login(login_data: LoginRequest, response: Response, role: str = "doctor"):
+async def login(login_data: LoginRequest, response: Response, request: Request, role: str = "doctor"):
     """
     Login endpoint. Role can be 'admin', 'doctor', or 'patient'.
     """
     from app.core.rate_limiter import login_rate_limiter
+    from app.core.redis import redis_client
+
+    # 0. IP-based Rate Limiting
+    client_ip = request.client.host if request.client else "unknown"
+    ip_key = f"login_ip:{client_ip}"
+
+    if not redis_client.redis:
+        await redis_client.connect()
+
+    ip_attempts = await redis_client.redis.incr(ip_key)
+    if ip_attempts == 1:
+        await redis_client.redis.expire(ip_key, 900)  # 15 minutes window
+    if ip_attempts > 25:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="تم تجاوز الحد المسموح لعدد محاولات الدخول من هذا الجهاز. يرجى الانتظار 15 دقيقة."
+        )
 
     # 1. Check if user is blocked
     if await login_rate_limiter.is_blocked(login_data.email):
@@ -236,10 +267,20 @@ async def reset_password(request: PasswordReset):
             detail="المستخدم غير موجود."
         )
         
-    # 3. Update password
+    # 3. Update password safely with parameterized query mapping & password strength validation
+    validate_password_strength(request.new_password)
     hashed_password = get_password_hash(request.new_password)
+
+    _RESET_QUERIES = {
+        "doctors": "UPDATE doctors SET password_hash = $1, updated_at = now() WHERE email = $2",
+        "departments": "UPDATE departments SET password_hash = $1, updated_at = now() WHERE email = $2",
+        "admins": "UPDATE admins SET password_hash = $1, updated_at = now() WHERE email = $2",
+    }
+    if table not in _RESET_QUERIES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="جدول غير صالح.")
+
     async with db.pool.acquire() as conn:
-        await conn.execute(f"UPDATE {table} SET password_hash = $1, updated_at = now() WHERE email = $2", hashed_password, email)
+        await conn.execute(_RESET_QUERIES[table], hashed_password, email)
         
     # 4. Delete OTP and reset login rate limits
     await redis_client.redis.delete(redis_key)

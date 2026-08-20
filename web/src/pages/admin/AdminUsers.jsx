@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { SPECIALTIES, getSpecialtyLabel } from '../../data/specialties';
 
 export default function AdminUsers() {
   const { 
@@ -288,18 +289,6 @@ export default function AdminUsers() {
     return matchesSearch && matchesStatus && matchesSpecialty;
   });
 
-  const getSpecialtyLabel = (spec) => {
-    if (!isArabic) return spec;
-    const map = {
-      Cardiology: 'أمراض القلب',
-      Neurology: 'الأعصاب',
-      Pediatrics: 'طب الأطفال',
-      Oncology: 'الأورام',
-      'General Practice': 'الطب العام',
-    };
-    return map[spec] || spec;
-  };
-
   const getPlanLabel = (plan) => {
     if (!isArabic) return plan;
     const map = {
@@ -528,7 +517,7 @@ export default function AdminUsers() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-secondary font-semibold">
-                          {getSpecialtyLabel(org.specialty)}
+                          {getSpecialtyLabel(org.specialty, isArabic)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-secondary font-bold">
                           {assignedCount} {isArabic ? 'أطباء' : 'doctors'}
@@ -648,11 +637,9 @@ export default function AdminUsers() {
                     value={orgSpecialty} onChange={(e) => setOrgSpecialty(e.target.value)}
                     className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
                   >
-                    <option value="Cardiology">{isArabic ? 'أمراض القلب' : 'Cardiology'}</option>
-                    <option value="Neurology">{isArabic ? 'الأعصاب' : 'Neurology'}</option>
-                    <option value="Pediatrics">{isArabic ? 'طب الأطفال' : 'Pediatrics'}</option>
-                    <option value="Oncology">{isArabic ? 'الأورام' : 'Oncology'}</option>
-                    <option value="General Practice">{isArabic ? 'الطب العام' : 'General Practice'}</option>
+                    {SPECIALTIES.map(spec => (
+                      <option key={spec.val} value={spec.val}>{isArabic ? spec.ar : spec.val}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -751,11 +738,9 @@ export default function AdminUsers() {
                     value={docSpecialty} onChange={(e) => setDocSpecialty(e.target.value)}
                     className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
                   >
-                    <option value="Cardiology">{isArabic ? 'أمراض القلب' : 'Cardiology'}</option>
-                    <option value="Neurology">{isArabic ? 'الأعصاب' : 'Neurology'}</option>
-                    <option value="Pediatrics">{isArabic ? 'طب الأطفال' : 'Pediatrics'}</option>
-                    <option value="Oncology">{isArabic ? 'الأورام' : 'Oncology'}</option>
-                    <option value="General Practice">{isArabic ? 'الطب العام' : 'General Practice'}</option>
+                    {SPECIALTIES.map(spec => (
+                      <option key={spec.val} value={spec.val}>{isArabic ? spec.ar : spec.val}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -850,11 +835,9 @@ export default function AdminUsers() {
                         value={editOrgSpecialty} onChange={(e) => setEditOrgSpecialty(e.target.value)}
                         className={`w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
                       >
-                        <option value="Cardiology">{isArabic ? 'أمراض القلب' : 'Cardiology'}</option>
-                        <option value="Neurology">{isArabic ? 'الأعصاب' : 'Neurology'}</option>
-                        <option value="Pediatrics">{isArabic ? 'طب الأطفال' : 'Pediatrics'}</option>
-                        <option value="Oncology">{isArabic ? 'الأورام' : 'Oncology'}</option>
-                        <option value="General Practice">{isArabic ? 'الطب العام' : 'General Practice'}</option>
+                        {SPECIALTIES.map(spec => (
+                          <option key={spec.val} value={spec.val}>{isArabic ? spec.ar : spec.val}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -876,7 +859,7 @@ export default function AdminUsers() {
                     <div>
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'انتهاء الاشتراك' : 'Subscription Expiry'}</label>
                       <input
-                        type="date" required value={editOrgExpiry} onChange={(e) => setEditOrgExpiry(e.target.value)}
+                        type="date" lang="en-US" required value={editOrgExpiry} onChange={(e) => setEditOrgExpiry(e.target.value)}
                         className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
                       />
                     </div>
@@ -916,7 +899,7 @@ export default function AdminUsers() {
                     </div>
                     <div>
                       <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'التخصص' : 'Specialty'}</span>
-                      <span className="text-sm font-bold text-primary">{getSpecialtyLabel(editingOrg.specialty)}</span>
+                      <span className="text-sm font-bold text-primary">{getSpecialtyLabel(editingOrg.specialty, isArabic)}</span>
                     </div>
                     <div>
                       <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'البريد الإلكتروني للاتصال' : 'Contact Email'}</span>
@@ -1061,7 +1044,7 @@ export default function AdminUsers() {
                     <div>
                       <label className="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'انتهاء الاشتراك' : 'Subscription Expiry'}</label>
                       <input
-                        type="date" required value={editDocExpiry} onChange={(e) => setEditDocExpiry(e.target.value)}
+                        type="date" lang="en-US" required value={editDocExpiry} onChange={(e) => setEditDocExpiry(e.target.value)}
                         className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
                       />
                     </div>
@@ -1312,11 +1295,11 @@ export default function AdminUsers() {
                   className={`w-full bg-white border border-border-subtle rounded-xl text-xs py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold ${isArabic ? 'text-right' : 'text-left'}`}
                 >
                   <option value="all">{isArabic ? 'جميع التخصصات' : 'All Specialties'}</option>
-                  <option value="Cardiology">{isArabic ? 'أمراض القلب (Cardiology)' : 'Cardiology'}</option>
-                  <option value="Neurology">{isArabic ? 'الأعصاب (Neurology)' : 'Neurology'}</option>
-                  <option value="Pediatrics">{isArabic ? 'طب الأطفال (Pediatrics)' : 'Pediatrics'}</option>
-                  <option value="Oncology">{isArabic ? 'الأورام (Oncology)' : 'Oncology'}</option>
-                  <option value="General Practice">{isArabic ? 'الطب العام (General Practice)' : 'General Practice'}</option>
+                  {SPECIALTIES.map(spec => (
+                    <option key={spec.val} value={spec.val}>
+                      {isArabic ? `${spec.ar} (${spec.val})` : spec.val}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>

@@ -71,8 +71,8 @@ class SubscriptionService:
             if is_department:
                 query = """
                 SELECT s.*, b.name as bundle_name, b.name_ar as bundle_name_ar,
-                       COALESCE(s.allowed_minutes, b.allowed_minutes) as allowed_minutes,
-                       COALESCE(s.allowed_messages, b.allowed_messages) as allowed_messages,
+                       (COALESCE(s.allowed_minutes, b.allowed_minutes) + COALESCE(s.rolled_over_minutes, 0)) as allowed_minutes,
+                       (COALESCE(s.allowed_messages, b.allowed_messages) + COALESCE(s.rolled_over_messages, 0)) as allowed_messages,
                        (SELECT COUNT(*) FROM subscription_doctors WHERE subscription_id = s.id) as seats_used
                 FROM subscriptions s
                 JOIN subscription_bundles b ON s.bundle_id = b.id
@@ -84,8 +84,8 @@ class SubscriptionService:
             else:
                 query = """
                 SELECT s.*, b.name as bundle_name, b.name_ar as bundle_name_ar,
-                       COALESCE(s.allowed_minutes, b.allowed_minutes) as allowed_minutes,
-                       COALESCE(s.allowed_messages, b.allowed_messages) as allowed_messages,
+                       (COALESCE(s.allowed_minutes, b.allowed_minutes) + COALESCE(s.rolled_over_minutes, 0)) as allowed_minutes,
+                       (COALESCE(s.allowed_messages, b.allowed_messages) + COALESCE(s.rolled_over_messages, 0)) as allowed_messages,
                        (SELECT COUNT(*) FROM subscription_doctors WHERE subscription_id = s.id) as seats_used,
                        (s.department_id IS NOT NULL) as managed_by_org
                 FROM subscriptions s

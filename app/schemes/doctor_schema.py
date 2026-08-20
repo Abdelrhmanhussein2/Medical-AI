@@ -27,6 +27,7 @@ class DoctorCreate(DoctorBase):
     status: Optional[str] = None
     subscription_plan: Optional[str] = None
     subscription_expiry: Optional[str] = None
+    ehr_system: Optional[str] = None
 
 class DoctorResponse(DoctorBase):
     id: UUID
@@ -39,6 +40,7 @@ class DoctorResponse(DoctorBase):
     subscription_activated_at: Optional[datetime] = None
     custom_minutes_limit: Optional[int] = None
     custom_tokens_limit: Optional[int] = None
+    ehr_system: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

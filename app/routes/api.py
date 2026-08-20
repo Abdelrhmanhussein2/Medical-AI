@@ -12,6 +12,7 @@ from app.controllers.chat_controller import router as chat_router
 from app.controllers.whatsapp_controller import router as whatsapp_router
 from app.controllers.template_controller import router as template_router
 from app.controllers.support_controller import router as support_router
+from app.controllers.payment_controller import router as payment_router
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(patient_router)
@@ -27,5 +28,6 @@ api_router.include_router(chat_router)
 api_router.include_router(whatsapp_router)
 api_router.include_router(template_router)
 api_router.include_router(support_router)
+api_router.include_router(payment_router)
 
 

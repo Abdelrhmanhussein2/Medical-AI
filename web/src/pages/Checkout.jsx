@@ -56,13 +56,14 @@ export default function Checkout() {
     setSearchParams({ plan: newPlanId });
   };
 
-  // Handle Form Submission
-  const handleSubmit = (e) => {
+  // ── Handle Form Submission — Real Moyasar Payment ─────────────────────────
+  const handleSubmit = async (e) => {
     if (e) e.preventDefault();
-    
+
     const isFree = selectedPlan.id === 'free';
+
     if (!isFree) {
-      if (cardNumber.replace(/\s/g, '').length < 16 || cardExpiry.length < 5 || cardCvv.length < 3) {
+      if (cardNumber.replace(/\s/g, '').length < 16 || cardExpiry.length < 5 || cardCvv.length < 3 || !cardName.trim()) {
         alert(isArabic ? 'الرجاء إدخال بيانات بطاقة صحيحة وكاملة.' : 'Please enter valid and complete card details.');
         return;
       }
@@ -71,69 +72,141 @@ export default function Checkout() {
     setIsProcessing(true);
     setProcessStep(1);
 
-    // Step 1: Connecting (1s)
-    setTimeout(() => {
-      setProcessStep(2);
-      // Step 2: Securing (1s)
-      setTimeout(() => {
-        setProcessStep(3);
-        
-        // Check if user is logged in as doctor
+    // ── Free Plan: skip payment, direct subscription ───────────────────────
+    if (isFree) {
+      try {
+        setProcessStep(2);
+        const bundles = await apiFetch(`/subscriptions/bundles?target_type=doctor`);
+        const targetBundle = (bundles || []).find(b => b.name === 'Free Trial');
+        if (!targetBundle) throw new Error(isArabic ? 'لم يتم العثور على باقة التجربة المجانية.' : 'Free trial bundle not found.');
+
         if (currentUser && currentUser.role === 'doctor') {
-          // 1. Resolve the bundle_id for the selected plan name
-          const planNameMap = {
-            'starter': 'SBR AI Starter',
-            'pro': 'SBR AI Pro',
-            'business': 'SBR AI Business',
-            'enterprise': 'SBR AI Enterprise',
-            'free': 'Free Trial',
-          };
-          const targetBundleName = planNameMap[selectedPlan.id] || 'SBR AI Starter';
-
-          apiFetch(`/subscriptions/bundles?target_type=doctor`)
-            .then(async (bundles) => {
-              const targetBundle = (bundles || []).find(b => b.name === targetBundleName);
-              if (!targetBundle) throw new Error(isArabic ? 'لم يتم العثور على الباقة المطلوبة.' : 'Target bundle not found.');
-
-              // 2. Check if doctor already has an active subscription
-              let existingSubId = null;
-              try {
-                const mySub = await apiFetch(`/subscriptions/my`);
-                if (mySub && mySub.id) existingSubId = mySub.id;
-              } catch (_) {}
-
-              if (existingSubId) {
-                // Renew existing subscription with new bundle
-                return renewSubscription(existingSubId, { bundle_id: targetBundle.id });
-              } else {
-                // Create a brand new subscription
-                return apiFetch(`/subscriptions/subscribe`, {
-                  method: 'POST',
-                  body: JSON.stringify({ bundle_id: targetBundle.id })
-                });
-              }
-            })
-            .then(() => {
-              setTimeout(() => {
-                navigate('/subscription');
-              }, 1500);
-            })
-            .catch((err) => {
-              console.error(err);
-              alert(isArabic ? ('حدث خطأ أثناء تجديد الاشتراك: ' + (err.message || '')) : ('Failed to renew subscription: ' + (err.message || '')));
-              setIsProcessing(false);
-              setProcessStep(0);
-            });
+          let existingSubId = null;
+          try { const mySub = await apiFetch(`/subscriptions/my`); if (mySub?.id) existingSubId = mySub.id; } catch (_) {}
+          if (existingSubId) {
+            await renewSubscription(existingSubId, { bundle_id: targetBundle.id });
+          } else {
+            await apiFetch(`/subscriptions/subscribe`, { method: 'POST', body: JSON.stringify({ bundle_id: targetBundle.id }) });
+          }
+          setProcessStep(3);
+          setTimeout(() => navigate('/subscription'), 1500);
         } else {
-          // Save plan context in sessionStorage
           sessionStorage.setItem('paidPlan', selectedPlan.id);
-          // Step 3: Success redirect (1.5s)
-          setTimeout(() => {
-            navigate('/register?role=doctor');
-          }, 1500);
+          setProcessStep(3);
+          setTimeout(() => navigate('/register?role=doctor'), 1500);
         }
-      }, 1000);
-    }, 1000);
+      } catch (err) {
+        console.error(err);
+        alert(isArabic ? ('حدث خطأ: ' + (err.message || '')) : ('Error: ' + (err.message || '')));
+        setIsProcessing(false);
+        setProcessStep(0);
+      }
+      return;
+    }
+
+    // ── Paid Plan: Real Moyasar Payment ───────────────────────────────────
+    try {
+      if (!currentUser) {
+        sessionStorage.setItem('paidPlan', selectedPlan.id);
+        navigate('/register?role=doctor');
+        return;
+      }
+
+      // 1. Fetch bundles to resolve the real bundle_id from DB
+      const planNameMap = {
+        'starter': 'SBR AI Starter',
+        'pro': 'SBR AI Pro',
+        'business': 'SBR AI Business',
+        'enterprise': 'SBR AI Enterprise',
+      };
+      const isOrgPlan = ['business', 'enterprise'].includes(selectedPlan.id);
+      const targetBundleName = planNameMap[selectedPlan.id] || 'SBR AI Starter';
+      const bundles = await apiFetch(`/subscriptions/bundles?target_type=${isOrgPlan ? 'department' : 'doctor'}`);
+      const targetBundle = (bundles || []).find(b => b.name === targetBundleName);
+      if (!targetBundle) throw new Error(isArabic ? 'لم يتم العثور على الباقة المطلوبة.' : 'Bundle not found in system.');
+
+      setProcessStep(2); // "Securing transaction..."
+
+      // 2. Fetch public configuration (Moyasar Publishable Key) from backend
+      const config = await apiFetch(`/payments/config`);
+      if (!config?.publishable_key) {
+        throw new Error(isArabic ? 'لم يتم الحصول على مفتاح بوابة الدفع العام.' : 'Failed to retrieve payment gateway configuration.');
+      }
+
+      // 3. Tokenize card details DIRECTLY to Moyasar API
+      //    This prevents sensitive card details from ever touching our servers (PCI-DSS compliant).
+      const [expiryMonth, expiryYear] = cardExpiry.split('/');
+      const monthStr = (expiryMonth || '').trim().padStart(2, '0');
+      let yearStr = (expiryYear || '').trim();
+      if (yearStr.length === 2) {
+        yearStr = `20${yearStr}`; // Moyasar tokens endpoint expects YYYY
+      }
+
+      setProcessStep(2); // "Securing transaction..."
+
+      // Moyasar Tokenization API Basic Auth uses Publishable Key as username, empty password
+      const authHeader = 'Basic ' + btoa(config.publishable_key + ':');
+      
+      const tokenResponse = await fetch('https://api.moyasar.com/v1/tokens', {
+        method: 'POST',
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: cardName.trim(),
+          number: cardNumber.replace(/\s/g, ''),
+          cvc: cardCvv.trim(),
+          month: parseInt(monthStr, 10),
+          year: parseInt(yearStr, 10),
+          save_only: true,
+        }),
+      });
+
+      if (!tokenResponse.ok) {
+        const errData = await tokenResponse.json().catch(() => ({}));
+        throw new Error(errData?.message || (isArabic ? 'فشل تشفير بيانات البطاقة مع بوابة موفق.' : 'Card tokenization failed with Moyasar.'));
+      }
+
+      const tokenData = await tokenResponse.json();
+      const cardToken = tokenData.id; // e.g. tok_xxxx
+
+      setProcessStep(3); // "Redirecting to secure payment..."
+
+      // 4. Send ONLY the token and bundle_id to our backend
+      //    The REAL amount is strictly fetched from the DB (never sent or trusted from client)
+      const paymentData = await apiFetch(`/payments/initiate`, {
+        method: 'POST',
+        body: JSON.stringify({
+          bundle_id: targetBundle.id,
+          token: cardToken,
+        }),
+      });
+
+      setProcessStep(3); // "Redirecting to secure payment..."
+
+      // 3. Store IDs for the callback page to verify after return
+      sessionStorage.setItem('pendingPaymentOrderId', paymentData.payment_order_id);
+      sessionStorage.setItem('pendingMoyasarPaymentId', paymentData.moyasar_payment_id);
+      sessionStorage.setItem('pendingBundleId', targetBundle.id);
+
+      // 4. Redirect to Moyasar 3DS hosted page
+      if (paymentData.transaction_url) {
+        setTimeout(() => { window.location.href = paymentData.transaction_url; }, 800);
+      } else {
+        throw new Error(isArabic ? 'لم يتم الحصول على رابط الدفع من بوابة موفق.' : 'Could not get payment URL from Moyasar.');
+      }
+
+    } catch (err) {
+      console.error('Payment initiation failed:', err);
+      alert(
+        isArabic
+          ? 'حدث خطأ أثناء بدء عملية الدفع: ' + (err.message || 'يرجى المحاولة مجدداً.')
+          : 'Payment initiation failed: ' + (err.message || 'Please try again.')
+      );
+      setIsProcessing(false);
+      setProcessStep(0);
+    }
   };
 
   const planName = isArabic ? selectedPlan.nameAr : selectedPlan.nameEn;
@@ -163,7 +236,7 @@ export default function Checkout() {
         </button>
         
         <div className="flex items-center gap-4">
-          <SbrLogo size={36} color="#24564C" showText={true} textClass="text-primary" />
+          <SbrLogo size={36} color="#006973" showText={true} textClass="text-primary" />
         </div>
       </header>
 
@@ -241,6 +314,11 @@ export default function Checkout() {
                 <p className="text-xs text-secondary mt-1">
                   {isArabic ? 'أكمل معاملتك باستخدام بطاقة الائتمان الخاصة بك.' : 'Complete your transaction using a credit card.'}
                 </p>
+                {/* Moyasar security badge */}
+                <div className="mt-3 flex items-center gap-2 text-[10px] text-secondary">
+                  <span className="material-symbols-outlined text-[14px] text-green-600">lock</span>
+                  {isArabic ? 'مدفوعات آمنة عبر بوابة موفق المعتمدة' : 'Secured by Moyasar — PCI DSS certified'}
+                </div>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
@@ -323,7 +401,7 @@ export default function Checkout() {
                   className="w-full bg-primary hover:bg-primary-hover disabled:bg-primary/50 text-on-primary font-semibold py-3 px-4 rounded-lg shadow-sm transition-all duration-300 flex items-center justify-center gap-2 mt-8 text-sm cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[18px]">lock</span>
-                  {isArabic ? `تفويض الدفع (${planPrice})` : `Authorize Payment (${planPrice})`}
+                  {isArabic ? `إتمام الدفع الآمن (${planPrice})` : `Complete Secure Payment (${planPrice})`}
                 </button>
               </form>
 
@@ -544,7 +622,7 @@ export default function Checkout() {
                 <p className="text-xs text-secondary">
                   {selectedPlan.id === 'free'
                     ? (isArabic ? 'جاري إنشاء مساحة عمل تجريبية آمنة.' : 'Creating a secure trial workspace.')
-                    : (isArabic ? 'جاري الاتصال الآمن مع البنك الخاص بك للتحقق من بيانات البطاقة.' : 'Connecting securely with your bank to verify card details.')
+                    : (isArabic ? 'جاري إنشاء طلب دفع آمن عبر موفق.' : 'Creating secure payment request via Moyasar.')
                   }
                 </p>
               </div>
@@ -564,7 +642,7 @@ export default function Checkout() {
                 <p className="text-xs text-secondary">
                   {selectedPlan.id === 'free'
                     ? (isArabic ? 'جاري إعداد صلاحيات الحساب والأمان.' : 'Setting up account security permissions.')
-                    : (isArabic ? 'جاري تشفير بيانات الدفع والتحقق من جلسة SSL الآمنة.' : 'Tokenizing payment tokens and verifying secure SSL session.')
+                    : (isArabic ? 'جاري التحقق من الباقة وإنشاء طلب الدفع.' : 'Verifying bundle and creating payment order.')
                   }
                 </p>
               </div>
@@ -574,19 +652,21 @@ export default function Checkout() {
               <div className="space-y-4 animate-scale-up">
                 <div className="flex justify-center">
                   <div className="w-12 h-12 rounded-full bg-primary-light flex items-center justify-center border border-primary/20 text-primary">
-                    <span className="material-symbols-outlined text-[32px] animate-pulse">check</span>
+                    <span className="material-symbols-outlined text-[32px] animate-pulse">
+                      {selectedPlan.id === 'free' ? 'check' : 'open_in_new'}
+                    </span>
                   </div>
                 </div>
                 <h3 className="text-md font-bold text-primary">
                   {selectedPlan.id === 'free'
                     ? (isArabic ? 'تم تفعيل التجربة بنجاح!' : 'Trial Activated Successfully!')
-                    : (isArabic ? 'تم تفويض عملية الدفع بنجاح!' : 'Payment Authorized!')
+                    : (isArabic ? 'جاري تحويلك لصفحة الدفع الآمنة...' : 'Redirecting to secure payment page...')
                   }
                 </h3>
                 <p className="text-xs text-secondary">
                   {selectedPlan.id === 'free'
-                    ? (isArabic ? 'تم إعداد خطة التجربة المجانية بنجاح. يتم تحويلك الآن للتسجيل...' : 'Your free trial has been set up. Redirecting to registration...')
-                    : (isArabic ? `عملية دفع ${planPrice} تمت بنجاح. يتم تحويلك الآن لإتمام التسجيل...` : `Your payment of ${planPrice} was successful. Redirecting to workspace registration...`)
+                    ? (isArabic ? 'يتم تحويلك الآن...' : 'Redirecting now...')
+                    : (isArabic ? 'ستُنقل الآن لصفحة موفق الآمنة لإتمام الدفع.' : 'You will be taken to Moyasar secure page to complete payment.')
                   }
                 </p>
               </div>

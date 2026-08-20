@@ -77,3 +77,49 @@ class EvolutionClient:
         except Exception as exc:
             logger.error(f"Unexpected error sending WhatsApp: {exc}")
             raise EvolutionAPIError(f"Unexpected error: {exc}")
+
+    async def send_media(self, phone: str, base64_data: str, file_name: str, media_type: str = "document") -> dict:
+        """
+        Sends a media file (Base64) using the Evolution API.
+        """
+        url = f"{self.base_url}/message/sendMedia/{self.instance}"
+        headers = {
+            "apikey": self.api_key,
+            "Content-Type": "application/json"
+        }
+        
+        # Make sure the base64 string doesn't have the data URL scheme prefix if it's already there
+        pure_base64 = base64_data
+        if "," in base64_data:
+            pure_base64 = base64_data.split(",")[1]
+
+        payload = {
+            "number": phone,
+            "mediatype": media_type,
+            "fileName": file_name,
+            "media": pure_base64
+        }
+        
+        try:
+            logger.info(f"Sending WhatsApp media to {phone} via Evolution API...")
+            response = await self.http_client.post(
+                url,
+                json=payload,
+                headers=headers,
+                timeout=30.0
+            )
+            
+            if response.status_code not in (200, 201):
+                logger.error(f"Evolution API returned status {response.status_code}: {response.text}")
+                raise EvolutionAPIError(f"Failed to send media, API returned status {response.status_code}")
+                
+            data = response.json()
+            logger.info(f"WhatsApp media sent successfully to {phone}.")
+            return data
+            
+        except httpx.RequestError as exc:
+            logger.error(f"HTTP request error while talking to Evolution API: {exc}")
+            raise EvolutionAPIError(f"HTTP communication failed: {exc}")
+        except Exception as exc:
+            logger.error(f"Unexpected error sending WhatsApp media: {exc}")
+            raise EvolutionAPIError(f"Unexpected error: {exc}")

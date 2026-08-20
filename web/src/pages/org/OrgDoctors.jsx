@@ -1,18 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useLanguage } from '../../context/LanguageContext';
-
-const SPECIALTIES = [
-  { val: 'Cardiology', ar: 'أمراض القلب' },
-  { val: 'Neurology', ar: 'الأعصاب' },
-  { val: 'Pediatrics', ar: 'طب الأطفال' },
-  { val: 'Oncology', ar: 'الأورام' },
-  { val: 'General Practice', ar: 'الطب العام' },
-  { val: 'Orthopedics', ar: 'العظام والمفاصل' },
-  { val: 'Dermatology', ar: 'الجلدية' },
-  { val: 'Psychiatry', ar: 'الطب النفسي' },
-  { val: 'ENT', ar: 'أنف وأذن وحنجرة' },
-];
+import { SPECIALTIES, getSpecialtyLabel } from '../../data/specialties';
 
 export default function OrgDoctors() {
   const { currentUser, doctors, addOrgDoctor, toggleDoctorStatus, updateDoctor, deleteDoctor } = useApp();
@@ -129,28 +118,7 @@ export default function OrgDoctors() {
     }
   };
 
-  const getSpecialtyLabel = (spec) => {
-    if (!isArabic) return spec;
-    const map = {
-      Cardiology: 'أمراض القلب',
-      Neurology: 'الأعصاب',
-      Pediatrics: 'طب الأطفال',
-      Oncology: 'الأورام',
-      'General Practice': 'الطب العام',
-      'General Medicine': 'الطب العام',
-      General: 'الطب العام',
-      Ophthalmology: 'طب العيون',
-      Orthopedics: 'طب العظام',
-      Dermatology: 'الجلدية',
-      'Internal Medicine': 'الباطنة',
-      Dentistry: 'طب الأسنان',
-      'Obstetrics & Gynecology': 'النساء والتوليد',
-      Psychiatry: 'الطب النفسي',
-    };
-    return map[spec] || spec;
-  };
-
-  const getPlanLabel = (plan) => {
+const getPlanLabel = (plan) => {
     if (!isArabic) return plan;
     const map = {
       'Basic Access': 'الوصول الأساسي',
@@ -278,7 +246,7 @@ export default function OrgDoctors() {
                     </div>
                   </td>
                   <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-secondary font-semibold">
-                    {getSpecialtyLabel(doc.specialization || doc.department)}
+                    {getSpecialtyLabel(doc.specialization || doc.department, isArabic)}
                   </td>
                   <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-secondary font-bold text-sm">
                     {doc.ai_consults}
@@ -516,7 +484,7 @@ export default function OrgDoctors() {
                   <div>
                     <label className="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'انتهاء الاشتراك' : 'Subscription Expiry'}</label>
                     <input
-                      type="date" required value={editDocExpiry} onChange={(e) => setEditDocExpiry(e.target.value)}
+                      type="date" lang="en-US" required value={editDocExpiry} onChange={(e) => setEditDocExpiry(e.target.value)}
                       className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
                     />
                   </div>
@@ -556,7 +524,7 @@ export default function OrgDoctors() {
                   </div>
                   <div>
                     <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'تخصص الطبيب' : 'Doctor Specialty'}</span>
-                    <span className="text-sm font-bold text-primary">{getSpecialtyLabel(selectedDoctor.specialization) || (isArabic ? 'عام' : 'General')}</span>
+                    <span className="text-sm font-bold text-primary">{getSpecialtyLabel(selectedDoctor.specialization, isArabic) || (isArabic ? 'عام' : 'General')}</span>
                   </div>
                   <div className="sm:col-span-2">
                     <span className="block font-semibold text-on-surface-variant mb-0.5">{isArabic ? 'البريد الإلكتروني للعيادة' : 'Clinic Email'}</span>

@@ -5,7 +5,7 @@ export const translations = {
     patients: 'المراجعين',
     appointments: 'المواعيد',
     visits: 'الزيارات الطبية',
-    aichat: 'SBR AI Chat',
+    aichat: 'تحدث مع مسبار',
     subscription: 'اشتراكي',
     settings: 'الإعدادات',
     signout: 'تسجيل الخروج',
@@ -135,7 +135,7 @@ export const translations = {
     
     // Subscription Page
     my_subscription: 'اشتراكي الحالي',
-    usage_stats: 'إحصائيات الاستخدام للذكاء الاصطناعي',
+    usage_stats: 'إحصائيات استهلاك الباقة',
     renewal_date: 'تاريخ التجديد/الانتهاء',
     renew_now: 'تجديد الاشتراك الآن',
     active: 'نشط',
@@ -278,7 +278,7 @@ export const translations = {
     
     // Subscription Page
     my_subscription: 'My Subscription',
-    usage_stats: 'AI Usage Statistics',
+    usage_stats: 'Usage Statistics',
     renewal_date: 'Renewal / Expiry Date',
     renew_now: 'Renew Subscription Now',
     active: 'Active',

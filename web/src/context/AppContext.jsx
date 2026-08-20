@@ -15,38 +15,43 @@ export const AppProvider = ({ children }) => {
 
   const [bundles, setBundles] = useState([]);
 
-  // Load user and bundles on mount
-  useEffect(() => {
-    sessionStorage.removeItem("accessToken"); // Securely clear any legacy token stored in sessionStorage
-    
-    const verifySession = async () => {
-      try {
-        const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.user) {
-            if (data.user.role === 'department') {
-              data.user.role = 'org';
-            }
-            setCurrentUser(data.user);
-            sessionStorage.setItem("currentUser", JSON.stringify(data.user));
-          } else {
-            setCurrentUser(null);
-            sessionStorage.removeItem("currentUser");
+  const verifySession = async () => {
+    try {
+      const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.user) {
+          if (data.user.role === 'department') {
+            data.user.role = 'org';
           }
+          setCurrentUser(data.user);
+          sessionStorage.setItem("currentUser", JSON.stringify(data.user));
         } else {
-          // Cookie expired or invalid — clear local session
           setCurrentUser(null);
           sessionStorage.removeItem("currentUser");
         }
-      } catch (e) {
-        console.error("Failed to verify session on mount", e);
+      } else {
+        // Cookie expired or invalid — clear local session
         setCurrentUser(null);
         sessionStorage.removeItem("currentUser");
-      } finally {
-        setSessionLoading(false);
       }
-    };
+    } catch (e) {
+      console.error("Failed to verify session", e);
+      setCurrentUser(null);
+      sessionStorage.removeItem("currentUser");
+    } finally {
+      setSessionLoading(false);
+    }
+  };
+
+  // Load user and bundles on mount
+  useEffect(() => {
+    sessionStorage.removeItem("accessToken"); // Securely clear any legacy token stored in sessionStorage
+    // Clear any legacy localStorage auth data (from old code versions)
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("accesstoken");
+    localStorage.removeItem("currentUser");
+    localStorage.removeItem("access_token");
     verifySession();
 
     const loadBundles = async () => {
@@ -62,6 +67,15 @@ export const AppProvider = ({ children }) => {
     };
     loadBundles();
   }, []);
+
+  // Periodic session refresh in the background (every 10 minutes) when active
+  useEffect(() => {
+    if (!currentUser) return;
+    const interval = setInterval(() => {
+      verifySession();
+    }, 10 * 60 * 1000); // 10 mins
+    return () => clearInterval(interval);
+  }, [currentUser]);
 
   const mergedPlans = getMergedPlans(bundles);
   const doctorPlans = mergedPlans.filter(p => ['free', 'starter', 'pro'].includes(p.id));
@@ -180,8 +194,22 @@ export const AppProvider = ({ children }) => {
       // Even if the backend call fails, proceed with local logout
       console.warn("Backend logout notification failed:", err.message);
     } finally {
+      // Clear sessionStorage auth data
       sessionStorage.removeItem("accessToken");
       sessionStorage.removeItem("currentUser");
+      // Clear any legacy localStorage auth data
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("accesstoken");
+      localStorage.removeItem("currentUser");
+      localStorage.removeItem("access_token");
+      // Clear all medical session data from localStorage
+      const keysToRemove = Object.keys(localStorage).filter(k =>
+        k.startsWith("instructions_formatted_") ||
+        k.startsWith("instructions_raw_") ||
+        k === "notes_hidden_sections" ||
+        k === "active_bg_recording_session"
+      );
+      keysToRemove.forEach(k => localStorage.removeItem(k));
       setCurrentUser(null);
       setPatients([]);
       setOrganizations([]);
@@ -192,7 +220,7 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const registerDoctor = async (name, email, phone, password, specialization = 'General', departmentId = null, status = 'approved', certificateFile = null) => {
+  const registerDoctor = async (name, email, phone, password, specialization = 'General', departmentId = null, status = 'approved', certificateFile = null, ehrSystem = null) => {
     const formData = new FormData();
     formData.append('name', name);
     formData.append('email', email);
@@ -206,6 +234,9 @@ export const AppProvider = ({ children }) => {
     }
     if (status) {
       formData.append('status', status);
+    }
+    if (ehrSystem) {
+      formData.append('ehr_system', ehrSystem);
     }
     if (certificateFile) {
       formData.append('certificate_file', certificateFile);
@@ -278,6 +309,17 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const refreshAppointments = async () => {
+    try {
+      if (currentUser?.id) {
+        const appts = await apiFetch(`/appointments/my?doctor_id=${currentUser.id}`);
+        setAppointments(appts || []);
+      }
+    } catch (err) {
+      console.error("Failed to refresh appointments list", err);
+    }
+  };
+
   const addAppointment = async (apptData) => {
     const newAppt = await apiFetch(`/appointments/`, {
       method: 'POST',
@@ -295,6 +337,17 @@ export const AppProvider = ({ children }) => {
     setAppointments(prev =>
       prev.map(a => a.id === id ? updated : a)
     );
+  };
+
+  const updateAppointment = async (id, apptData) => {
+    const updated = await apiFetch(`/appointments/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(apptData)
+    });
+    setAppointments(prev =>
+      prev.map(a => a.id === id ? updated : a)
+    );
+    return updated;
   };
 
   const addVisit = async (visitData) => {
@@ -479,8 +532,10 @@ export const AppProvider = ({ children }) => {
       updatePatient,
       generateGeneralSummary,
       refreshPatients,
+      refreshAppointments,
       addAppointment,
       updateAppointmentStatus,
+      updateAppointment,
       addVisit,
       updateDoctor,
       updateProfile,

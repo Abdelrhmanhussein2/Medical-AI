@@ -38,7 +38,7 @@ export default function Login({ setActivePage, isPortal = false }) {
           
           <div className={`max-w-md space-y-8 relative z-10 ${isArabic ? 'text-right' : 'text-left'}`}>
             <div className="flex items-center gap-3">
-              <SbrLogo size={56} color="#24564C" showText={true} textClass="text-primary" />
+              <SbrLogo size={56} color="#006973" showText={true} textClass="text-primary" />
             </div>
 
             <div className="space-y-4">
@@ -97,7 +97,7 @@ export default function Login({ setActivePage, isPortal = false }) {
           <div className="mx-auto w-full max-w-sm">
             <div className="text-center mb-8 flex flex-col items-center">
               <div className="mb-4 lg:hidden">
-                <SbrLogo size={44} color="#24564C" showText={true} textClass="text-primary" />
+                <SbrLogo size={44} color="#006973" showText={true} textClass="text-primary" />
               </div>
               <h2 className="font-display-lg text-2xl md:text-3xl text-primary font-bold">
                 {isArabic ? 'مرحباً بعودتك' : 'Welcome back'}

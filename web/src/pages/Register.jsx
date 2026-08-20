@@ -2,7 +2,42 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 import { PLANS } from '../data/plans';
+import { EHR_SYSTEMS } from '../data/ehr_systems';
 import SbrLogo from '../components/SbrLogo';
+import SearchableSelect from '../components/SearchableSelect';
+import SpecialtyInput from '../components/SpecialtyInput';
+
+
+const COUNTRIES = [
+  // Most Used / Defaults
+  { code: 'EG', nameAr: 'مصر', nameEn: 'Egypt', prefix: '+20', defaultPhone: '+201012345678' },
+  // GCC
+  { code: 'SA', nameAr: 'المملكة العربية السعودية', nameEn: 'Saudi Arabia', prefix: '+966', defaultPhone: '+966501234567' },
+  { code: 'AE', nameAr: 'الإمارات العربية المتحدة', nameEn: 'United Arab Emirates', prefix: '+971', defaultPhone: '+971501234567' },
+  { code: 'KW', nameAr: 'الكويت', nameEn: 'Kuwait', prefix: '+965', defaultPhone: '+96550123456' },
+  { code: 'QA', nameAr: 'قطر', nameEn: 'Qatar', prefix: '+974', defaultPhone: '+97450123456' },
+  { code: 'OM', nameAr: 'عمان', nameEn: 'Oman', prefix: '+968', defaultPhone: '+96890123456' },
+  { code: 'BH', nameAr: 'البحرين', nameEn: 'Bahrain', prefix: '+973', defaultPhone: '+97330123456' },
+  // Levant & Iraq
+  { code: 'JO', nameAr: 'الأردن', nameEn: 'Jordan', prefix: '+962', defaultPhone: '+962701234567' },
+  { code: 'PS', nameAr: 'فلسطين', nameEn: 'Palestine', prefix: '+970', defaultPhone: '+970591234567' },
+  { code: 'LB', nameAr: 'لبنان', nameEn: 'Lebanon', prefix: '+961', defaultPhone: '+9613123456' },
+  { code: 'SY', nameAr: 'سوريا', nameEn: 'Syria', prefix: '+963', defaultPhone: '+963912345678' },
+  { code: 'IQ', nameAr: 'العراق', nameEn: 'Iraq', prefix: '+964', defaultPhone: '+9647012345678' },
+  // North Africa
+  { code: 'MA', nameAr: 'المغرب', nameEn: 'Morocco', prefix: '+212', defaultPhone: '+212612345678' },
+  { code: 'DZ', nameAr: 'الجزائر', nameEn: 'Algeria', prefix: '+213', defaultPhone: '+213512345678' },
+  { code: 'TN', nameAr: 'تونس', nameEn: 'Tunisia', prefix: '+216', defaultPhone: '+21651234567' },
+  { code: 'LY', nameAr: 'ليبيا', nameEn: 'Libya', prefix: '+218', defaultPhone: '+218912345678' },
+  { code: 'SD', nameAr: 'السودان', nameEn: 'Sudan', prefix: '+249', defaultPhone: '+249912345678' },
+  // East Africa & Yemen
+  { code: 'YE', nameAr: 'اليمن', nameEn: 'Yemen', prefix: '+967', defaultPhone: '+967701234567' },
+  { code: 'SO', nameAr: 'الصومال', nameEn: 'Somalia', prefix: '+252', defaultPhone: '+25261234567' },
+  { code: 'DJ', nameAr: 'جيبوتي', nameEn: 'Djibouti', prefix: '+253', defaultPhone: '+25377123456' },
+  { code: 'MR', nameAr: 'موريتانيا', nameEn: 'Mauritania', prefix: '+222', defaultPhone: '+22241234567' },
+  { code: 'KM', nameAr: 'جزر القمر', nameEn: 'Comoros', prefix: '+269', defaultPhone: '+2693212345' },
+  { code: 'OTHER', nameAr: 'أخرى', nameEn: 'Other', prefix: '+', defaultPhone: '+12025550143' }
+];
 
 export default function Register({ setActivePage }) {
   const { registerDoctor, registerOrg, activateSubscription } = useApp();
@@ -11,9 +46,27 @@ export default function Register({ setActivePage }) {
   const [role, setRole] = useState('doctor');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState('SA');
   const [phone, setPhone] = useState('');
+
+  const countryOptions = COUNTRIES.map((c) => ({
+    value: c.code,
+    label: isArabic ? c.nameAr : c.nameEn,
+    sublabel: c.prefix
+  }));
+
+  const ehrOptions = EHR_SYSTEMS.map((ehr) => ({
+    value: ehr,
+    label: ehr
+  }));
+
+  const handleCountryChange = (countryCode) => {
+    setSelectedCountry(countryCode);
+  };
   const [password, setPassword] = useState('');
   const [specialty, setSpecialty] = useState('Cardiology');
+  const [ehrSystem, setEhrSystem] = useState('');
+  const [ehrOther, setEhrOther] = useState('');
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [agreePrivacy, setAgreePrivacy] = useState(false);
@@ -30,9 +83,20 @@ export default function Register({ setActivePage }) {
       return;
     }
 
+    let finalPhone = phone.trim();
+    const country = COUNTRIES.find(c => c.code === selectedCountry);
+    if (country && !finalPhone.startsWith('+')) {
+      if (finalPhone.startsWith('0')) {
+        finalPhone = country.prefix + finalPhone.slice(1);
+      } else {
+        finalPhone = country.prefix + finalPhone;
+      }
+    }
+
     if (role === 'doctor') {
       try {
-        const newDoc = await registerDoctor(name, email, phone, password, specialty, null, 'pending', null);
+        const finalEhr = ehrSystem === 'Other' ? (ehrOther.trim() || 'Other') : (ehrSystem || null);
+        const newDoc = await registerDoctor(name, email, finalPhone, password, specialty, null, 'pending', null, finalEhr);
         if (paidPlan) {
           const planMap = {
             'free': 'Free Trial',
@@ -54,7 +118,7 @@ export default function Register({ setActivePage }) {
       }
     } else {
       try {
-        await registerOrg(name, email, phone, specialty, password);
+        await registerOrg(name, email, finalPhone, specialty, password);
         setSuccess(true);
       } catch (err) {
         setError(err.message || (isArabic ? 'حدث خطأ أثناء التسجيل' : 'An error occurred during registration'));
@@ -100,7 +164,7 @@ export default function Register({ setActivePage }) {
           <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-tertiary-fixed-dim/5 rounded-full blur-3xl"></div>
 
           <div className={`max-w-md space-y-8 relative z-10 ${isArabic ? 'text-right' : 'text-left'}`}>
-            <SbrLogo size={56} color="#24564C" showText={true} textClass="text-primary" />
+            <SbrLogo size={56} color="#006973" showText={true} textClass="text-primary" />
 
             <div className="space-y-4">
               <h2 className="text-4xl font-bold text-primary font-headline-lg leading-tight">
@@ -170,7 +234,7 @@ export default function Register({ setActivePage }) {
           <div className="mx-auto w-full max-w-sm">
             <div className="text-center mb-6 flex flex-col items-center">
               <div className="mb-4 lg:hidden">
-                <SbrLogo size={44} color="#24564C" showText={true} textClass="text-primary" />
+                <SbrLogo size={44} color="#006973" showText={true} textClass="text-primary" />
               </div>
               <h2 className="font-display-lg text-2xl md:text-3xl text-primary font-bold">
                 {role === 'doctor'
@@ -193,7 +257,15 @@ export default function Register({ setActivePage }) {
                 ].map(({ key, ar, en }) => (
                   <button
                     key={key}
-                    onClick={() => { setRole(key); setName(''); setEmail(''); setPhone(''); setError(''); }}
+                    onClick={() => {
+                      setRole(key);
+                      setName('');
+                      setEmail('');
+                      setPhone('');
+                      setEhrSystem('');
+                      setEhrOther('');
+                      setError('');
+                    }}
                     type="button"
                     className={`flex-1 py-2 text-xs font-bold rounded-md transition-colors ${role === key ? 'bg-white text-primary shadow-sm' : 'text-secondary hover:text-primary'
                       }`}
@@ -266,40 +338,67 @@ export default function Register({ setActivePage }) {
 
                 <div>
                   <label className={`block text-sm font-semibold text-on-surface-variant mb-1.5 ${isArabic ? 'text-right' : 'text-left'}`}>
-                    {isArabic ? 'رقم الهاتف' : 'Phone Number'}
+                    {isArabic ? 'الدولة' : 'Country'}
                   </label>
-                  <input
-                    type="text" required value={phone} onChange={(e) => setPhone(e.target.value)}
-                    placeholder="0501234567"
-                    className={`w-full px-4 py-2.5 bg-white border border-border-subtle rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary text-on-surface`}
+                  <SearchableSelect
+                    options={countryOptions}
+                    value={selectedCountry}
+                    onChange={handleCountryChange}
+                    placeholder={isArabic ? '-- اختر الدولة --' : '-- Select Country --'}
+                    searchPlaceholder={isArabic ? 'ابحث عن دولة...' : 'Search country...'}
+                    isArabic={isArabic}
                   />
                 </div>
 
                 <div>
                   <label className={`block text-sm font-semibold text-on-surface-variant mb-1.5 ${isArabic ? 'text-right' : 'text-left'}`}>
-                    {role === 'doctor'
-                      ? (isArabic ? 'التخصص الطبي' : 'Specialization')
-                      : (isArabic ? 'التخصص / القسم' : 'Specialty / Clinical Department')}
+                    {isArabic ? 'رقم الهاتف' : 'Phone Number'}
                   </label>
-                  <select
-                    value={specialty} onChange={(e) => setSpecialty(e.target.value)}
-                    className={`w-full px-4 py-2.5 bg-white border border-border-subtle rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ${isArabic ? 'text-right' : 'text-left'}`}
-                  >
-                    {[
-                      { val: 'Cardiology', ar: 'أمراض القلب' },
-                      { val: 'Neurology', ar: 'الأعصاب' },
-                      { val: 'Pediatrics', ar: 'طب الأطفال' },
-                      { val: 'Oncology', ar: 'الأورام' },
-                      { val: 'General Practice', ar: 'الطب العام' },
-                      { val: 'Orthopedics', ar: 'العظام والمفاصل' },
-                      { val: 'Dermatology', ar: 'الجلدية' },
-                      { val: 'Psychiatry', ar: 'الطب النفسي' },
-                      { val: 'ENT', ar: 'أنف وأذن وحنجرة' },
-                    ].map(({ val, ar }) => (
-                      <option key={val} value={val}>{isArabic ? ar : val}</option>
-                    ))}
-                  </select>
+                  <input
+                    type="text" required value={phone} onChange={(e) => setPhone(e.target.value)}
+                    placeholder={COUNTRIES.find(c => c.code === selectedCountry)?.prefix + '1012345678'}
+                    className={`w-full px-4 py-2.5 bg-white border border-border-subtle rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ltr text-left`}
+                    dir="ltr"
+                  />
                 </div>
+
+                <SpecialtyInput
+                  value={specialty}
+                  onChange={setSpecialty}
+                  isArabic={isArabic}
+                  required
+                  label={
+                    role === 'doctor'
+                      ? (isArabic ? 'التخصص الطبي' : 'Specialization')
+                      : (isArabic ? 'التخصص / القسم' : 'Specialty / Clinical Department')
+                  }
+                />
+
+                {role === 'doctor' && (
+                  <div>
+                    <label className={`block text-sm font-semibold text-on-surface-variant mb-1.5 ${isArabic ? 'text-right' : 'text-left'}`}>
+                      {isArabic ? 'نظام السجل الطبي الإلكتروني (EHR)' : 'Electronic Health Record (EHR) System'}
+                    </label>
+                    <SearchableSelect
+                      options={ehrOptions}
+                      value={ehrSystem}
+                      onChange={(val) => { setEhrSystem(val); setEhrOther(''); }}
+                      placeholder={isArabic ? '-- اختر النظام --' : '-- Select EHR --'}
+                      searchPlaceholder={isArabic ? 'ابحث عن نظام...' : 'Search system...'}
+                      isArabic={isArabic}
+                    />
+                    {ehrSystem === 'Other' && (
+                      <input
+                        type="text"
+                        value={ehrOther}
+                        onChange={(e) => setEhrOther(e.target.value)}
+                        placeholder={isArabic ? 'اكتب اسم النظام...' : 'Type your EHR system name...'}
+                        className={`mt-2 w-full px-4 py-2.5 bg-white border border-border-subtle rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary text-on-surface ltr text-left`}
+                        dir="ltr"
+                      />
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <label className={`block text-sm font-semibold text-on-surface-variant mb-1.5 ${isArabic ? 'text-right' : 'text-left'}`}>
@@ -400,50 +499,197 @@ export default function Register({ setActivePage }) {
             </div>
 
             {/* Content */}
-            <div className="p-6 overflow-y-auto space-y-5 text-start font-body-md text-sm text-on-surface-variant leading-relaxed">
-              <p className="font-semibold text-on-surface">
-                {isArabic
-                  ? 'يرجى قراءة سياسة الخصوصية وسرية البيانات بعناية قبل إكمال التسجيل:'
-                  : 'Please read our Privacy Policy and Data Agreement carefully before completing registration:'}
-              </p>
+            <div className="p-6 overflow-y-auto space-y-6 text-start font-body-md text-sm text-on-surface-variant leading-relaxed">
 
-              <div className="space-y-4">
-                <div className="p-4 bg-primary-light/40 border border-primary/10 rounded-xl space-y-1">
-                  <h4 className="font-bold text-primary flex items-center gap-1.5 text-xs">
-                    <span className="material-symbols-outlined text-[16px]">mic</span>
-                    {isArabic ? '1. معالجة التسجيلات الصوتية' : '1. Audio Processing & Privacy'}
-                  </h4>
-                  <p className="text-xs text-on-surface-variant leading-relaxed">
-                    {isArabic
-                      ? 'يتم تشفير جميع المحادثات الطبية المرفوعة لحظياً. نستخدم معالجة صوتية مشفرة بالكامل ولا يتم تخزين الملفات الصوتية الخام بعد استخراج الملاحظات لحماية خصوصية المراجع.'
-                      : 'All uploaded audio consultations are encrypted. We utilize fully encrypted voice processing, and raw audio files are automatically purged after the clinical SOAP summary is generated.'}
+              {isArabic ? (
+                /* ===== ARABIC VERSION ===== */
+                <div className="space-y-5" dir="rtl">
+                  <p className="text-xs text-secondary">
+                    آخر تحديث: 10 أغسطس 2026
                   </p>
-                </div>
 
-                <div className="p-4 bg-tertiary-fixed/30 border border-tertiary/10 rounded-xl space-y-1">
-                  <h4 className="font-bold text-secondary flex items-center gap-1.5 text-xs">
-                    <span className="material-symbols-outlined text-[16px]">verified_user</span>
-                    {isArabic ? '2. التزام حماية PHI' : '2. PHI Protection & Non-Disclosure'}
-                  </h4>
-                  <p className="text-xs text-on-surface-variant leading-relaxed">
-                    {isArabic
-                      ? 'نحن لا نشارك أو نبيع أي معلومات صحية محمية (PHI). تظل مساحة عملك معزولة تماماً ولا يحق لأي جهة خارجية الوصول إلى بيانات المراجعين الخاصة بك.'
-                      : 'We never share or sell Protected Health Information (PHI). Your clinical workspace remains fully isolated, and no third parties have access to your patient records under any circumstances.'}
-                  </p>
-                </div>
+                  {/* سياسة الخصوصية */}
+                  <section className="space-y-3">
+                    <h4 className="font-bold text-primary flex items-center gap-2 text-sm">
+                      <span className="material-symbols-outlined text-[18px]">shield_locked</span>
+                      سياسة الخصوصية
+                    </h4>
+                    <div className="p-4 bg-primary-light/30 border border-primary/10 rounded-xl space-y-2">
+                      <p className="text-xs font-semibold text-on-surface">ما تغطيه هذه السياسة</p>
+                      <p className="text-xs leading-relaxed">هذه السياسة توضح كيف نجمع بياناتك ونستخدمها ونحميها عند استخدامك لموقعنا (sbr-ai.com) واشتراكك في منصة SBR AI. تُقرأ مع سياسة الكوكيز.</p>
+                    </div>
+                    <div className="p-4 bg-surface-container-low border border-border-subtle rounded-xl space-y-2">
+                      <p className="text-xs font-semibold text-on-surface">البيانات التي نجمعها</p>
+                      <ul className="text-xs space-y-1 list-disc list-inside">
+                        <li>اسمك وبيانات التواصل (البريد الإلكتروني، رقم الجوال، اسم العيادة)</li>
+                        <li>عنوان IP عبر تقنية الكوكيز</li>
+                        <li>بيانات حسابك وبيانات الاشتراك والفوترة</li>
+                        <li>نشاطك واستخدامك للموقع والأنظمة</li>
+                      </ul>
+                    </div>
+                    <div className="p-4 bg-surface-container-low border border-border-subtle rounded-xl space-y-2">
+                      <p className="text-xs font-semibold text-on-surface">حقوقك بموجب نظام حماية البيانات الشخصية (PDPL)</p>
+                      <ul className="text-xs space-y-1 list-disc list-inside">
+                        <li>الحق في الإعلام بالغرض والأساس القانوني للمعالجة</li>
+                        <li>الحق في الوصول لنسخة من بياناتك الشخصية</li>
+                        <li>الحق في تصحيح أي بيانات غير دقيقة</li>
+                        <li>الحق في الحذف/الإتلاف (المادة 18 من النظام)</li>
+                        <li>حق قابلية نقل البيانات بتنسيق قابل للقراءة آلياً</li>
+                        <li>الحق في الاعتراض على المعالجة لأغراض محددة</li>
+                        <li>سحب الموافقة في أي وقت</li>
+                      </ul>
+                    </div>
+                  </section>
 
-                <div className="p-4 bg-surface-container-low border border-border-subtle rounded-xl space-y-1">
-                  <h4 className="font-bold text-on-surface flex items-center gap-1.5 text-xs">
-                    <span className="material-symbols-outlined text-[16px]">lock</span>
-                    {isArabic ? '3. معايير الأمان والامتثال' : '3. Security Audits & Compliance'}
-                  </h4>
-                  <p className="text-xs text-on-surface-variant leading-relaxed">
-                    {isArabic
-                      ? 'يتم تشفير قاعدة البيانات بالكامل باستخدام بروتوكول AES-256 لحماية خصوصيتك وخصوصية مرضاك.'
-                      : 'All database records are fully encrypted using AES-256 protocols to safeguard you and your patients.'}
-                  </p>
+                  {/* سياسة الكوكيز */}
+                  <section className="space-y-3">
+                    <h4 className="font-bold text-secondary flex items-center gap-2 text-sm">
+                      <span className="material-symbols-outlined text-[18px]">cookie</span>
+                      سياسة الكوكيز
+                    </h4>
+                    <div className="p-4 bg-tertiary-fixed/20 border border-tertiary/10 rounded-xl space-y-2">
+                      <p className="text-xs leading-relaxed">نستخدم ثلاثة أنواع من الكوكيز:</p>
+                      <ul className="text-xs space-y-1 list-disc list-inside">
+                        <li><strong>ضرورية:</strong> لتسجيل الدخول وتأمين الجلسة — دائماً نشطة</li>
+                        <li><strong>تحليلية:</strong> لتحليل حركة الزوار — تحتاج موافقتك</li>
+                        <li><strong>وظيفية:</strong> لتذكّر تفضيلاتك كاللغة — تحتاج موافقتك</li>
+                      </ul>
+                      <p className="text-xs leading-relaxed">لا نستخدم حالياً كوكيز إعلانية أو تسويقية. يمكنك إدارة موافقتك في أي وقت.</p>
+                    </div>
+                  </section>
+
+                  {/* شروط الاستخدام */}
+                  <section className="space-y-3">
+                    <h4 className="font-bold text-on-surface flex items-center gap-2 text-sm">
+                      <span className="material-symbols-outlined text-[18px]">gavel</span>
+                      شروط الاستخدام
+                    </h4>
+                    <div className="p-4 bg-error-container/20 border border-error/10 rounded-xl space-y-2">
+                      <p className="text-xs font-semibold text-error">إخلاء المسؤولية الطبية (المادة 12)</p>
+                      <p className="text-xs leading-relaxed">قد تحتوي مخرجات الذكاء الاصطناعي على أخطاء أو معلومات غير مكتملة. بصفتك طبيباً مرخصاً، أنت المسؤول الوحيد عن مراجعة وتدقيق كل مخرج قبل إدراجه في أي سجل طبي أو الاعتماد عليه في أي قرار سريري.</p>
+                    </div>
+                    <div className="p-4 bg-surface-container-low border border-border-subtle rounded-xl space-y-1">
+                      <p className="text-xs font-semibold text-on-surface">بنود أساسية</p>
+                      <ul className="text-xs space-y-1 list-disc list-inside">
+                        <li>يُحظر على من هم دون 18 عاماً استخدام المنصة</li>
+                        <li>يحق لنا تعليق الوصول إذا تأخر السداد أكثر من 7 أيام</li>
+                        <li>يُحذف الحساب الخامل لمدة 12 شهراً مع جميع بياناته</li>
+                        <li>يخضع هذا الاتفاق لأنظمة المملكة العربية السعودية</li>
+                        <li>للتواصل أو الاستفسارات: contact@sbr-ai.com</li>
+                      </ul>
+                    </div>
+                  </section>
+
+                  {/* معالجة الصوت والأمان */}
+                  <section className="space-y-3">
+                    <h4 className="font-bold text-primary flex items-center gap-2 text-sm">
+                      <span className="material-symbols-outlined text-[18px]">lock</span>
+                      الأمان وحماية البيانات الطبية
+                    </h4>
+                    <div className="p-4 bg-primary-light/30 border border-primary/10 rounded-xl space-y-2">
+                      <ul className="text-xs space-y-1 list-disc list-inside">
+                        <li>تشفير كامل للمحادثات الطبية وتدمير الملفات الصوتية الخام بعد استخراج الملاحظات</li>
+                        <li>لا نشارك أو نبيع المعلومات الصحية المحمية (PHI) أبداً</li>
+                        <li>تشفير قاعدة البيانات بالكامل باستخدام AES-256</li>
+                        <li>مساحة عملك معزولة تماماً عن باقي المستخدمين</li>
+                      </ul>
+                    </div>
+                  </section>
                 </div>
-              </div>
+              ) : (
+                /* ===== ENGLISH VERSION ===== */
+                <div className="space-y-5" dir="ltr">
+                  <p className="text-xs text-secondary">Last updated: August 10, 2026</p>
+
+                  {/* Privacy Policy */}
+                  <section className="space-y-3">
+                    <h4 className="font-bold text-primary flex items-center gap-2 text-sm">
+                      <span className="material-symbols-outlined text-[18px]">shield_locked</span>
+                      Privacy Policy
+                    </h4>
+                    <div className="p-4 bg-primary-light/30 border border-primary/10 rounded-xl space-y-2">
+                      <p className="text-xs font-semibold text-on-surface">What this policy covers</p>
+                      <p className="text-xs leading-relaxed">This policy explains how we collect, use, and protect your data when you use our website (sbr-ai.com) and subscribe to the SBR AI platform. It should be read alongside our Cookie Policy.</p>
+                    </div>
+                    <div className="p-4 bg-surface-container-low border border-border-subtle rounded-xl space-y-2">
+                      <p className="text-xs font-semibold text-on-surface">Data we collect</p>
+                      <ul className="text-xs space-y-1 list-disc list-inside">
+                        <li>Your name and contact details (email, phone, clinic name)</li>
+                        <li>IP address via cookies</li>
+                        <li>Account data, subscription and billing data</li>
+                        <li>Your activity and usage of the website and systems</li>
+                      </ul>
+                    </div>
+                    <div className="p-4 bg-surface-container-low border border-border-subtle rounded-xl space-y-2">
+                      <p className="text-xs font-semibold text-on-surface">Your rights under the Personal Data Protection Law (PDPL)</p>
+                      <ul className="text-xs space-y-1 list-disc list-inside">
+                        <li>Be informed of the purpose and legal basis for processing</li>
+                        <li>Access a copy of your personal data</li>
+                        <li>Correction of any inaccurate data</li>
+                        <li>Deletion/destruction of your data (Article 18 of the Law)</li>
+                        <li>Data portability in a machine-readable format</li>
+                        <li>Object to processing for specific purposes</li>
+                        <li>Withdraw consent at any time</li>
+                      </ul>
+                    </div>
+                  </section>
+
+                  {/* Cookie Policy */}
+                  <section className="space-y-3">
+                    <h4 className="font-bold text-secondary flex items-center gap-2 text-sm">
+                      <span className="material-symbols-outlined text-[18px]">cookie</span>
+                      Cookie Policy
+                    </h4>
+                    <div className="p-4 bg-tertiary-fixed/20 border border-tertiary/10 rounded-xl space-y-2">
+                      <p className="text-xs leading-relaxed">We use three categories of cookies:</p>
+                      <ul className="text-xs space-y-1 list-disc list-inside">
+                        <li><strong>Strictly necessary:</strong> For login and session security — always active</li>
+                        <li><strong>Analytics:</strong> To analyze visitor traffic — require your consent</li>
+                        <li><strong>Functionality:</strong> To remember preferences like language — require your consent</li>
+                      </ul>
+                      <p className="text-xs leading-relaxed">We do not currently use advertising or marketing cookies. You may manage your consent at any time.</p>
+                    </div>
+                  </section>
+
+                  {/* Terms of Service */}
+                  <section className="space-y-3">
+                    <h4 className="font-bold text-on-surface flex items-center gap-2 text-sm">
+                      <span className="material-symbols-outlined text-[18px]">gavel</span>
+                      Terms of Service
+                    </h4>
+                    <div className="p-4 bg-error-container/20 border border-error/10 rounded-xl space-y-2">
+                      <p className="text-xs font-semibold text-error">AI-Generated Output Disclaimer (Section 12)</p>
+                      <p className="text-xs leading-relaxed">AI-generated output may contain errors or omissions. As a licensed physician, you are solely responsible for reviewing and verifying every output before including it in a medical record or relying on it for any clinical decision.</p>
+                    </div>
+                    <div className="p-4 bg-surface-container-low border border-border-subtle rounded-xl space-y-1">
+                      <p className="text-xs font-semibold text-on-surface">Key terms</p>
+                      <ul className="text-xs space-y-1 list-disc list-inside">
+                        <li>Our Services are not directed to persons under 18</li>
+                        <li>We may suspend access if payment is more than 7 days overdue</li>
+                        <li>Accounts inactive for 12+ months may be deleted with all associated data</li>
+                        <li>This Agreement is governed by the laws of the Kingdom of Saudi Arabia</li>
+                        <li>Contact us at: contact@sbr-ai.com</li>
+                      </ul>
+                    </div>
+                  </section>
+
+                  {/* Security */}
+                  <section className="space-y-3">
+                    <h4 className="font-bold text-primary flex items-center gap-2 text-sm">
+                      <span className="material-symbols-outlined text-[18px]">lock</span>
+                      Security & Medical Data Protection
+                    </h4>
+                    <div className="p-4 bg-primary-light/30 border border-primary/10 rounded-xl space-y-2">
+                      <ul className="text-xs space-y-1 list-disc list-inside">
+                        <li>All audio consultations are encrypted; raw audio is purged after note extraction</li>
+                        <li>We never share or sell Protected Health Information (PHI)</li>
+                        <li>All database records are fully encrypted using AES-256</li>
+                        <li>Your clinical workspace is fully isolated from other users</li>
+                      </ul>
+                    </div>
+                  </section>
+                </div>
+              )}
             </div>
 
             {/* Footer */}

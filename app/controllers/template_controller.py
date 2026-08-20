@@ -6,7 +6,9 @@ from app.schemes.template_schema import (
     TemplateCreate,
     TemplateResponse,
     PatientFillCreate,
-    PatientFillResponse
+    PatientFillResponse,
+    TemplateFillExtractRequest,
+    TemplateField
 )
 from app.services.template_service import template_service
 
@@ -39,7 +41,7 @@ async def list_templates(
     doctor_id = current_user["id"]
     return await template_service.list_templates(doctor_id)
 
-@router.get("/ai-suggest", response_model=List[str])
+@router.get("/ai-suggest", response_model=List[TemplateField])
 async def ai_suggest_fields(
     name: str = Query(..., min_length=1),
     current_user: dict = Depends(require_role("doctor"))
@@ -49,7 +51,7 @@ async def ai_suggest_fields(
     """
     return await template_service.generate_suggested_fields(name)
 
-@router.post("/ai-extract", response_model=List[str])
+@router.post("/ai-extract", response_model=List[TemplateField])
 async def ai_extract_fields(
     text: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None),
@@ -132,3 +134,14 @@ async def update_template(
     doctor_id = current_user["id"]
     fields_list = [f.model_dump() for f in data.fields]
     return await template_service.update_template(template_id, doctor_id, data.name, fields_list)
+
+@router.post("/patients/fills/ai-extract", response_model=dict)
+async def ai_extract_patient_fill(
+    data: TemplateFillExtractRequest,
+    current_user: dict = Depends(require_role("doctor"))
+):
+    """
+    Extracts clinical note values for template fields from the session transcript.
+    """
+    doctor_id = current_user["id"]
+    return await template_service.extract_patient_fill_values(doctor_id, data.template_id, data.transcript)

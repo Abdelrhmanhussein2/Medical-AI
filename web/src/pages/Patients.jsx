@@ -1,10 +1,77 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
+import SearchableSelect from '../components/SearchableSelect';
+
+
+const getVisitSections = (soapNote, isArabic) => {
+  if (!soapNote) return [];
+  
+  const chiefComplaint = soapNote['Chief Complaint'] || soapNote['S'] || '';
+  const hpi = soapNote['History of Present Illness'] || soapNote['O'] || '';
+  
+  let assessmentPlan = '';
+  if (soapNote['Assessment & Plan'] !== undefined) {
+    assessmentPlan = soapNote['Assessment & Plan'] || '';
+  } else {
+    const a = soapNote['A'] || '';
+    const p = soapNote['P'] || '';
+    if (a || p) {
+      assessmentPlan = `${a}\n${p}`.trim();
+    }
+  }
+  
+  const freeText = soapNote['Free Text'] || soapNote['free text'] || '';
+
+  return [
+    { label: isArabic ? 'الشكوى الرئيسية' : 'CHIEF COMPLAINT', value: chiefComplaint },
+    { label: isArabic ? 'تاريخ المرض الحالي' : 'HISTORY OF PRESENT ILLNESS', value: hpi },
+    { label: isArabic ? 'التقييم والخطة العلاجية' : 'ASSESSMENT & PLAN', value: assessmentPlan },
+    { label: isArabic ? 'ملاحظات حرة' : 'FREE TEXT', value: freeText }
+  ];
+};
+
+const COUNTRIES = [
+  // Most Used / Defaults
+  { code: 'EG', nameAr: 'مصر', nameEn: 'Egypt', prefix: '+20', defaultPhone: '+201012345678' },
+  // GCC
+  { code: 'SA', nameAr: 'المملكة العربية السعودية', nameEn: 'Saudi Arabia', prefix: '+966', defaultPhone: '+966501234567' },
+  { code: 'AE', nameAr: 'الإمارات العربية المتحدة', nameEn: 'United Arab Emirates', prefix: '+971', defaultPhone: '+971501234567' },
+  { code: 'KW', nameAr: 'الكويت', nameEn: 'Kuwait', prefix: '+965', defaultPhone: '+96550123456' },
+  { code: 'QA', nameAr: 'قطر', nameEn: 'Qatar', prefix: '+974', defaultPhone: '+97450123456' },
+  { code: 'OM', nameAr: 'عمان', nameEn: 'Oman', prefix: '+968', defaultPhone: '+96890123456' },
+  { code: 'BH', nameAr: 'البحرين', nameEn: 'Bahrain', prefix: '+973', defaultPhone: '+97330123456' },
+  // Levant & Iraq
+  { code: 'JO', nameAr: 'الأردن', nameEn: 'Jordan', prefix: '+962', defaultPhone: '+962701234567' },
+  { code: 'PS', nameAr: 'فلسطين', nameEn: 'Palestine', prefix: '+970', defaultPhone: '+970591234567' },
+  { code: 'LB', nameAr: 'لبنان', nameEn: 'Lebanon', prefix: '+961', defaultPhone: '+9613123456' },
+  { code: 'SY', nameAr: 'سوريا', nameEn: 'Syria', prefix: '+963', defaultPhone: '+963912345678' },
+  { code: 'IQ', nameAr: 'العراق', nameEn: 'Iraq', prefix: '+964', defaultPhone: '+9647012345678' },
+  // North Africa
+  { code: 'MA', nameAr: 'المغرب', nameEn: 'Morocco', prefix: '+212', defaultPhone: '+212612345678' },
+  { code: 'DZ', nameAr: 'الجزائر', nameEn: 'Algeria', prefix: '+213', defaultPhone: '+213512345678' },
+  { code: 'TN', nameAr: 'تونس', nameEn: 'Tunisia', prefix: '+216', defaultPhone: '+21651234567' },
+  { code: 'LY', nameAr: 'ليبيا', nameEn: 'Libya', prefix: '+218', defaultPhone: '+218912345678' },
+  { code: 'SD', nameAr: 'السودان', nameEn: 'Sudan', prefix: '+249', defaultPhone: '+249912345678' },
+  // East Africa & Yemen
+  { code: 'YE', nameAr: 'اليمن', nameEn: 'Yemen', prefix: '+967', defaultPhone: '+967701234567' },
+  { code: 'SO', nameAr: 'الصومال', nameEn: 'Somalia', prefix: '+252', defaultPhone: '+25261234567' },
+  { code: 'DJ', nameAr: 'جيبوتي', nameEn: 'Djibouti', prefix: '+253', defaultPhone: '+25377123456' },
+  { code: 'MR', nameAr: 'موريتانيا', nameEn: 'Mauritania', prefix: '+222', defaultPhone: '+22241234567' },
+  { code: 'KM', nameAr: 'جزر القمر', nameEn: 'Comoros', prefix: '+269', defaultPhone: '+2693212345' },
+  { code: 'OTHER', nameAr: 'أخرى', nameEn: 'Other', prefix: '+', defaultPhone: '+12025550143' }
+];
 
 export default function Patients({ setActivePage }) {
   const { patients, addPatient, updatePatient, visits, generateGeneralSummary } = useApp();
   const { t, isArabic } = useLanguage();
+
+  const countryOptions = COUNTRIES.map((c) => ({
+    value: c.code,
+    label: isArabic ? c.nameAr : c.nameEn,
+    sublabel: c.prefix
+  }));
+
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -30,6 +97,7 @@ export default function Patients({ setActivePage }) {
 
   // Add Patient Form states
   const [name, setName] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState('SA');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [dob, setDob] = useState('');
@@ -87,10 +155,20 @@ export default function Patients({ setActivePage }) {
       return;
     }
 
+    let finalPhone = phone.trim();
+    const country = COUNTRIES.find(c => c.code === selectedCountry);
+    if (country && !finalPhone.startsWith('+')) {
+      if (finalPhone.startsWith('0')) {
+        finalPhone = country.prefix + finalPhone.slice(1);
+      } else {
+        finalPhone = country.prefix + finalPhone;
+      }
+    }
+
     try {
       addPatient({
         name,
-        phone,
+        phone: finalPhone,
         email: email || null,
         date_of_birth: dob || null,
         gender,
@@ -108,6 +186,7 @@ export default function Patients({ setActivePage }) {
       setFileId('');
       setDiseases('');
       setHabits('');
+      setSelectedCountry('EG');
       setShowAddModal(false);
     } catch (err) {
       setError(err.message || 'حدث خطأ');
@@ -290,11 +369,11 @@ export default function Patients({ setActivePage }) {
                   </td>
                   <td className={`hidden md:table-cell px-6 py-4 whitespace-nowrap ${isArabic ? 'text-right' : 'text-left'}`}>
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
-                      patient.gender === 'male' 
-                        ? 'bg-primary-light text-primary' 
-                        : 'bg-surface-container-high text-secondary'
+                      (patient.gender === 'female' || patient.gender === 'أنثى')
+                        ? 'bg-surface-container-high text-secondary' 
+                        : 'bg-primary-light text-primary'
                     }`}>
-                      {patient.gender === 'male' ? (isArabic ? 'ذكر' : 'Male') : (isArabic ? 'أنثى' : 'Female')}
+                      {(patient.gender === 'female' || patient.gender === 'أنثى') ? (isArabic ? 'أنثى' : 'Female') : (isArabic ? 'ذكر' : 'Male')}
                     </span>
                   </td>
                   <td className={`hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-secondary font-mono ${isArabic ? 'text-right' : 'text-left'}`}>
@@ -351,14 +430,27 @@ export default function Patients({ setActivePage }) {
               </div>
 
               <div>
+                <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'الدولة' : 'Country'}</label>
+                <SearchableSelect
+                  options={countryOptions}
+                  value={selectedCountry}
+                  onChange={(val) => setSelectedCountry(val)}
+                  placeholder={isArabic ? '-- اختر الدولة --' : '-- Select Country --'}
+                  searchPlaceholder={isArabic ? 'ابحث عن دولة...' : 'Search country...'}
+                  isArabic={isArabic}
+                />
+              </div>
+
+              <div>
                 <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'رقم الهاتف *' : 'Phone Number *'}</label>
                 <input
                   type="text"
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="0501234567"
-                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder={COUNTRIES.find(c => c.code === selectedCountry)?.defaultPhone || '+201012345678'}
+                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ltr text-left"
+                  dir="ltr"
                 />
               </div>
 
@@ -401,6 +493,7 @@ export default function Patients({ setActivePage }) {
                 <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'تاريخ الميلاد' : 'Date of Birth'}</label>
                 <input
                   type="date"
+                  lang="en-US"
                   value={dob}
                   onChange={(e) => setDob(e.target.value)}
                   class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -478,9 +571,9 @@ export default function Patients({ setActivePage }) {
                       </div>
                       <h4 className="font-button text-base text-on-surface font-bold">{selectedPatient.name}</h4>
                       <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${
-                        selectedPatient.gender === 'male' ? 'bg-primary-light text-primary' : 'bg-surface-container-high text-secondary'
+                        (selectedPatient.gender === 'female' || selectedPatient.gender === 'أنثى') ? 'bg-surface-container-high text-secondary' : 'bg-primary-light text-primary'
                       }`}>
-                        {selectedPatient.gender === 'male' ? t('male') : t('female')}
+                        {(selectedPatient.gender === 'female' || selectedPatient.gender === 'أنثى') ? t('female') : t('male')}
                       </span>
                     </div>
                     
@@ -634,6 +727,7 @@ export default function Patients({ setActivePage }) {
                       <label class="block text-[11px] font-semibold text-on-surface-variant mb-1">{isArabic ? 'تاريخ الميلاد' : 'Date of Birth'}</label>
                       <input
                         type="date"
+                        lang="en-US"
                         value={editDob}
                         onChange={(e) => setEditDob(e.target.value)}
                         class="w-full px-3 py-1.5 bg-white border border-border-subtle rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary"
@@ -764,19 +858,14 @@ export default function Patients({ setActivePage }) {
                                 </div>
                               )}
 
-                              {/* SOAP Note details */}
+                              {/* Clinical Note / SOAP */}
                               {visit.soap_note && (
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                                  {[
-                                    ['S', isArabic ? 'الشكوى (S)' : 'Subjective (S)'],
-                                    ['O', isArabic ? 'الفحص (O)' : 'Objective (O)'],
-                                    ['A', isArabic ? 'التشخيص (A)' : 'Assessment (A)'],
-                                    ['P', isArabic ? 'الخطة (P)' : 'Plan (P)']
-                                  ].map(([key, label]) => (
-                                    <div key={key} class="bg-surface-container-low p-2.5 rounded-lg border border-border-subtle/50 space-y-1">
-                                      <span class="text-[9px] font-black text-primary block">{label}</span>
-                                      <p class="text-[11px] text-on-surface-variant leading-relaxed min-h-[18px]">
-                                        {visit.soap_note[key] || (isArabic ? 'لا يوجد' : 'N/A')}
+                                  {getVisitSections(visit.soap_note, isArabic).map((section, idx) => (
+                                    <div key={idx} class="bg-surface-container-low p-2.5 rounded-lg border border-border-subtle/50 space-y-1">
+                                      <span class="text-[9px] font-black text-primary block">{section.label}</span>
+                                      <p class="text-[11px] text-on-surface-variant leading-relaxed min-h-[18px] whitespace-pre-wrap">
+                                        {section.value || (isArabic ? 'لا يوجد' : 'N/A')}
                                       </p>
                                     </div>
                                   ))}

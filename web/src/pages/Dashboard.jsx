@@ -29,17 +29,10 @@ export default function Dashboard({ setActivePage }) {
     fetchSubscription();
   }, []);
 
-  // Calculate remaining AI minutes
+  // Calculate remaining AI minutes dynamically from server allowed_minutes
   const getRemainingMinutes = () => {
     if (!subscription) return 60; // Fallback to 60 for new users with trial
-    const planNameLower = (subscription.bundle_name || '').toLowerCase();
-    const matchedPlan = PLANS.find(p => 
-      p.id === planNameLower || 
-      p.nameEn.toLowerCase() === planNameLower || 
-      (subscription.bundle_name_ar && p.nameAr === subscription.bundle_name_ar)
-    ) || PLANS[1]; // Fallback to starter
-    
-    const totalMinutes = matchedPlan.minutes || 1000;
+    const totalMinutes = subscription.allowed_minutes || 60;
     const usedMinutes = subscription.used_minutes || 0;
     return Math.max(totalMinutes - usedMinutes, 0);
   };

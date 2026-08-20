@@ -99,7 +99,7 @@ The platform allows you to:
       <nav className="fixed w-full top-0 z-50 backdrop-blur-xl bg-white/90 border-b border-border-subtle">
         <div className="max-w-container-max mx-auto px-4 sm:px-8 flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-2">
-            <SbrLogo size={32} color="#24564C" showText={true} textClass="text-primary" />
+            <SbrLogo size={32} color="#006973" showText={true} textClass="text-primary" />
           </Link>
           <button
             onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}

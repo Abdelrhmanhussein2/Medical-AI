@@ -146,62 +146,70 @@ class TemplateService:
 
         return await self.fills_repo.get_patient_fills(patient_id, doctor_id)
 
-    async def generate_suggested_fields(self, template_name: str) -> List[str]:
+    async def generate_suggested_fields(self, template_name: str) -> List[Dict[str, str]]:
         """
-        Generates suggested clinical field names based on the template name using LLM.
+        Generates suggested clinical field names and default values based on the template name using LLM.
         """
         if not template_name or not template_name.strip():
             return []
 
         prompt = (
-            f"مهمتك هي اقتراح من 3 إلى 7 أسماء حقول طبية سريرية مناسبة لقالب كشف طبي يحمل الاسم: \"{template_name}\".\n"
-            f"أمثلة لحقول شائعة: 'الشكوى الرئيسية'، 'التاريخ المرضي'، 'الفحص السريري'، 'العلامات الحيوية'، 'التوصيات العلاجية'، 'التشخيص المقترح'.\n"
-            f"يجب أن تكون الأسماء قصيرة وموجزة جداً ومناسبة للتخصص.\n"
-            f"الرجاء إعادة النتيجة كـ JSON Array من النصوص باللغة العربية فقط كالتالي:\n"
-            f"[\"حقل 1\", \"حقل 2\", \"حقل 3\"]\n"
-            f"لا تضع أي تعليقات أو نصوص خارج المصفوفة، أعد المصفوفة فقط."
+            f"أنت طبيب متخصص. مهمتك اقتراح من 4 إلى 7 حقول طبية عملية لقالب كشف طبي باسم: \"{template_name}\".\n\n"
+            f"لكل حقل:\n"
+            f"1. اسم الحقل (label): قصير ومباشر (مثل: خطوات العلاج، الفحص السريري، التشخيص).\n"
+            f"2. القيمة الافتراضية (defaultValue): اكتب محتوى مفصّل وكامل يصلح كنقطة بداية للطبيب. \n"
+            f"   - إذا كان الحقل عن علاج: اكتب الخطوات العلاجية المنطقية بالتفصيل (أدوية، جرعات، مدة، تعليمات).\n"
+            f"   - إذا كان الحقل عن تأهيل: اكتب التمارين والخطوات التأهيلية مرتبة.\n"
+            f"   - إذا كان الحقل عن شكوى أو تاريخ مرضي: اكتب الأسئلة الطبية المهمة أو النمط الشائع.\n"
+            f"   - لا تكتب كلمتين فقط - اكتب على الأقل 3 إلى 8 جمل أو نقاط مفيدة.\n\n"
+            f"أعد النتيجة كـ JSON Array فقط بالعربية:\n"
+            f"[\n"
+            f"  {{\"label\": \"اسم الحقل\", \"defaultValue\": \"المحتوى التفصيلي هنا...\"}},\n"
+            f"  {{\"label\": \"اسم الحقل 2\", \"defaultValue\": \"المحتوى التفصيلي هنا...\"}}\n"
+            f"]\n"
+            f"لا تضع أي نص خارج الـ JSON."
         )
 
         try:
             from openai import AsyncOpenAI
-            from groq import AsyncGroq
             from app.core.config import settings
             import os
+            import json
 
-            use_openai = settings.OPENAI_API_KEY and not settings.OPENAI_API_KEY.startswith("sk-your")
-            if use_openai:
-                client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.strip())
-                model_to_use = settings.OPENAI_MODEL or "gpt-4o-mini"
-            else:
-                api_key = settings.GROQ_API_KEY or os.environ.get("GROQ_API_KEY", "")
-                if not api_key:
-                    return ["الشكوى الرئيسية", "التاريخ الطبي", "الفحص السريري", "العلاج والتعليمات"]
-                client = AsyncGroq(api_key=api_key.strip())
-                from app.services.ai_engine_service import MODEL_NAME
-                model_to_use = MODEL_NAME
+            if not settings.OPENAI_API_KEY or settings.OPENAI_API_KEY.startswith("sk-your"):
+                return [{"label": "الشكوى الرئيسية", "defaultValue": ""}, {"label": "التاريخ الطبي", "defaultValue": ""}]
+
+            client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.strip())
+            model_to_use = settings.OPENAI_MODEL or "gpt-4o-mini"
 
             response = await client.chat.completions.create(
                 model=model_to_use,
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.3,
-                max_tokens=200
+                temperature=0.4,
+                max_tokens=2000
             )
             content = response.choices[0].message.content.strip()
             if content.startswith("```"):
                 content = content.replace("```json", "").replace("```", "").strip()
-            
-            import json
+
             fields = json.loads(content)
             if isinstance(fields, list):
-                return [str(f).strip() for f in fields[:10] if f]
+                result = []
+                for f in fields[:10]:
+                    if isinstance(f, dict) and f.get("label"):
+                        result.append({
+                            "label": str(f.get("label")).strip(),
+                            "defaultValue": str(f.get("defaultValue") or "").strip()
+                        })
+                return result
             return []
         except Exception as e:
             logger.error(f"Error generating suggested fields via AI: {e}")
-            return ["الشكوى الرئيسية", "التاريخ الطبي", "الفحص السريري", "العلاج والتعليمات"]
+            return [{"label": "الشكوى الرئيسية", "defaultValue": ""}, {"label": "التاريخ الطبي", "defaultValue": ""}]
 
-    async def extract_fields_from_input(self, text: Optional[str], file: Optional[Any]) -> List[str]:
+    async def extract_fields_from_input(self, text: Optional[str], file: Optional[Any]) -> List[Dict[str, str]]:
         """
-        Transcribes the audio file if provided, and extracts clinical fields from the text or transcription using LLM.
+        Transcribes the audio file if provided, and extracts clinical fields and default values from the text or transcription using LLM.
         """
         input_text = text or ""
         
@@ -226,28 +234,16 @@ class TemplateService:
                     f.write(contents)
 
                 transcribed = ""
-                if use_openai:
+                if settings.OPENAI_API_KEY and not settings.OPENAI_API_KEY.startswith("sk-your"):
                     from openai import AsyncOpenAI
                     client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.strip())
                     with open(saved_file_path, "rb") as audio_file:
                         transcription = await client.audio.transcriptions.create(
                             file=(unique_name, audio_file.read()),
-                            model="whisper-1",
+                            model="gpt-4o-transcribe",
                             response_format="text"
                         )
                         transcribed = str(transcription).strip()
-                else:
-                    api_key = settings.GROQ_API_KEY or os.environ.get("GROQ_API_KEY", "")
-                    if api_key:
-                        from groq import AsyncGroq
-                        client = AsyncGroq(api_key=api_key.strip())
-                        with open(saved_file_path, "rb") as audio_file:
-                            transcription = await client.audio.transcriptions.create(
-                                file=(unique_name, audio_file.read()),
-                                model="whisper-large-v3",
-                                response_format="text"
-                            )
-                            transcribed = str(transcription).strip()
                 if transcribed:
                     input_text = transcribed
             except Exception as e:
@@ -258,52 +254,125 @@ class TemplateService:
 
         # 2. Extract fields from input_text
         prompt = (
-            f"مهمتك هي استخراج وتصفية أسماء حقول طبية سريرية مناسبة (من 1 إلى 10 حقول) من الوصف أو النص التالي:\n"
+            f"أنت طبيب متخصص. قرأت الوصف التالي من طبيب يريد إنشاء قالب كشف طبي:\n"
             f"\"{input_text}\"\n\n"
-            f"تعليمات:\n"
-            f"1. إذا كان النص يحتوي على أسماء حقول مباشرة (مثلاً: 'عايز الضغط والسكر والنبض والوزن')، فاستخرجها: ['ضغط الدم', 'مستوى السكر', 'نبضات القلب', 'الوزن'].\n"
-            f"2. إذا كان النص عبارة عن تسجيل صوتي تم تحويله لنص وبطريقة غير دقيقة تماماً، قم بتصحيح الكلمات إملائياً واستخرج الحقول الطبية المقصودة منها.\n"
-            f"3. يجب أن تكون أسماء الحقول مختصرة جداً (من كلمة إلى ثلاث كلمات بحد أقصى للحقل الواحد).\n"
-            f"4. يجب إعادة النتيجة كـ JSON Array من النصوص فقط باللغة العربية فقط كالتالي:\n"
-            f"[\"حقل 1\", \"حقل 2\", \"حقل 3\"]\n"
-            f"لا تكتب أي مقدمات أو تعليقات خارج المصفوفة، أعد المصفوفة فقط."
+            f"مهمتك:\n"
+            f"1. استخرج أسماء الحقول الطبية المطلوبة من الوصف.\n"
+            f"2. لكل حقل اكتب قيمة افتراضية مفصّلة ومفيدة كنقطة بداية للطبيب:\n"
+            f"   - إذا كان عن علاج: اكتب الخطوات العلاجية بالتفصيل (أدوية، جرعات، مدة، تعليمات).\n"
+            f"   - إذا كان عن تأهيل: اكتب التمارين والخطوات مرتبة.\n"
+            f"   - إذا كان عن شكوى: اكتب الأسئلة أو الأنماط الشائعة.\n"
+            f"   - لا تكتب كلمتين فقط - اكتب على الأقل 3 إلى 8 جمل أو نقاط مفيدة.\n\n"
+            f"أعد النتيجة كـ JSON Array فقط بالعربية:\n"
+            f"[\n"
+            f"  {{\"label\": \"اسم الحقل\", \"defaultValue\": \"المحتوى التفصيلي هنا...\"}},\n"
+            f"  {{\"label\": \"اسم الحقل 2\", \"defaultValue\": \"المحتوى التفصيلي هنا...\"}}\n"
+            f"]\n"
+            f"لا تضع أي نص خارج الـ JSON."
         )
 
         try:
             from openai import AsyncOpenAI
-            from groq import AsyncGroq
             from app.core.config import settings
             import os
+            import json
 
-            use_openai = settings.OPENAI_API_KEY and not settings.OPENAI_API_KEY.startswith("sk-your")
-            if use_openai:
-                client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.strip())
-                model_to_use = settings.OPENAI_MODEL or "gpt-4o-mini"
-            else:
-                api_key = settings.GROQ_API_KEY or os.environ.get("GROQ_API_KEY", "")
-                if not api_key:
-                    return []
-                client = AsyncGroq(api_key=api_key.strip())
-                from app.services.ai_engine_service import MODEL_NAME
-                model_to_use = MODEL_NAME
+            if not settings.OPENAI_API_KEY or settings.OPENAI_API_KEY.startswith("sk-your"):
+                return []
+
+            client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.strip())
+            model_to_use = settings.OPENAI_MODEL or "gpt-4o-mini"
+
+            response = await client.chat.completions.create(
+                model=model_to_use,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.4,
+                max_tokens=2000
+            )
+            content = response.choices[0].message.content.strip()
+            if content.startswith("```"):
+                content = content.replace("```json", "").replace("```", "").strip()
+
+            fields = json.loads(content)
+            if isinstance(fields, list):
+                result = []
+                for f in fields[:10]:
+                    if isinstance(f, dict) and f.get("label"):
+                        result.append({
+                            "label": str(f.get("label")).strip(),
+                            "defaultValue": str(f.get("defaultValue") or "").strip()
+                        })
+                return result
+            return []
+        except Exception as e:
+            logger.error(f"Error extracting template fields: {e}")
+            return []
+
+
+    async def extract_patient_fill_values(self, doctor_id: UUID, template_id: UUID, transcript: str) -> Dict[str, str]:
+        """
+        Extracts clinical note values for the fields of a template based on the session transcript.
+        """
+        template = await self.get_template(template_id, doctor_id)
+        fields = template.get("fields", [])
+        if not fields:
+            return {}
+
+        field_labels = [f.get("label") for f in fields if f.get("label")]
+        if not field_labels:
+            return {}
+
+        prompt = (
+            f"مهمتك هي استخراج معلومات سريرية مناسبة لكل حقل من الحقول الطبية المحددة بناءً على نص الاستشارة أو النص المكتوب أدناه:\n"
+            f"نص الاستشارة:\n"
+            f"\"\"\"{transcript}\"\"\"\n\n"
+            f"الحقول المطلوب تعبئتها:\n"
+            f"{', '.join([f' - {label}' for label in field_labels])}\n\n"
+            f"تعليمات الاستخراج:\n"
+            f"1. استخلص القيمة المقابلة لكل حقل من نص الاستشارة فقط. حافظ على دقة المعلومات.\n"
+            f"2. إذا لم تكن هناك معلومات كافية أو مذكورة لحقل معين، أرجع قيمته كـ \"\" (نص فارغ) أو \"غير محدد\".\n"
+            f"3. يجب إرجاع النتيجة كـ JSON Object صالح ومباشر، حيث المفاتيح هي أسماء الحقول بدقة، والقيم هي النصوص المستخلصة.\n"
+            f"مثال:\n"
+            f"{{\n"
+            f"  \"{field_labels[0]}\": \"قيمة الحقل السريرية المستخلصة\"\n"
+            f"}}\n"
+            f"لا تضع أي تعليبات أو نصوص خارج كود الـ JSON، أعد كود الـ JSON فقط."
+        )
+
+        try:
+            from openai import AsyncOpenAI
+            from app.core.config import settings
+            import os
+            import json
+
+            if not settings.OPENAI_API_KEY or settings.OPENAI_API_KEY.startswith("sk-your"):
+                return {label: "" for label in field_labels}
+
+            client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.strip())
+            model_to_use = settings.OPENAI_MODEL or "gpt-4o-mini"
 
             response = await client.chat.completions.create(
                 model=model_to_use,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.1,
-                max_tokens=250
+                max_tokens=500
             )
             content = response.choices[0].message.content.strip()
             if content.startswith("```"):
                 content = content.replace("```json", "").replace("```", "").strip()
-            
-            import json
-            fields = json.loads(content)
-            if isinstance(fields, list):
-                return [str(f).strip() for f in fields[:10] if f]
-            return []
+
+            extracted = json.loads(content)
+            if isinstance(extracted, dict):
+                result = {}
+                for label in field_labels:
+                    val = extracted.get(label, "")
+                    if val is None:
+                        val = ""
+                    result[label] = str(val).strip()
+                return result
+            return {label: "" for label in field_labels}
         except Exception as e:
-            logger.error(f"Error extracting template fields: {e}")
-            return []
+            logger.error(f"Error extracting patient fill values via AI: {e}")
+            return {label: "" for label in field_labels}
 
 template_service = TemplateService()

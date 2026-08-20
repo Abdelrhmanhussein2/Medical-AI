@@ -17,3 +17,8 @@ web/npm-debug.log*
 app/uploads/
 app/docker/docker-compose.yaml
 web/nginx.local.conf
+
+# Root Node / npm dependencies
+node_modules/
+package.json
+package-lock.json

@@ -8,7 +8,6 @@ from uuid import UUID, uuid4
 from app.core.database import db
 from app.core.config import settings
 from app.services.ai_service import summarize_session_transcript
-from groq import AsyncGroq
 
 
 class SessionService:
@@ -87,7 +86,7 @@ class SessionService:
     @staticmethod
     async def process_audio_chunk(session_id: str, file) -> dict:
         """
-        يستقبل جزء من الصوت، يرسله لـ Groq Whisper لتفريغه،
+        يستقبل جزء من الصوت، يرسله لـ OpenAI Whisper لتفريغه،
         ثم يدمجه في transcript_raw للجلسة المعنية.
         """
         openai_key = settings.OPENAI_API_KEY or os.environ.get("OPENAI_API_KEY", "")
@@ -95,11 +94,12 @@ class SessionService:
             raise ValueError("OpenAI API Key is not configured.")
 
         # 1. التحقق من وجود الجلسة أولاً
-        check_query = "SELECT id, transcript_raw FROM sessions WHERE id = $1"
+        check_query = "SELECT id, doctor_id, transcript_raw FROM sessions WHERE id = $1"
         async with db.pool.acquire() as conn:
             row = await conn.fetchrow(check_query, UUID(session_id))
             if not row:
                 raise ValueError("Session not found")
+        doctor_id = row["doctor_id"]
         
         # 2. حفظ الملف الصوتي مؤقتاً
         filename = getattr(file, "filename", None) or ""
@@ -120,22 +120,39 @@ class SessionService:
         except Exception as e:
             raise RuntimeError(f"Failed to save chunk file: {str(e)}")
             
-        # 3. إرسال لـ OpenAI Whisper
+        # 3. إرسال لـ OpenAI gpt-4o-transcribe لتفريغ الجزء الصوتي بذكاء عالي
         chunk_text = ""
         try:
             from openai import AsyncOpenAI
             client = AsyncOpenAI(api_key=openai_key.strip())
             with open(saved_file_path, "rb") as audio_file:
-                transcription = await client.audio.transcriptions.create(
-                    file=(unique_name, audio_file.read()),
-                    model="whisper-1",
-                    response_format="text"
-                )
-                chunk_text = str(transcription).strip()
+                audio_bytes = audio_file.read()
+                try:
+                    transcription = await client.audio.transcriptions.create(
+                        file=(unique_name, audio_bytes),
+                        model="gpt-4o-transcribe",
+                        response_format="text"
+                    )
+                    chunk_text = str(transcription).strip()
+                except Exception:
+                    try:
+                        transcription = await client.audio.transcriptions.create(
+                            file=(unique_name, audio_bytes),
+                            model="gpt-4o-mini-transcribe",
+                            response_format="text"
+                        )
+                        chunk_text = str(transcription).strip()
+                    except Exception:
+                        transcription = await client.audio.transcriptions.create(
+                            file=(unique_name, audio_bytes),
+                            model="whisper-1",
+                            response_format="text"
+                        )
+                        chunk_text = str(transcription).strip()
         except Exception as e:
             if os.path.exists(saved_file_path):
                 os.remove(saved_file_path)
-            raise RuntimeError(f"OpenAI Whisper transcription failed: {str(e)}")
+            raise RuntimeError(f"OpenAI chunk transcription failed: {str(e)}")
             
         # 4. مسح الملف المؤقت من القرص فوراً
         if os.path.exists(saved_file_path):
@@ -145,7 +162,28 @@ class SessionService:
         if not chunk_text or chunk_text.startswith("Subtitles by") or chunk_text.startswith("Amara.org"):
             chunk_text = ""
             
-        # 5. تحديث قاعدة البيانات وإلحاق النص الجديد
+        # 5. تشفير وحفظ الجزء الصوتي في جدول session_audio_chunks
+        from app.core.encryption import encrypt_binary, encrypt_text
+        encrypted_audio = encrypt_binary(contents)
+        encrypted_transcript = encrypt_text(chunk_text) if chunk_text else None
+        
+        async with db.pool.acquire() as conn:
+            chunk_index = await conn.fetchval(
+                "SELECT COALESCE(MAX(chunk_index), -1) + 1 FROM session_audio_chunks WHERE session_id = $1",
+                UUID(session_id)
+            )
+            await conn.execute(
+                """
+                INSERT INTO session_audio_chunks (session_id, doctor_id, chunk_index, audio_data, transcript)
+                VALUES ($1, $2, $3, $4, $5)
+                ON CONFLICT (session_id, chunk_index) DO UPDATE
+                    SET audio_data = EXCLUDED.audio_data,
+                        transcript = EXCLUDED.transcript
+                """,
+                UUID(session_id), UUID(str(doctor_id)), chunk_index, encrypted_audio, encrypted_transcript
+            )
+
+        # 6. تحديث قاعدة البيانات وإلحاق النص الجديد في جدول sessions
         if chunk_text:
             update_query = """
                 UPDATE sessions 
@@ -181,7 +219,7 @@ class SessionService:
             return dict(row) if row else None
     
     @staticmethod
-    async def summarize(session_id: str, patient_name: str = "المريض") -> dict:
+    async def summarize(session_id: str, patient_name: str = "المريض", summary_format: str = "soap") -> dict:
         """
         يجلب نص الجلسة، يرسله للـ AI، ويحفظ النتيجة.
         """
@@ -198,9 +236,9 @@ class SessionService:
         
         if not transcript.strip():
             transcript = "لم يتم تسجيل أي نص في هذه الجلسة."
-        
-        # إرسال للـ AI
-        ai_result = await summarize_session_transcript(transcript, patient_name)
+
+        # إرسال للـ AI للتلخيص وإنشاء SOAP Note
+        ai_result = await summarize_session_transcript(transcript, patient_name, summary_format)
         
         # حفظ النتيجة
         update_query = """
@@ -325,6 +363,47 @@ class SessionService:
         return result
     
     @staticmethod
+    async def update_session_notes(session_id: str, soap_note: Optional[dict] = None, summary_text: Optional[str] = None, patient_summary: Optional[str] = None) -> dict:
+        """تحديث ملاحظات الكشف والملخص للجلسة بعد المراجعة والتحرير"""
+        updates = []
+        params = []
+        
+        if soap_note is not None:
+            params.append(json.dumps(soap_note, ensure_ascii=False))
+            updates.append(f"soap_note = ${len(params)}")
+            
+        if summary_text is not None:
+            params.append(summary_text)
+            updates.append(f"summary_text = ${len(params)}")
+            
+        if patient_summary is not None:
+            params.append(patient_summary)
+            updates.append(f"patient_summary = ${len(params)}")
+            
+        if not updates:
+            return await SessionService.get_session(session_id)
+            
+        params.append(session_id)
+        query = f"""
+            UPDATE sessions 
+            SET {", ".join(updates)}
+            WHERE id = ${len(params)}
+            RETURNING *
+        """
+        async with db.pool.acquire() as conn:
+            row = await conn.fetchrow(query, *params)
+            if not row:
+                return None
+            result = dict(row)
+            if result.get("soap_note"):
+                result["soap_note"] = json.loads(result["soap_note"])
+            if result.get("prescriptions"):
+                result["prescriptions"] = json.loads(result["prescriptions"])
+            if result.get("tasks"):
+                result["tasks"] = json.loads(result["tasks"])
+            return result
+            
+    @staticmethod
     async def complete_session(session_id: str, duration_seconds: int) -> dict:
         """إنهاء الجلسة وتغيير الحالة إلى completed"""
         query = """
@@ -387,7 +466,7 @@ class SessionService:
     async def get_sessions_by_patient(patient_id: str) -> list:
         """جلب كل الجلسات الطبية لمريض معين"""
         query = """
-            SELECT id, status, duration_seconds, summary_text, soap_note, patient_summary, prescriptions, tasks, ai_model_used, ai_tokens_used, ai_prompt_tokens, ai_completion_tokens, created_at
+            SELECT id, status, duration_seconds, summary_text, soap_note, patient_summary, prescriptions, tasks, ai_model_used, ai_tokens_used, ai_prompt_tokens, ai_completion_tokens, created_at, transcript_raw
             FROM sessions 
             WHERE patient_id = $1
             ORDER BY created_at DESC

@@ -15,9 +15,11 @@ async def tool_get_my_appointments(fn_args: dict, owner_id: str, conn) -> dict:
         date_from_obj = datetime.strptime(date_from_str, "%Y-%m-%d").date()
         date_to_obj = datetime.strptime(date_to_str, "%Y-%m-%d").date()
     except ValueError:
-        from datetime import date, timedelta
-        date_from_obj = date.today()
-        date_to_obj = date.today() + timedelta(days=7)
+        from datetime import datetime, timezone, timedelta
+        tz_offset = timezone(timedelta(hours=3))
+        today_gmt3 = datetime.now(tz_offset).date()
+        date_from_obj = today_gmt3
+        date_to_obj = today_gmt3 + timedelta(days=7)
 
     appts = await conn.fetch(
         """
@@ -131,6 +133,7 @@ async def tool_reschedule_appointment(fn_args: dict, owner_id: str, conn) -> dic
         if "UPDATE 1" in res:
             try:
                 from datetime import datetime, timedelta
+                from app.core.database import db
                 from app.services.whatsapp.reminder_repository import ReminderRepository
                 
                 appt_dt = datetime.combine(new_d, new_t)
@@ -188,8 +191,9 @@ async def tool_update_appointment_status(fn_args: dict, owner_id: str, conn) -> 
 
 async def tool_get_today_schedule(fn_args: dict, owner_id: str, conn) -> dict:
     try:
-        from datetime import date
-        today = date.today()
+        from datetime import datetime, timezone, timedelta
+        tz_offset = timezone(timedelta(hours=3))
+        today = datetime.now(tz_offset).date()
         today_appts = await conn.fetch(
             """
             SELECT a.id, a.appointment_time, a.status, a.description, p.name as patient_name, p.phone as patient_phone

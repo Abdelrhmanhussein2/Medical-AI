@@ -1,10 +1,11 @@
 from uuid import UUID
 from datetime import datetime
-from typing import List, Dict
+from typing import List, Dict, Optional
 from pydantic import BaseModel, Field
 
 class TemplateField(BaseModel):
     label: str = Field(..., min_length=1, max_length=100)
+    defaultValue: Optional[str] = Field(None, max_length=2000)
 
 class TemplateCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=150)
@@ -30,7 +31,7 @@ class PatientFillResponse(BaseModel):
     id: UUID
     patient_id: UUID
     doctor_id: UUID
-    template_id: UUID = None
+    template_id: Optional[UUID] = None
     template_name: str
     filled_data: Dict[str, str]
     filled_at: datetime
@@ -38,3 +39,7 @@ class PatientFillResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class TemplateFillExtractRequest(BaseModel):
+    template_id: UUID
+    transcript: str

@@ -21,8 +21,9 @@ class DoctorService:
         Saves the uploaded certificate locally and returns the path/URL.
         In a real app, this might upload to S3.
         """
-        file_ext = os.path.splitext(file.filename)[1]
-        safe_filename = f"{email.replace('@', '_').replace('.', '_')}{file_ext}"
+        from uuid import uuid4
+        file_ext = os.path.splitext(file.filename)[1] if file.filename else ".pdf"
+        safe_filename = f"{uuid4()}{file_ext}"
         file_path = os.path.join(UPLOAD_DIR, safe_filename)
         
         async with aiofiles.open(file_path, 'wb') as out_file:
@@ -59,9 +60,9 @@ class DoctorService:
             query = """
             INSERT INTO doctors (
                 name, email, phone, password_hash, specialization, department_id,
-                certificate_url, profile_image_url, calendar_provider, calendar_id, status, must_change_password
+                certificate_url, profile_image_url, calendar_provider, calendar_id, status, must_change_password, ehr_system
             ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
             ) RETURNING *
             """
             
@@ -78,7 +79,8 @@ class DoctorService:
                 doctor_data.calendar_provider,
                 doctor_data.calendar_id,
                 doctor_data.status if doctor_data.status else 'pending',
-                must_change
+                must_change,
+                doctor_data.ehr_system
             )
 
             # Auto-assign Free Trial for independent doctors (not org members)

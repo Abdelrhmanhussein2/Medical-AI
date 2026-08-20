@@ -1,4 +1,4 @@
-﻿--
+--
 -- PostgreSQL database dump
 --
 
@@ -286,6 +286,7 @@ CREATE TABLE public.chat_messages (
     audio_duration character varying(10),
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     audio_file_path text,
+    audio_data bytea,
     CONSTRAINT chk_msg_sender_type CHECK (((sender_type)::text = ANY ((ARRAY['user'::character varying, 'ai'::character varying])::text[])))
 );
 

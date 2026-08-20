@@ -2,8 +2,39 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useLanguage } from '../context/LanguageContext';
 
+const COUNTRIES = [
+  // Most Used / Defaults
+  { code: 'EG', nameAr: 'مصر', nameEn: 'Egypt', prefix: '+20', defaultPhone: '+201012345678' },
+  // GCC
+  { code: 'SA', nameAr: 'المملكة العربية السعودية', nameEn: 'Saudi Arabia', prefix: '+966', defaultPhone: '+966501234567' },
+  { code: 'AE', nameAr: 'الإمارات العربية المتحدة', nameEn: 'United Arab Emirates', prefix: '+971', defaultPhone: '+971501234567' },
+  { code: 'KW', nameAr: 'الكويت', nameEn: 'Kuwait', prefix: '+965', defaultPhone: '+96550123456' },
+  { code: 'QA', nameAr: 'قطر', nameEn: 'Qatar', prefix: '+974', defaultPhone: '+97450123456' },
+  { code: 'OM', nameAr: 'عمان', nameEn: 'Oman', prefix: '+968', defaultPhone: '+96890123456' },
+  { code: 'BH', nameAr: 'البحرين', nameEn: 'Bahrain', prefix: '+973', defaultPhone: '+97330123456' },
+  // Levant & Iraq
+  { code: 'JO', nameAr: 'الأردن', nameEn: 'Jordan', prefix: '+962', defaultPhone: '+962701234567' },
+  { code: 'PS', nameAr: 'فلسطين', nameEn: 'Palestine', prefix: '+970', defaultPhone: '+970591234567' },
+  { code: 'LB', nameAr: 'لبنان', nameEn: 'Lebanon', prefix: '+961', defaultPhone: '+9613123456' },
+  { code: 'SY', nameAr: 'سوريا', nameEn: 'Syria', prefix: '+963', defaultPhone: '+963912345678' },
+  { code: 'IQ', nameAr: 'العراق', nameEn: 'Iraq', prefix: '+964', defaultPhone: '+9647012345678' },
+  // North Africa
+  { code: 'MA', nameAr: 'المغرب', nameEn: 'Morocco', prefix: '+212', defaultPhone: '+212612345678' },
+  { code: 'DZ', nameAr: 'الجزائر', nameEn: 'Algeria', prefix: '+213', defaultPhone: '+213512345678' },
+  { code: 'TN', nameAr: 'تونس', nameEn: 'Tunisia', prefix: '+216', defaultPhone: '+21651234567' },
+  { code: 'LY', nameAr: 'ليبيا', nameEn: 'Libya', prefix: '+218', defaultPhone: '+218912345678' },
+  { code: 'SD', nameAr: 'السودان', nameEn: 'Sudan', prefix: '+249', defaultPhone: '+249912345678' },
+  // East Africa & Yemen
+  { code: 'YE', nameAr: 'اليمن', nameEn: 'Yemen', prefix: '+967', defaultPhone: '+967701234567' },
+  { code: 'SO', nameAr: 'الصومال', nameEn: 'Somalia', prefix: '+252', defaultPhone: '+25261234567' },
+  { code: 'DJ', nameAr: 'جيبوتي', nameEn: 'Djibouti', prefix: '+253', defaultPhone: '+25377123456' },
+  { code: 'MR', nameAr: 'موريتانيا', nameEn: 'Mauritania', prefix: '+222', defaultPhone: '+22241234567' },
+  { code: 'KM', nameAr: 'جزر القمر', nameEn: 'Comoros', prefix: '+269', defaultPhone: '+2693212345' },
+  { code: 'OTHER', nameAr: 'أخرى', nameEn: 'Other', prefix: '+', defaultPhone: '+12025550143' }
+];
+
 export default function Appointments({ setActivePage }) {
-  const { appointments, patients, currentUser, addAppointment, updateAppointmentStatus, addPatient } = useApp();
+  const { appointments, patients, currentUser, addAppointment, updateAppointmentStatus, updateAppointment, addPatient } = useApp();
   const { t, isArabic } = useLanguage();
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,6 +62,7 @@ export default function Appointments({ setActivePage }) {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [isCreatingNewPatient, setIsCreatingNewPatient] = useState(false);
   const [newPatientName, setNewPatientName] = useState('');
+  const [newPatientCountry, setNewPatientCountry] = useState('EG');
   const [newPatientPhone, setNewPatientPhone] = useState('');
 
   const [date, setDate] = useState('');
@@ -64,12 +96,12 @@ export default function Appointments({ setActivePage }) {
         return false;
       }
     }
-    
+
     // Date filter
     const selDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
     return appt.appointment_date === selDateStr;
   }).sort((a, b) => {
-     return a.appointment_time.localeCompare(b.appointment_time);
+    return a.appointment_time.localeCompare(b.appointment_time);
   });
 
   const formatTime = (timeStr) => {
@@ -84,7 +116,7 @@ export default function Appointments({ setActivePage }) {
   const handleOpenEdit = (appt) => {
     setEditAppt(appt);
     setEditDate(appt.appointment_date || '');
-    setEditTime(appt.appointment_time || '');
+    setEditTime(appt.appointment_time ? appt.appointment_time.substring(0, 5) : '');
     setEditDuration(appt.duration_minutes || 30);
     setEditDescription(appt.description || '');
     setEditError('');
@@ -99,8 +131,12 @@ export default function Appointments({ setActivePage }) {
       return;
     }
     try {
-      // For now update locally since we don't have a PATCH endpoint yet
-      // updateAppointment(editAppt.id, { appointment_date: editDate, appointment_time: editTime, duration_minutes: Number(editDuration), description: editDescription });
+      await updateAppointment(editAppt.id, {
+        appointment_date: editDate,
+        appointment_time: editTime,
+        duration_minutes: Number(editDuration),
+        description: editDescription
+      });
       setEditAppt(null);
     } catch (err) {
       setEditError(err.message || 'حدث خطأ أثناء التعديل');
@@ -109,16 +145,21 @@ export default function Appointments({ setActivePage }) {
   const getStatusBadge = (status, id, appt) => {
     if (status === 'completed') {
       return (
-        <div className="flex items-center gap-1.5 px-4 py-2 bg-surface-container-high rounded-full text-secondary text-sm font-semibold">
-          <span className="material-symbols-outlined text-[16px]">check_circle</span>
-          {isArabic ? 'مكتملة' : 'Completed'}
+        <div className="flex items-center gap-2 relative">
+          <button
+            onClick={() => setActivePage(`live-session-${id}`)}
+            className="px-5 py-2.5 bg-surface-container-high hover:bg-surface-container text-secondary rounded-lg text-sm font-bold shadow-sm transition-colors flex items-center gap-2 border border-border-subtle cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px] text-success">check_circle</span>
+            {isArabic ? 'عرض الجلسة ' : 'View Session '}
+          </button>
         </div>
       );
     }
 
     const renderMoreMenu = () => (
       <div className="relative">
-        <button 
+        <button
           onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === id ? null : id); }}
           className="p-2 text-secondary hover:bg-surface-container rounded-lg transition-colors"
         >
@@ -154,12 +195,12 @@ export default function Appointments({ setActivePage }) {
           return (
             <div className="flex items-center gap-2 relative">
               {renderMoreMenu()}
-              <button 
-                 disabled
-                 className="px-5 py-2.5 bg-surface-container-low text-secondary/40 rounded-lg text-sm font-bold border border-border-subtle cursor-not-allowed flex items-center gap-2"
-                 title="Passed"
+              <button
+                disabled
+                className="px-5 py-2.5 bg-surface-container-low text-secondary/40 rounded-lg text-sm font-bold border border-border-subtle cursor-not-allowed flex items-center gap-2"
+                title="Passed"
               >
-                 {isArabic ? 'بدء الجلسة (انتهت)' : 'Join Call (Passed)'}
+                {isArabic ? 'بدء الجلسة (انتهت)' : 'Join Call (Passed)'}
               </button>
             </div>
           );
@@ -168,12 +209,12 @@ export default function Appointments({ setActivePage }) {
           return (
             <div className="flex items-center gap-2 relative">
               {renderMoreMenu()}
-              <button 
-                 disabled
-                 className="px-5 py-2.5 bg-surface-container-low text-secondary/40 rounded-lg text-sm font-bold border border-border-subtle cursor-not-allowed flex items-center gap-2"
-                 title="Upcoming"
+              <button
+                disabled
+                className="px-5 py-2.5 bg-surface-container-low text-secondary/40 rounded-lg text-sm font-bold border border-border-subtle cursor-not-allowed flex items-center gap-2"
+                title="Upcoming"
               >
-                 {isArabic ? 'بدء الجلسة (قريباً)' : 'Join Call (Upcoming)'}
+                {isArabic ? 'بدء الجلسة (قريباً)' : 'Join Call (Upcoming)'}
               </button>
             </div>
           );
@@ -183,35 +224,35 @@ export default function Appointments({ setActivePage }) {
       return (
         <div className="flex items-center gap-2 relative">
           {renderMoreMenu()}
-          <button 
-             onClick={() => setActivePage(`live-session-${id}`)}
-             className="px-5 py-2.5 bg-primary text-on-primary rounded-lg text-sm font-bold shadow-sm hover:bg-primary-hover transition-colors flex items-center gap-2 border border-primary/20"
+          <button
+            onClick={() => setActivePage(`live-session-${id}`)}
+            className="px-5 py-2.5 bg-primary text-on-primary rounded-lg text-sm font-bold shadow-sm hover:bg-primary-hover transition-colors flex items-center gap-2 border border-primary/20"
           >
-             {isArabic ? 'ابدأ الجلسة 🎙️' : 'Join Call 🎙️'}
+            {isArabic ? 'ابدأ الجلسة 🎙️' : 'Join Call 🎙️'}
           </button>
         </div>
       );
     }
     if (status === 'cancelled') {
-       return (
+      return (
         <div className="flex items-center gap-1.5 px-4 py-2 bg-error-container/50 rounded-full text-error text-sm font-semibold">
           <span className="material-symbols-outlined text-[16px]">cancel</span>
           {isArabic ? 'ملغية' : 'Cancelled'}
         </div>
-       );
+      );
     }
     if (status === 'no_show') {
-       return (
+      return (
         <div className="flex items-center gap-1.5 px-4 py-2 bg-surface-container rounded-full text-secondary text-sm font-semibold">
           <span className="material-symbols-outlined text-[16px]">person_off</span>
           {isArabic ? 'لم يحضر' : 'No Show'}
         </div>
-       );
+      );
     }
     return (
-       <div className="flex items-center gap-1.5 px-4 py-2 bg-surface-container rounded-full text-secondary text-sm font-semibold capitalize">
-          {status}
-       </div>
+      <div className="flex items-center gap-1.5 px-4 py-2 bg-surface-container rounded-full text-secondary text-sm font-semibold capitalize">
+        {status}
+      </div>
     );
   };
 
@@ -268,9 +309,18 @@ export default function Appointments({ setActivePage }) {
         return;
       }
       try {
+        let finalPhone = newPatientPhone.trim();
+        const country = COUNTRIES.find(c => c.code === newPatientCountry);
+        if (country && !finalPhone.startsWith('+')) {
+          if (finalPhone.startsWith('0')) {
+            finalPhone = country.prefix + finalPhone.slice(1);
+          } else {
+            finalPhone = country.prefix + finalPhone;
+          }
+        }
         const created = await addPatient({
           name: newPatientName,
-          phone: newPatientPhone,
+          phone: finalPhone,
         });
         finalPatientId = created.id;
         finalPhone = created.phone;
@@ -304,6 +354,7 @@ export default function Appointments({ setActivePage }) {
       setIsCreatingNewPatient(false);
       setNewPatientName('');
       setNewPatientPhone('');
+      setNewPatientCountry('EG');
       setDate('');
       setTime('');
       setDuration(30);
@@ -315,10 +366,10 @@ export default function Appointments({ setActivePage }) {
   };
 
   const filteredSearchPatients = patientQuery.trim()
-    ? patients.filter(p => 
-        p.name.toLowerCase().includes(patientQuery.toLowerCase()) || 
-        p.phone.includes(patientQuery)
-      )
+    ? patients.filter(p =>
+      p.name.toLowerCase().includes(patientQuery.toLowerCase()) ||
+      p.phone.includes(patientQuery)
+    )
     : [];
 
   // --- Calendar Logic ---
@@ -338,12 +389,12 @@ export default function Appointments({ setActivePage }) {
     const firstDay = new Date(year, month, 1).getDay(); // 0 (Sun) to 6 (Sat)
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const prevMonthDays = new Date(year, month, 0).getDate();
-    
+
     // Convert Sunday-first to Monday-first
     const startOffset = firstDay === 0 ? 6 : firstDay - 1;
-    
+
     const days = [];
-    
+
     // Previous month padding
     for (let i = startOffset - 1; i >= 0; i--) {
       days.push({
@@ -351,7 +402,7 @@ export default function Appointments({ setActivePage }) {
         isCurrentMonth: false
       });
     }
-    
+
     // Current month days
     for (let i = 1; i <= daysInMonth; i++) {
       days.push({
@@ -359,7 +410,7 @@ export default function Appointments({ setActivePage }) {
         isCurrentMonth: true
       });
     }
-    
+
     // Next month padding to complete the grid (usually 42 cells total)
     const remainingCells = 42 - days.length;
     for (let i = 1; i <= remainingCells; i++) {
@@ -368,7 +419,7 @@ export default function Appointments({ setActivePage }) {
         isCurrentMonth: false
       });
     }
-    
+
     return days;
   };
 
@@ -393,21 +444,21 @@ export default function Appointments({ setActivePage }) {
             {isArabic ? 'إدارة المواعيد والزيارات السريرية القادمة الخاصة بك.' : 'Manage your schedule and upcoming clinical consultations.'}
           </p>
         </div>
-        
+
         <div className="flex items-center gap-4 w-full md:w-auto">
           <div className="relative w-full md:w-64">
             <span className={`material-symbols-outlined absolute ${isArabic ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-outline-variant text-[20px]`}>
               search
             </span>
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder={isArabic ? 'ابحث عن مراجع...' : 'Search patient...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className={`w-full ${isArabic ? 'pr-10 pl-4 text-right' : 'pl-10 pr-4 text-left'} py-2 border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-sm`}
             />
           </div>
-          
+
           <button
             onClick={() => setShowAddModal(true)}
             className="shrink-0 bg-primary hover:bg-primary-hover text-on-primary font-bold text-sm py-2 px-5 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm"
@@ -420,10 +471,10 @@ export default function Appointments({ setActivePage }) {
 
       {/* Main Content Layout */}
       <div class="flex flex-col lg:flex-row gap-8 items-start">
-        
+
         {/* Left Column: Calendar & Insights */}
         <div class="w-full lg:w-[340px] shrink-0 flex flex-col gap-6">
-          
+
           {/* Calendar Widget */}
           <div class="bg-white rounded-2xl border border-border-subtle shadow-sm p-6">
             <div class="flex justify-between items-center mb-6">
@@ -433,23 +484,23 @@ export default function Appointments({ setActivePage }) {
                 <button onClick={nextMonth} class="text-secondary hover:text-primary"><span class="material-symbols-outlined text-[20px]">chevron_right</span></button>
               </div>
             </div>
-            
+
             <div class="grid grid-cols-7 gap-y-4 gap-x-2 text-center text-xs font-bold text-secondary mb-2">
               {(isArabic
                 ? ['اث', 'ثل', 'أر', 'خم', 'جم', 'سب', 'أح']
                 : ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
               ).map(d => <div key={d}>{d}</div>)}
             </div>
-            
+
             <div class="grid grid-cols-7 gap-y-4 gap-x-2 text-center text-sm font-semibold">
               {calendarDays.map((dayObj, i) => {
                 const isSelected = selectedDate.getDate() === dayObj.date.getDate() && selectedDate.getMonth() === dayObj.date.getMonth() && selectedDate.getFullYear() === dayObj.date.getFullYear();
                 const isToday = todayDate.getDate() === dayObj.date.getDate() && todayDate.getMonth() === dayObj.date.getMonth() && todayDate.getFullYear() === dayObj.date.getFullYear();
                 const hasAppts = hasAppointments(dayObj.date);
-                
+
                 return (
                   <div key={i} class="relative flex justify-center cursor-pointer" onClick={() => setSelectedDate(dayObj.date)}>
-                    <div 
+                    <div
                       class={`w-8 h-8 rounded-full flex items-center justify-center transition-colors
                         ${!dayObj.isCurrentMonth ? 'text-outline-variant' : 'text-on-surface'}
                         ${isSelected ? 'bg-primary text-on-primary shadow-sm' : 'hover:bg-surface-container'}
@@ -468,12 +519,12 @@ export default function Appointments({ setActivePage }) {
           </div>
 
 
-          
+
         </div>
 
         {/* Right Column: Appointments List */}
         <div class="flex-1 min-w-0">
-          
+
           <div class="flex justify-between items-end mb-6">
             <div>
               <h2 class="text-xl font-bold text-on-surface inline-block">
@@ -489,23 +540,22 @@ export default function Appointments({ setActivePage }) {
           <div class="space-y-4">
             {displayAppts.length === 0 ? (
               <div class="bg-white border border-border-subtle rounded-2xl p-10 text-center shadow-sm">
-                 <span class="material-symbols-outlined text-4xl text-outline-variant mb-3">event_available</span>
-                 <p class="text-secondary font-medium">{isArabic ? 'لا توجد مواعيد مجدولة لهذا اليوم' : 'No appointments scheduled for this day'}</p>
+                <span class="material-symbols-outlined text-4xl text-outline-variant mb-3">event_available</span>
+                <p class="text-secondary font-medium">{isArabic ? 'لا توجد مواعيد مجدولة لهذا اليوم' : 'No appointments scheduled for this day'}</p>
               </div>
             ) : (
               displayAppts.map((appt, idx) => {
                 const patientObj = patients.find(p => p.id === appt.patient_id);
                 const { time: fTime, period } = formatTime(appt.appointment_time);
-                
+
                 // Highlight logic (mocking the second card as active)
                 const isActive = appt.status === 'scheduled' && idx === 0;
 
                 return (
-                  <div 
-                    key={appt.id} 
-                    class={`bg-white rounded-2xl flex flex-col sm:flex-row items-stretch shadow-sm transition-all duration-200 relative ${
-                      isActive ? 'border-[2.5px] border-primary shadow-md' : 'border border-border-subtle hover:border-outline-variant'
-                    }`}
+                  <div
+                    key={appt.id}
+                    class={`bg-white rounded-2xl flex flex-col sm:flex-row items-stretch shadow-sm transition-all duration-200 relative ${isActive ? 'border-[2.5px] border-primary shadow-md' : 'border border-border-subtle hover:border-outline-variant'
+                      }`}
                   >
                     {/* Time Column */}
                     <div class="px-6 py-5 sm:w-36 flex sm:flex-col items-center justify-between sm:justify-center border-b sm:border-b-0 sm:border-r border-border-subtle bg-bg-canvas/50 shrink-0">
@@ -514,7 +564,7 @@ export default function Appointments({ setActivePage }) {
                         <span class="text-xs font-bold text-secondary tracking-widest uppercase">{period}</span>
                       </div>
                     </div>
-                    
+
                     {/* Details Column */}
                     <div class="flex-1 p-5 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
                       <div class="flex items-center gap-4">
@@ -524,33 +574,33 @@ export default function Appointments({ setActivePage }) {
                         <div>
                           <h3 class="text-lg font-bold text-on-surface mb-1">{patientObj ? patientObj.name : 'Unknown Patient'}</h3>
                           <div class="flex items-center flex-wrap gap-2">
-                             <span class={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${getTagStyle(appt.description)}`}>
-                               {appt.description || 'Routine Checkup'}
-                             </span>
-                             <span class="text-outline-variant font-bold text-[10px]">•</span>
-                             <span class="text-secondary text-sm font-medium">
-                               {appt.status === 'completed' && appt.session_duration != null
-                                 ? `${Math.round(appt.session_duration / 60)} min`
-                                 : `${appt.duration_minutes} min`
-                               }
-                             </span>
-                             <span class="text-outline-variant font-bold text-[10px] hidden sm:inline">•</span>
-                             <span class="text-secondary text-xs font-semibold flex items-center gap-1 hidden sm:flex">
-                               <span class="material-symbols-outlined text-[14px]">videocam</span>
-                               {isArabic ? 'مكالمة تليفزيونية' : 'Telehealth'}
-                             </span>
+                            <span class={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${getTagStyle(appt.description)}`}>
+                              {appt.description || 'Routine Checkup'}
+                            </span>
+                            <span class="text-outline-variant font-bold text-[10px]">•</span>
+                            <span class="text-secondary text-sm font-medium">
+                              {appt.status === 'completed' && appt.session_duration != null
+                                ? `${Math.round(appt.session_duration / 60)} min`
+                                : `${appt.duration_minutes} min`
+                              }
+                            </span>
+                            <span class="text-outline-variant font-bold text-[10px] hidden sm:inline">•</span>
+                            <span class="text-secondary text-xs font-semibold flex items-center gap-1 hidden sm:flex">
+                              <span class="material-symbols-outlined text-[14px]">videocam</span>
+                              {isArabic ? 'مكالمة تليفزيونية' : 'Telehealth'}
+                            </span>
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Action Column */}
                       <div class="w-full xl:w-auto mt-2 xl:mt-0 flex justify-end">
-                         {getStatusBadge(appt.status, appt.id, appt)}
-                         {appt.status !== 'completed' && appt.status !== 'cancelled' && (
-                           <button onClick={() => handleOpenEdit(appt)} class="ml-2 p-2 hover:bg-surface-container rounded-full text-secondary">
-                             <span class="material-symbols-outlined text-[18px]">edit</span>
-                           </button>
-                         )}
+                        {getStatusBadge(appt.status, appt.id, appt)}
+                        {appt.status !== 'completed' && appt.status !== 'cancelled' && (
+                          <button onClick={() => handleOpenEdit(appt)} class="ml-2 p-2 hover:bg-surface-container rounded-full text-secondary">
+                            <span class="material-symbols-outlined text-[18px]">edit</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -558,7 +608,7 @@ export default function Appointments({ setActivePage }) {
               })
             )}
           </div>
-          
+
         </div>
       </div>
 
@@ -568,7 +618,7 @@ export default function Appointments({ setActivePage }) {
           <div class="bg-white rounded-xl border border-border-subtle shadow-lg max-w-md w-full overflow-visible">
             <div class="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas">
               <h3 class="font-headline-md text-base text-primary font-bold">{isArabic ? 'تحديد موعد' : 'Schedule Appointment'}</h3>
-              <button 
+              <button
                 onClick={() => setShowAddModal(false)}
                 class="p-1 hover:bg-surface-container rounded-full text-secondary"
               >
@@ -586,7 +636,7 @@ export default function Appointments({ setActivePage }) {
               {/* Patient Autocomplete Input */}
               <div class="relative">
                 <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'اختر المراجع *' : 'Select Patient *'}</label>
-                
+
                 {!isCreatingNewPatient ? (
                   <>
                     <div class="relative">
@@ -611,7 +661,7 @@ export default function Appointments({ setActivePage }) {
                         </button>
                       )}
                     </div>
-                    
+
                     {/* Search results dropdown */}
                     {showDropdown && patientQuery.trim() !== '' && (
                       <div class="absolute left-0 right-0 mt-1 bg-white border border-border-subtle rounded-lg shadow-lg z-20 max-h-48 overflow-y-auto divide-y divide-border-subtle">
@@ -626,7 +676,7 @@ export default function Appointments({ setActivePage }) {
                             <span class="text-secondary">{p.phone}</span>
                           </button>
                         ))}
-                        
+
                         <button
                           type="button"
                           onClick={handleStartCreateNew}
@@ -645,7 +695,7 @@ export default function Appointments({ setActivePage }) {
                         <span class="material-symbols-outlined text-[16px]">person_add</span>
                         {isArabic ? 'بيانات المراجع الجديد' : 'New Patient Details'}
                       </span>
-                      <button 
+                      <button
                         type="button"
                         onClick={() => {
                           setIsCreatingNewPatient(false);
@@ -656,7 +706,7 @@ export default function Appointments({ setActivePage }) {
                         {isArabic ? 'إلغاء إضافة مراجع' : 'Cancel new patient'}
                       </button>
                     </div>
-                    
+
                     <div class="grid grid-cols-1 gap-2">
                       <div>
                         <label class="block text-[10px] font-bold text-secondary mb-1">{isArabic ? 'اسم المراجع كاملاً *' : 'Patient Full Name *'}</label>
@@ -670,14 +720,29 @@ export default function Appointments({ setActivePage }) {
                         />
                       </div>
                       <div>
+                        <label class="block text-[10px] font-bold text-secondary mb-1">{isArabic ? 'بلد المراجع' : 'Patient Country'}</label>
+                        <select
+                          value={newPatientCountry}
+                          onChange={(e) => setNewPatientCountry(e.target.value)}
+                          class="w-full px-3 py-1.5 bg-white border border-border-subtle rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                        >
+                          {COUNTRIES.map((c) => (
+                            <option key={c.code} value={c.code}>
+                              {isArabic ? `${c.nameAr} (${c.prefix})` : `${c.nameEn} (${c.prefix})`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
                         <label class="block text-[10px] font-bold text-secondary mb-1">{isArabic ? 'رقم هاتف المراجع *' : 'Patient Phone Number *'}</label>
                         <input
                           type="text"
                           required
                           value={newPatientPhone}
                           onChange={(e) => setNewPatientPhone(e.target.value)}
-                          placeholder="0501234567"
-                          class="w-full px-3 py-1.5 bg-white border border-border-subtle rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                          placeholder={COUNTRIES.find(c => c.code === newPatientCountry)?.defaultPhone || '+201012345678'}
+                          class="w-full px-3 py-1.5 bg-white border border-border-subtle rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary ltr text-left"
+                          dir="ltr"
                         />
                       </div>
                     </div>
@@ -691,6 +756,7 @@ export default function Appointments({ setActivePage }) {
                   <input
                     type="date"
                     required
+                    lang="en-US"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                     class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"
@@ -775,6 +841,7 @@ export default function Appointments({ setActivePage }) {
                   <input
                     type="date"
                     required
+                    lang="en-US"
                     value={editDate}
                     onChange={(e) => setEditDate(e.target.value)}
                     class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary text-on-surface"

@@ -22,8 +22,16 @@ jobs:
 
             cd /opt/apps/Medical-AI
 
+            # Backup server-only config files before git reset
+            cp app/docker/docker-compose.yaml /tmp/docker-compose.yaml.bak 2>/dev/null || true
+            cp web/nginx.local.conf /tmp/nginx.local.conf.bak 2>/dev/null || true
+
             git fetch origin
             git reset --hard origin/main
+
+            # Restore server-only config files after git reset
+            cp /tmp/docker-compose.yaml.bak app/docker/docker-compose.yaml 2>/dev/null || true
+            cp /tmp/nginx.local.conf.bak web/nginx.local.conf 2>/dev/null || true
 
             cd web
             npm ci

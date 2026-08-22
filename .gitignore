@@ -15,8 +15,8 @@ web/.vite/
 web/*.local
 web/npm-debug.log*
 app/uploads/
-app/docker/docker-compose.yaml
-web/nginx.local.conf
+# app/docker/docker-compose.yaml  -- must be tracked for deployment
+# web/nginx.local.conf             -- must be tracked for deployment
 
 # Root Node / npm dependencies
 node_modules/

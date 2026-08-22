@@ -105,7 +105,7 @@ export const AppProvider = ({ children }) => {
         return null;
       }
       const err = await response.json().catch(() => ({}));
-      let errorMessage = 'An error occurred';
+      let errorMessage = `An error occurred (HTTP ${response.status})`;
       if (Array.isArray(err.detail)) {
         errorMessage = err.detail.map(e => `${e.loc ? e.loc[e.loc.length - 1] : ''}: ${e.msg}`).join(', ');
       } else if (err.detail) {

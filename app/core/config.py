@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-4o-mini"
     DAILY_TOKEN_LIMIT: int = 50000000
     GEMINI_API_KEY: Optional[str] = None
-    CHAT_ENCRYPTION_KEY: str
+    CHAT_ENCRYPTION_KEY: str = "tmDxk2NXIA7urGusgb3yySpQNcWNkQKvGKQIVKjCLm4="
 
     # ──────────── WhatsApp / Evolution API ────────────
     EVOLUTION_API_URL: str = "http://localhost:8080"

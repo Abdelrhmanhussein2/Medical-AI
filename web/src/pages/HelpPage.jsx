@@ -149,14 +149,39 @@ The platform allows you to:
             </div>
           </div>
 
-          {/* Right Column: Suggestions & Complaints Form */}
-          <div className="lg:col-span-5 bg-white border border-border-subtle rounded-2xl p-6 shadow-sm text-right" dir={isArabic ? 'rtl' : 'ltr'}>
-            <div className="flex items-center gap-2 border-b border-border-subtle pb-4 mb-4">
-              <span className="material-symbols-outlined text-primary text-[22px]">rate_review</span>
-              <h2 className="text-base font-black text-secondary">
-                {isArabic ? 'الاقتراحات والشكاوى' : 'Suggestions & Complaints'}
-              </h2>
-            </div>
+          {/* Right Column: Direct Contact & Suggestions Form */}
+          <div className="lg:col-span-5 space-y-5 text-right" dir={isArabic ? 'rtl' : 'ltr'}>
+            
+            {/* Phone Support Card */}
+            <a
+              href="tel:0552060316"
+              className="flex items-center justify-between p-4 rounded-2xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all text-right group cursor-pointer shadow-xs"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-xl bg-primary text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <span className="material-symbols-outlined text-xl">call</span>
+                </div>
+                <div>
+                  <p className="text-[11px] text-primary font-bold uppercase tracking-wider mb-0.5">
+                    {isArabic ? 'الدعم الفني والاتصال المباشر' : 'Direct Phone Support'}
+                  </p>
+                  <p className="text-base font-black text-on-surface group-hover:text-primary transition-colors font-mono">
+                    0552060316
+                  </p>
+                </div>
+              </div>
+              <span className="material-symbols-outlined text-primary text-[20px] group-hover:translate-x-[-4px] transition-transform">
+                {isArabic ? 'arrow_back' : 'arrow_forward'}
+              </span>
+            </a>
+
+            <div className="bg-white border border-border-subtle rounded-2xl p-6 shadow-sm">
+              <div className="flex items-center gap-2 border-b border-border-subtle pb-4 mb-4">
+                <span className="material-symbols-outlined text-primary text-[22px]">rate_review</span>
+                <h2 className="text-base font-black text-secondary">
+                  {isArabic ? 'الاقتراحات والشكاوى' : 'Suggestions & Complaints'}
+                </h2>
+              </div>
 
             {successTicket ? (
               <div className="bg-primary-light/40 border border-primary/20 p-5 rounded-xl text-center space-y-4 animate-fade-in">
@@ -272,6 +297,7 @@ The platform allows you to:
             )}
           </div>
         </div>
+      </div>
 
         <div className="mt-12 text-center">
           <Link to="/" className="inline-flex items-center gap-2 text-primary font-semibold text-sm hover:underline">

@@ -93,9 +93,17 @@ class EvolutionClient:
         if "," in base64_data:
             pure_base64 = base64_data.split(",")[1]
 
+        # Determine mimetype based on filename extension
+        mime_type = "application/pdf"
+        if file_name.lower().endswith(".png"):
+            mime_type = "image/png"
+        elif file_name.lower().endswith((".jpg", ".jpeg")):
+            mime_type = "image/jpeg"
+
         payload = {
             "number": phone,
             "mediatype": media_type,
+            "mimetype": mime_type,
             "fileName": file_name,
             "media": pure_base64
         }
@@ -106,7 +114,7 @@ class EvolutionClient:
                 url,
                 json=payload,
                 headers=headers,
-                timeout=30.0
+                timeout=60.0
             )
             
             if response.status_code not in (200, 201):

@@ -217,3 +217,4 @@ async def retry_message_transcription(
     owner_id, owner_type = _verify_chat_user(current_user)
     from app.services.audio_service import AudioService
     return await AudioService.retry_transcription(str(message_id), owner_id, owner_type)
+

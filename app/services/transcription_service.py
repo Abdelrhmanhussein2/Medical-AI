@@ -86,13 +86,13 @@ class TranscriptionService:
         
         start_time = time.time()
         success = False
-        final_model = "gpt-4o-transcribe"
+        final_model = "gpt-transcribe"
         
         try:
-            # Try primary model first: gpt-4o-transcribe
+            # Try primary model first: gpt-transcribe
             try:
                 result = await TranscriptionService._transcribe_model(
-                    client, filename, audio_bytes, "gpt-4o-transcribe"
+                    client, filename, audio_bytes, "gpt-transcribe"
                 )
                 success = True
                 return result
@@ -100,7 +100,7 @@ class TranscriptionService:
                 # If model is not supported (HTTP 400), try fallback to mini
                 is_model_error = isinstance(exc, APIStatusError) and exc.status_code == 400
                 if is_model_error:
-                    logger.info("gpt-4o-transcribe not available, falling back to gpt-4o-mini-transcribe")
+                    logger.info("gpt-transcribe not available, falling back to gpt-4o-mini-transcribe")
                     final_model = "gpt-4o-mini-transcribe"
                     try:
                         result = await TranscriptionService._transcribe_model(

@@ -583,7 +583,8 @@ class AIEngineService:
             raise
         except Exception as e:
             logger.exception(f"AI Engine Error in generate_ai_response: {e}")
+            error_msg = f"{type(e).__name__}: {str(e)}" if str(e) else f"{type(e).__name__}"
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"AI Engine Error: {str(e)}"
+                detail=f"AI Engine Error: {error_msg}"
             )

@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form
+from fastapi.responses import FileResponse
 from typing import List, Optional
 from datetime import datetime
 from uuid import UUID
+import os
 
 from app.core.dependencies import get_current_user
 from app.schemes.chat_schema import (
@@ -172,3 +174,46 @@ async def generate_ai_reply(
             detail="فشل إنشاء رد الذكاء الاصطناعي."
         )
     return message
+
+@router.get("/messages/{message_id}/audio")
+async def get_message_audio(
+    message_id: UUID,
+    current_user: dict = Depends(get_current_user)
+):
+    owner_id, owner_type = _verify_chat_user(current_user)
+    
+    from app.core.database import db
+    async with db.pool.acquire() as connection:
+        query = """
+            SELECT msg.audio_file_path, thread.owner_id, thread.owner_type
+            FROM chat_messages msg
+            JOIN chat_threads thread ON msg.thread_id = thread.id
+            WHERE msg.id = $1
+        """
+        row = await connection.fetchrow(query, message_id)
+        if not row:
+            raise HTTPException(status_code=404, detail="الرسالة غير موجودة.")
+        
+        msg_data = dict(row)
+        if str(msg_data["owner_id"]) != owner_id or msg_data["owner_type"] != owner_type:
+            raise HTTPException(status_code=403, detail="ليس لديك صلاحية للوصول إلى هذا الملف الصوتي.")
+        
+        if not msg_data["audio_file_path"]:
+            raise HTTPException(status_code=404, detail="لا يوجد ملف صوتي لهذه الرسالة.")
+            
+        relative_path = msg_data["audio_file_path"].lstrip("/")
+        full_path = os.path.join(os.getcwd(), "app", relative_path)
+        if not os.path.exists(full_path):
+            raise HTTPException(status_code=404, detail="الملف الصوتي غير موجود على الخادم.")
+            
+        return FileResponse(full_path, media_type="audio/webm")
+
+@router.post("/threads/{thread_id}/messages/{message_id}/retry-transcription", response_model=MessageResponse)
+async def retry_message_transcription(
+    thread_id: UUID,
+    message_id: UUID,
+    current_user: dict = Depends(get_current_user)
+):
+    owner_id, owner_type = _verify_chat_user(current_user)
+    from app.services.audio_service import AudioService
+    return await AudioService.retry_transcription(str(message_id), owner_id, owner_type)

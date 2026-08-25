@@ -241,7 +241,9 @@ class TemplateService:
                         transcription = await client.audio.transcriptions.create(
                             file=(unique_name, audio_file.read()),
                             model="gpt-4o-transcribe",
-                            response_format="text"
+                            response_format="text",
+                            language="ar",
+                            prompt="التسجيل عبارة عن محادثة طبية باللغة العربية والإنجليزية، تحتوي على مصطلحات طبية، تشخيص، أسماء مرضى، وأدوية وعيادات."
                         )
                         transcribed = str(transcription).strip()
                 if transcribed:

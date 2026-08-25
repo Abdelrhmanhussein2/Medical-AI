@@ -799,6 +799,34 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
     }
   };
 
+  const handleRetryTranscription = async (messageId) => {
+    try {
+      const token = sessionStorage.getItem("accessToken");
+      
+      setMessages(prev => prev.map(m => m.id === messageId ? { ...m, transcription_status: 'processing' } : m));
+      
+      const res = await fetch(`/api/v1/chat/threads/${activeThreadId}/messages/${messageId}/retry-transcription`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (res.ok) {
+        const updatedMsg = await res.json();
+        setMessages(prev => prev.map(m => m.id === messageId ? updatedMsg : m));
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.detail || "فشلت إعادة تفريغ الصوت.");
+        setMessages(prev => prev.map(m => m.id === messageId ? { ...m, transcription_status: 'failed' } : m));
+      }
+    } catch (err) {
+      console.error("Failed to retry transcription", err);
+      alert("حدث خطأ أثناء الاتصال بالخادم.");
+      setMessages(prev => prev.map(m => m.id === messageId ? { ...m, transcription_status: 'failed' } : m));
+    }
+  };
+
   const displayTitle = (title) => {
     if (!title) return '';
     if (isArabic) {
@@ -1099,7 +1127,7 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                       <div className="flex flex-col gap-1 items-end">
                         <div className="bg-primary text-on-primary p-3.5 rounded-2xl rounded-tr-sm shadow-sm max-w-md">
                           {message.is_audio ? (
-                            <div className="space-y-2 text-right" dir="rtl">
+                            <div className="space-y-2 text-right text-white" dir="rtl">
                               <div className="flex items-center gap-2 pb-1 border-b border-white/20 text-white/90">
                                 <span className="material-symbols-outlined text-[18px]">mic</span>
                                 <span className="text-[11px] font-bold">ملاحظة صوتية</span>
@@ -1110,9 +1138,33 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                               {message.audio_file_path && (
                                 <audio 
                                   controls 
-                                  src={message.audio_file_path} 
+                                  src={`/api/v1/chat/messages/${message.id}/audio`} 
                                   className="w-full h-8 max-w-[240px] rounded-lg my-1 accent-white" 
                                 />
+                              )}
+                              
+                              {message.transcription_status === 'processing' && (
+                                <div className="flex items-center gap-2 text-xs text-white/80 py-1">
+                                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white"></div>
+                                  <span>جاري تفريغ الصوت...</span>
+                                </div>
+                              )}
+                              
+                              {message.transcription_status === 'failed' && (
+                                <div className="space-y-1">
+                                  <p className="text-xs text-red-200">{message.content}</p>
+                                  <button
+                                    onClick={() => handleRetryTranscription(message.id)}
+                                    className="flex items-center gap-1 text-[11px] bg-white/20 hover:bg-white/30 text-white px-2.5 py-1 rounded-lg transition-all"
+                                  >
+                                    <span className="material-symbols-outlined text-[14px]">refresh</span>
+                                    <span>إعادة المحاولة</span>
+                                  </button>
+                                </div>
+                              )}
+                              
+                              {(message.transcription_status === 'completed' || !message.transcription_status) && message.content && (
+                                <p className="text-sm leading-relaxed mt-1.5 pt-1.5 border-t border-white/10 text-white/95 font-medium">{message.content}</p>
                               )}
                             </div>
                           ) : (

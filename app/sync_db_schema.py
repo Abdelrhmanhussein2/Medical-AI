@@ -280,6 +280,7 @@ SQL_STATEMENTS = [
     );""",
     
     "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS audio_data BYTEA;",
+    "ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS transcription_status VARCHAR(20) DEFAULT 'completed';",
     
     # Token Usage Logs
     """CREATE TABLE IF NOT EXISTS token_usage_logs (

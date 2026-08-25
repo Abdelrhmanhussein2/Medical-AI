@@ -248,7 +248,9 @@ async def process_patient_instructions_audio(
             transcription = await client.audio.transcriptions.create(
                 file=(unique_name, audio_file.read()),
                 model="gpt-4o-transcribe",
-                response_format="text"
+                response_format="text",
+                language="ar",
+                prompt="التسجيل عبارة عن محادثة طبية باللغة العربية والإنجليزية، تحتوي على مصطلحات طبية، تشخيص، أسماء مرضى، وأدوية وعيادات."
             )
             transcribed_text = str(transcription).strip()
     except Exception as e:

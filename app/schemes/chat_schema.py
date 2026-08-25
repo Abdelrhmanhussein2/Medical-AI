@@ -51,6 +51,7 @@ class MessageResponse(BaseModel):
     is_audio: bool
     audio_duration: Optional[str] = None
     audio_file_path: Optional[str] = None
+    transcription_status: str = "completed"
     created_at: datetime
 
     class Config:

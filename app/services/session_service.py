@@ -131,7 +131,9 @@ class SessionService:
                     transcription = await client.audio.transcriptions.create(
                         file=(unique_name, audio_bytes),
                         model="gpt-4o-transcribe",
-                        response_format="text"
+                        response_format="text",
+                        language="ar",
+                        prompt="التسجيل عبارة عن محادثة طبية باللغة العربية والإنجليزية، تحتوي على مصطلحات طبية، تشخيص، أسماء مرضى، وأدوية وعيادات."
                     )
                     chunk_text = str(transcription).strip()
                 except Exception:
@@ -139,14 +141,18 @@ class SessionService:
                         transcription = await client.audio.transcriptions.create(
                             file=(unique_name, audio_bytes),
                             model="gpt-4o-mini-transcribe",
-                            response_format="text"
+                            response_format="text",
+                            language="ar",
+                            prompt="التسجيل عبارة عن محادثة طبية باللغة العربية والإنجليزية، تحتوي على مصطلحات طبية، تشخيص، أسماء مرضى، وأدوية وعيادات."
                         )
                         chunk_text = str(transcription).strip()
                     except Exception:
                         transcription = await client.audio.transcriptions.create(
                             file=(unique_name, audio_bytes),
                             model="whisper-1",
-                            response_format="text"
+                            response_format="text",
+                            language="ar",
+                            prompt="التسجيل عبارة عن محادثة طبية باللغة العربية والإنجليزية، تحتوي على مصطلحات طبية، تشخيص، أسماء مرضى، وأدوية وعيادات."
                         )
                         chunk_text = str(transcription).strip()
         except Exception as e:

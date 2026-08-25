@@ -1,5 +1,8 @@
+import logging
 from cryptography.fernet import Fernet
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 # Initialize Fernet cipher using key from config
 _cipher = Fernet(settings.CHAT_ENCRYPTION_KEY.encode())
@@ -23,7 +26,14 @@ def decrypt_bytes(ciphertext: bytes) -> str:
         return ""
     if isinstance(ciphertext, memoryview):
         ciphertext = bytes(ciphertext)
-    return _cipher.decrypt(ciphertext).decode("utf-8")
+    try:
+        return _cipher.decrypt(ciphertext).decode("utf-8")
+    except Exception as e:
+        logger.error(f"Decryption failed in decrypt_bytes: {e}")
+        try:
+            return ciphertext.decode("utf-8")
+        except Exception:
+            return "[خطأ في فك تشفير الرسالة - مفتاح تشفير غير متطابق]"
 
 def encrypt_binary(raw_bytes: bytes) -> bytes:
     """
@@ -46,4 +56,8 @@ def decrypt_binary(ciphertext: bytes) -> bytes:
         return b""
     if isinstance(ciphertext, memoryview):
         ciphertext = bytes(ciphertext)
-    return _cipher.decrypt(ciphertext)
+    try:
+        return _cipher.decrypt(ciphertext)
+    except Exception as e:
+        logger.error(f"Decryption failed in decrypt_binary: {e}")
+        return ciphertext

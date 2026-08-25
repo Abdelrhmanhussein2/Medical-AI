@@ -2,9 +2,12 @@
 import os
 import logging
 import json
+import asyncio
 from uuid import UUID, uuid4
 from typing import Any, Optional
 from fastapi import HTTPException, status
+from openai import APIStatusError, APITimeoutError, APIConnectionError, RateLimitError
+
 from app.core.database import db
 from app.core.encryption import encrypt_text, encrypt_binary
 from app.core.config import settings
@@ -49,6 +52,83 @@ class AudioService:
             )
 
     @staticmethod
+    async def _transcribe_model_with_retry(
+        client, unique_name: str, audio_bytes: bytes, model_name: str, max_retries: int = 3
+    ) -> str:
+        """
+        Transcribe audio using a specific model with transient error retries.
+        """
+        delay = 1.0
+        for attempt in range(max_retries + 1):
+            try:
+                transcription = await client.audio.transcriptions.create(
+                    file=(unique_name, audio_bytes),
+                    model=model_name,
+                    response_format="text",
+                    language="ar",
+                    prompt=(
+                        "Transcribe the audio accurately in Arabic.\n\n"
+                        "This is a medical conversation between a doctor and a patient.\n\n"
+                        "Requirements:\n"
+                        "- Preserve the original spoken content.\n"
+                        "- Do not summarize or paraphrase.\n"
+                        "- Preserve medical terminology.\n"
+                        "- Preserve medication names, dosages, numbers, units, laboratory tests, diseases, symptoms, and examination names.\n"
+                        "- Preserve Arabic speech as Arabic.\n"
+                        "- Do not translate Arabic into English.\n"
+                        "- Do not add medical information that was not spoken.\n"
+                        "- Do not infer or invent missing words.\n"
+                        "- Keep the transcription as faithful to the audio as possible."
+                    )
+                )
+                return str(transcription).strip()
+            except (RateLimitError, APITimeoutError, APIConnectionError) as exc:
+                if attempt == max_retries:
+                    logger.error(f"OpenAI transcription failed on {model_name} after {max_retries} retries: {exc}")
+                    raise exc
+                logger.warning(f"Transient error on {model_name}: {exc}. Retrying in {delay}s...")
+                await asyncio.sleep(delay)
+                delay *= 2.0
+            except APIStatusError as exc:
+                if exc.status_code >= 500 and attempt < max_retries:
+                    logger.warning(f"Transient HTTP {exc.status_code} error on {model_name}: {exc}. Retrying in {delay}s...")
+                    await asyncio.sleep(delay)
+                    delay *= 2.0
+                else:
+                    raise exc
+            except Exception as exc:
+                raise exc
+
+    @staticmethod
+    async def _transcribe_audio_with_retry(
+        client, unique_name: str, audio_bytes: bytes, max_retries: int = 3
+    ) -> str:
+        """
+        Perform OpenAI transcription using fallbacks: gpt-4o-transcribe -> gpt-4o-mini-transcribe -> whisper-1
+        """
+        try:
+            return await AudioService._transcribe_model_with_retry(
+                client, unique_name, audio_bytes, "gpt-4o-transcribe", max_retries
+            )
+        except Exception as exc:
+            is_model_error = isinstance(exc, APIStatusError) and exc.status_code == 400
+            if is_model_error:
+                logger.info("gpt-4o-transcribe not available, falling back to gpt-4o-mini-transcribe")
+                try:
+                    return await AudioService._transcribe_model_with_retry(
+                        client, unique_name, audio_bytes, "gpt-4o-mini-transcribe", max_retries
+                    )
+                except Exception as fallback_exc:
+                    is_fallback_model_error = isinstance(fallback_exc, APIStatusError) and fallback_exc.status_code == 400
+                    if is_fallback_model_error:
+                        logger.info("gpt-4o-mini-transcribe not available, falling back to whisper-1")
+                        return await AudioService._transcribe_model_with_retry(
+                            client, unique_name, audio_bytes, "whisper-1", max_retries
+                        )
+                    raise fallback_exc
+            raise exc
+
+    @staticmethod
     async def process_audio_message(
         thread_id: str,
         owner_id: str,
@@ -65,8 +145,9 @@ class AudioService:
                 detail="خدمة تحويل الصوت إلى نص غير مهيأة. يرجى التواصل مع الدعم."
             )
 
-        # 1. Security check: Validate filename and extension
-        filename = getattr(file, "filename", None) or ""
+        # 1. Security check: Validate filename and extension safely
+        raw_filename = getattr(file, "filename", None) or ""
+        filename = os.path.basename(raw_filename)
         ext = os.path.splitext(filename)[1].lower() if filename else ".webm"
         if not ext or ext not in ALLOWED_EXTENSIONS:
             logger.warning(f"Rejected upload with unsupported extension: {ext}")
@@ -85,7 +166,6 @@ class AudioService:
             )
 
         # Magic bytes check for audio files
-        # WebM: 1A 45 DF A3 | Ogg: OggS | WAV: RIFF | MP3: ID3 or FF FB / FF FA | MP4/M4A: ftyp
         header = contents[:12]
         is_valid_magic = (
             header.startswith(b"\x1a\x45\xdf\xa3") or  # WebM
@@ -109,7 +189,7 @@ class AudioService:
                 detail="الملف الصوتي فارغ. يرجى المحاولة مرة أخرى."
             )
 
-        # 3. Create upload directory and generate unique filename safely
+        # 3. Create upload directory and generate unique filename safely (prevent path traversal)
         upload_dir = os.path.join(os.getcwd(), "app", "uploads", "audio")
         os.makedirs(upload_dir, exist_ok=True)
 
@@ -128,79 +208,209 @@ class AudioService:
             )
 
         relative_audio_path = f"/uploads/audio/{unique_name}"
-        transcription_text = ""
-
-        # 4. Perform OpenAI GPT-4o Transcribe
-        try:
-            from openai import AsyncOpenAI
-            client = AsyncOpenAI(api_key=api_key.strip())
-            with open(saved_file_path, "rb") as audio_file:
-                audio_bytes = audio_file.read()
-                try:
-                    transcription = await client.audio.transcriptions.create(
-                        file=(unique_name, audio_bytes),
-                        model="gpt-4o-transcribe",
-                        response_format="text"
-                    )
-                    transcription_text = str(transcription).strip()
-                except Exception:
-                    transcription = await client.audio.transcriptions.create(
-                        file=(unique_name, audio_bytes),
-                        model="gpt-4o-mini-transcribe",
-                        response_format="text"
-                    )
-                    transcription_text = str(transcription).strip()
-        except Exception as e:
-            logger.exception(f"Error transcribing audio message with gpt-4o-transcribe: {e}")
-            transcription_text = "[تسجيل صوتي]"
-
-        if not transcription_text:
-            transcription_text = "[تسجيل صوتي]"
-
-        # 5. Parse duration safely
         duration_val = "0.0"
         if audio_duration is not None:
             duration_str = str(audio_duration).strip()
             if duration_str:
                 duration_val = duration_str[:10]
 
-        # 6. Save message to DB inside transaction
+        # 4. Save message to DB inside transaction (initially as processing to avoid orphan files)
+        message_id = None
         async with db.pool.acquire() as connection:
             await AudioService._assert_thread_owner(connection, thread_id, owner_id, owner_type)
-            encrypted_content = encrypt_text(transcription_text)
+            encrypted_placeholder = encrypt_text("[جاري تفريغ التسجيل الصوتي...]")
             encrypted_audio = encrypt_binary(contents) if contents else None
 
-            async with connection.transaction():
-                query = """
-                    INSERT INTO chat_messages (
-                        thread_id, sender_type, content, is_audio, audio_duration, audio_file_path, audio_data
+            try:
+                async with connection.transaction():
+                    query = """
+                        INSERT INTO chat_messages (
+                            thread_id, sender_type, content, is_audio, audio_duration, audio_file_path, audio_data, transcription_status
+                        )
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                        RETURNING *
+                    """
+                    row = await connection.fetchrow(
+                        query,
+                        UUID(thread_id),
+                        "user",
+                        encrypted_placeholder,
+                        True,
+                        duration_val,
+                        relative_audio_path,
+                        encrypted_audio,
+                        "processing"
                     )
-                    VALUES ($1, $2, $3, $4, $5, $6, $7)
-                    RETURNING *
-                """
-                row = await connection.fetchrow(
-                    query,
-                    UUID(thread_id),
-                    "user",
-                    encrypted_content,
-                    True,
-                    duration_val,
-                    relative_audio_path,
-                    encrypted_audio
+
+                    update_thread_query = """
+                        UPDATE chat_threads
+                        SET message_count = message_count + 1, updated_at = now()
+                        WHERE id = $1
+                    """
+                    await connection.execute(update_thread_query, UUID(thread_id))
+
+                    res = dict(row) if row else None
+                    if res:
+                        message_id = res["id"]
+            except Exception as db_err:
+                logger.exception(f"Failed to insert audio message in DB: {db_err}")
+                # Clean up local file to avoid orphan file
+                if os.path.exists(saved_file_path):
+                    try:
+                        os.remove(saved_file_path)
+                    except Exception as clean_err:
+                        logger.error(f"Failed to clean up file: {clean_err}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="حدث خطأ أثناء تسجيل الرسالة الصوتية في قاعدة البيانات."
                 )
 
-                update_thread_query = """
-                    UPDATE chat_threads
-                    SET message_count = message_count + 1, updated_at = now()
-                    WHERE id = $1
-                """
-                await connection.execute(update_thread_query, UUID(thread_id))
+        # 5. Perform OpenAI Transcription outside DB transaction
+        transcription_text = ""
+        transcription_status = "completed"
+        try:
+            from openai import AsyncOpenAI
+            client = AsyncOpenAI(api_key=api_key.strip())
+            transcription_text = await AudioService._transcribe_audio_with_retry(
+                client, unique_name, contents
+            )
+        except Exception as transcribe_err:
+            logger.error(f"Transcription failed for message {message_id}: {transcribe_err}")
+            transcription_status = "failed"
+            transcription_text = "[فشل التفريغ الصوتي - اضغط لإعادة المحاولة]"
 
-                res = dict(row) if row else None
-                if res:
-                    res["content"] = transcription_text
-                    res["bento_data"] = AudioService._parse_json(res.get("bento_data"))
-                    res["insight_data"] = AudioService._parse_json(res.get("insight_data"))
+        # 6. Update the message status and content in the database
+        async with db.pool.acquire() as connection:
+            encrypted_content = encrypt_text(transcription_text)
+            update_query = """
+                UPDATE chat_messages
+                SET content = $1, transcription_status = $2
+                WHERE id = $3
+                RETURNING *
+            """
+            row = await connection.fetchrow(update_query, encrypted_content, transcription_status, message_id)
+
+            res = dict(row) if row else None
+            if res:
+                res["content"] = transcription_text
+                res["bento_data"] = AudioService._parse_json(res.get("bento_data"))
+                res["insight_data"] = AudioService._parse_json(res.get("insight_data"))
+                return res
+
+    @staticmethod
+    async def retry_transcription(
+        message_id: str,
+        owner_id: str,
+        owner_type: str
+    ) -> dict:
+        """
+        Retry transcription for a failed audio message without re-uploading.
+        """
+        async with db.pool.acquire() as connection:
+            # 1. Fetch message and verify thread ownership
+            query = """
+                SELECT msg.*, thread.owner_id, thread.owner_type
+                FROM chat_messages msg
+                JOIN chat_threads thread ON msg.thread_id = thread.id
+                WHERE msg.id = $1
+            """
+            row = await connection.fetchrow(query, UUID(message_id))
+            if not row:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="الرسالة غير موجودة."
+                )
+
+            msg_data = dict(row)
+            if str(msg_data["owner_id"]) != owner_id or msg_data["owner_type"] != owner_type:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="ليس لديك صلاحية للوصول إلى هذه الرسالة."
+                )
+
+            if not msg_data["is_audio"]:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="هذه الرسالة ليست رسالة صوتية."
+                )
+
+            if msg_data["transcription_status"] != "failed":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="يمكن فقط إعادة تفريغ الرسائل التي فشلت عملية تفريغها."
+                )
+
+            # 2. Get audio data. Try reading from disk first. If not found, use database backup.
+            audio_bytes = b""
+            saved_file_path = ""
+            if msg_data["audio_file_path"]:
+                saved_file_path = os.path.join(os.getcwd(), "app", msg_data["audio_file_path"].lstrip("/"))
+                if os.path.exists(saved_file_path):
+                    try:
+                        with open(saved_file_path, "rb") as f:
+                            audio_bytes = f.read()
+                    except Exception as disk_err:
+                        logger.error(f"Failed to read audio file from disk: {disk_err}")
+
+            if not audio_bytes and msg_data["audio_data"]:
+                from app.core.encryption import decrypt_binary
+                try:
+                    audio_bytes = decrypt_binary(msg_data["audio_data"])
+                except Exception as db_decrypt_err:
+                    logger.error(f"Failed to decrypt database audio backup: {db_decrypt_err}")
+
+            if not audio_bytes:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="تعذر العثور على الملف الصوتي لإعادة المحاولة."
+                )
+
+            # 3. Perform transcription
+            api_key = settings.OPENAI_API_KEY or os.environ.get("OPENAI_API_KEY", "")
+            if not api_key:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="خدمة تحويل الصوت إلى نص غير مهيأة."
+                )
+
+            unique_name = os.path.basename(msg_data["audio_file_path"]) if msg_data["audio_file_path"] else f"{message_id}.webm"
+
+            # Set state to processing first
+            await connection.execute(
+                "UPDATE chat_messages SET transcription_status = 'processing' WHERE id = $1",
+                UUID(message_id)
+            )
+
+        # Outside connection pool during LLM request
+        transcription_text = ""
+        transcription_status = "completed"
+        try:
+            from openai import AsyncOpenAI
+            client = AsyncOpenAI(api_key=api_key.strip())
+            transcription_text = await AudioService._transcribe_audio_with_retry(
+                client, unique_name, audio_bytes
+            )
+        except Exception as transcribe_err:
+            logger.error(f"Retry transcription failed for message {message_id}: {transcribe_err}")
+            transcription_status = "failed"
+            transcription_text = "[فشل التفريغ الصوتي - اضغط لإعادة المحاولة]"
+
+        # Save back to database
+        async with db.pool.acquire() as connection:
+            encrypted_content = encrypt_text(transcription_text)
+            update_query = """
+                UPDATE chat_messages
+                SET content = $1, transcription_status = $2
+                WHERE id = $3
+                RETURNING *
+            """
+            row = await connection.fetchrow(update_query, encrypted_content, transcription_status, UUID(message_id))
+
+            res = dict(row) if row else None
+            if res:
+                res["content"] = transcription_text
+                res["bento_data"] = AudioService._parse_json(res.get("bento_data"))
+                res["insight_data"] = AudioService._parse_json(res.get("insight_data"))
                 return res
 
     @staticmethod

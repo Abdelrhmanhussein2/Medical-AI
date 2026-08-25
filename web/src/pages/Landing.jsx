@@ -581,24 +581,6 @@ export default function Landing({ setActivePage }) {
                     </div>
                   </a>
 
-                  <a
-                    href="tel:0552060316"
-                    className={`flex items-center gap-4 p-4 rounded-xl border border-border-subtle bg-bg-canvas hover:border-primary/30 hover:shadow-sm transition-all group ${
-                      isArabic ? 'flex-row-reverse text-right' : ''
-                    }`}
-                  >
-                    <div className="w-11 h-11 rounded-full bg-primary-light text-primary flex items-center justify-center shrink-0">
-                      <span className="material-symbols-outlined text-xl">phone</span>
-                    </div>
-                    <div>
-                      <p className="text-[11px] text-on-surface-variant font-semibold uppercase tracking-wider mb-0.5">
-                        {isArabic ? 'الهاتف' : 'Phone'}
-                      </p>
-                      <p className="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">
-                        0552060316
-                      </p>
-                    </div>
-                  </a>
 
                   <div className={`flex items-center gap-4 p-4 rounded-xl border border-border-subtle bg-bg-canvas ${
                     isArabic ? 'flex-row-reverse text-right' : ''
@@ -692,13 +674,6 @@ export default function Landing({ setActivePage }) {
                 >
                   <span className="material-symbols-outlined text-[15px]">mail</span>
                   contact@sbr-ai.com
-                </a>
-                <a
-                  href="tel:0552060316"
-                  className="inline-flex items-center gap-2 text-white/90 hover:text-white text-xs font-semibold transition-colors"
-                >
-                  <span className="material-symbols-outlined text-[15px]">phone</span>
-                  0552060316
                 </a>
                 <div className="text-white/70 text-[10px] mt-1 font-semibold leading-relaxed">
                   {isArabic 

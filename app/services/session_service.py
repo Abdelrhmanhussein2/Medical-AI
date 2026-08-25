@@ -123,38 +123,12 @@ class SessionService:
         # 3. إرسال لـ OpenAI gpt-4o-transcribe لتفريغ الجزء الصوتي بذكاء عالي
         chunk_text = ""
         try:
-            from openai import AsyncOpenAI
-            client = AsyncOpenAI(api_key=openai_key.strip())
+            from app.services.transcription_service import TranscriptionService
             with open(saved_file_path, "rb") as audio_file:
                 audio_bytes = audio_file.read()
-                try:
-                    transcription = await client.audio.transcriptions.create(
-                        file=(unique_name, audio_bytes),
-                        model="gpt-4o-transcribe",
-                        response_format="text",
-                        language="ar",
-                        prompt="التسجيل عبارة عن محادثة طبية باللغة العربية والإنجليزية، تحتوي على مصطلحات طبية، تشخيص، أسماء مرضى، وأدوية وعيادات."
-                    )
-                    chunk_text = str(transcription).strip()
-                except Exception:
-                    try:
-                        transcription = await client.audio.transcriptions.create(
-                            file=(unique_name, audio_bytes),
-                            model="gpt-4o-mini-transcribe",
-                            response_format="text",
-                            language="ar",
-                            prompt="التسجيل عبارة عن محادثة طبية باللغة العربية والإنجليزية، تحتوي على مصطلحات طبية، تشخيص، أسماء مرضى، وأدوية وعيادات."
-                        )
-                        chunk_text = str(transcription).strip()
-                    except Exception:
-                        transcription = await client.audio.transcriptions.create(
-                            file=(unique_name, audio_bytes),
-                            model="whisper-1",
-                            response_format="text",
-                            language="ar",
-                            prompt="التسجيل عبارة عن محادثة طبية باللغة العربية والإنجليزية، تحتوي على مصطلحات طبية، تشخيص، أسماء مرضى، وأدوية وعيادات."
-                        )
-                        chunk_text = str(transcription).strip()
+            chunk_text = await TranscriptionService.transcribe_audio(
+                audio_bytes, unique_name, openai_key
+            )
         except Exception as e:
             if os.path.exists(saved_file_path):
                 os.remove(saved_file_path)

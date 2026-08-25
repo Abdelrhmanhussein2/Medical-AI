@@ -2,15 +2,14 @@
 import os
 import logging
 import json
-import asyncio
 from uuid import UUID, uuid4
 from typing import Any, Optional
 from fastapi import HTTPException, status
-from openai import APIStatusError, APITimeoutError, APIConnectionError, RateLimitError
 
 from app.core.database import db
 from app.core.encryption import encrypt_text, encrypt_binary
 from app.core.config import settings
+from app.services.transcription_service import TranscriptionService
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +20,7 @@ MAX_AUDIO_SIZE = 25 * 1024 * 1024  # 25 MB
 class AudioService:
     """
     Service responsible for handling audio uploading, validation,
-    and transcription using OpenAI Whisper.
+    and transcription using the centralized TranscriptionService.
     """
 
     @staticmethod
@@ -52,83 +51,6 @@ class AudioService:
             )
 
     @staticmethod
-    async def _transcribe_model_with_retry(
-        client, unique_name: str, audio_bytes: bytes, model_name: str, max_retries: int = 3
-    ) -> str:
-        """
-        Transcribe audio using a specific model with transient error retries.
-        """
-        delay = 1.0
-        for attempt in range(max_retries + 1):
-            try:
-                transcription = await client.audio.transcriptions.create(
-                    file=(unique_name, audio_bytes),
-                    model=model_name,
-                    response_format="text",
-                    language="ar",
-                    prompt=(
-                        "Transcribe the audio accurately in Arabic.\n\n"
-                        "This is a medical conversation between a doctor and a patient.\n\n"
-                        "Requirements:\n"
-                        "- Preserve the original spoken content.\n"
-                        "- Do not summarize or paraphrase.\n"
-                        "- Preserve medical terminology.\n"
-                        "- Preserve medication names, dosages, numbers, units, laboratory tests, diseases, symptoms, and examination names.\n"
-                        "- Preserve Arabic speech as Arabic.\n"
-                        "- Do not translate Arabic into English.\n"
-                        "- Do not add medical information that was not spoken.\n"
-                        "- Do not infer or invent missing words.\n"
-                        "- Keep the transcription as faithful to the audio as possible."
-                    )
-                )
-                return str(transcription).strip()
-            except (RateLimitError, APITimeoutError, APIConnectionError) as exc:
-                if attempt == max_retries:
-                    logger.error(f"OpenAI transcription failed on {model_name} after {max_retries} retries: {exc}")
-                    raise exc
-                logger.warning(f"Transient error on {model_name}: {exc}. Retrying in {delay}s...")
-                await asyncio.sleep(delay)
-                delay *= 2.0
-            except APIStatusError as exc:
-                if exc.status_code >= 500 and attempt < max_retries:
-                    logger.warning(f"Transient HTTP {exc.status_code} error on {model_name}: {exc}. Retrying in {delay}s...")
-                    await asyncio.sleep(delay)
-                    delay *= 2.0
-                else:
-                    raise exc
-            except Exception as exc:
-                raise exc
-
-    @staticmethod
-    async def _transcribe_audio_with_retry(
-        client, unique_name: str, audio_bytes: bytes, max_retries: int = 3
-    ) -> str:
-        """
-        Perform OpenAI transcription using fallbacks: gpt-4o-transcribe -> gpt-4o-mini-transcribe -> whisper-1
-        """
-        try:
-            return await AudioService._transcribe_model_with_retry(
-                client, unique_name, audio_bytes, "gpt-4o-transcribe", max_retries
-            )
-        except Exception as exc:
-            is_model_error = isinstance(exc, APIStatusError) and exc.status_code == 400
-            if is_model_error:
-                logger.info("gpt-4o-transcribe not available, falling back to gpt-4o-mini-transcribe")
-                try:
-                    return await AudioService._transcribe_model_with_retry(
-                        client, unique_name, audio_bytes, "gpt-4o-mini-transcribe", max_retries
-                    )
-                except Exception as fallback_exc:
-                    is_fallback_model_error = isinstance(fallback_exc, APIStatusError) and fallback_exc.status_code == 400
-                    if is_fallback_model_error:
-                        logger.info("gpt-4o-mini-transcribe not available, falling back to whisper-1")
-                        return await AudioService._transcribe_model_with_retry(
-                            client, unique_name, audio_bytes, "whisper-1", max_retries
-                        )
-                    raise fallback_exc
-            raise exc
-
-    @staticmethod
     async def process_audio_message(
         thread_id: str,
         owner_id: str,
@@ -136,15 +58,6 @@ class AudioService:
         file: Any,
         audio_duration: Optional[Any] = 0.0
     ) -> dict:
-        # Use OpenAI API key (same as session_service.py)
-        api_key = settings.OPENAI_API_KEY or os.environ.get("OPENAI_API_KEY", "")
-        if not api_key:
-            logger.error("OpenAI API Key is not configured.")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="خدمة تحويل الصوت إلى نص غير مهيأة. يرجى التواصل مع الدعم."
-            )
-
         # 1. Security check: Validate filename and extension safely
         raw_filename = getattr(file, "filename", None) or ""
         filename = os.path.basename(raw_filename)
@@ -265,14 +178,12 @@ class AudioService:
                     detail="حدث خطأ أثناء تسجيل الرسالة الصوتية في قاعدة البيانات."
                 )
 
-        # 5. Perform OpenAI Transcription outside DB transaction
+        # 5. Perform OpenAI Transcription using Centralized Service outside DB transaction
         transcription_text = ""
         transcription_status = "completed"
         try:
-            from openai import AsyncOpenAI
-            client = AsyncOpenAI(api_key=api_key.strip())
-            transcription_text = await AudioService._transcribe_audio_with_retry(
-                client, unique_name, contents
+            transcription_text = await TranscriptionService.transcribe_audio(
+                contents, unique_name
             )
         except Exception as transcribe_err:
             logger.error(f"Transcription failed for message {message_id}: {transcribe_err}")
@@ -365,14 +276,6 @@ class AudioService:
                     detail="تعذر العثور على الملف الصوتي لإعادة المحاولة."
                 )
 
-            # 3. Perform transcription
-            api_key = settings.OPENAI_API_KEY or os.environ.get("OPENAI_API_KEY", "")
-            if not api_key:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="خدمة تحويل الصوت إلى نص غير مهيأة."
-                )
-
             unique_name = os.path.basename(msg_data["audio_file_path"]) if msg_data["audio_file_path"] else f"{message_id}.webm"
 
             # Set state to processing first
@@ -385,10 +288,8 @@ class AudioService:
         transcription_text = ""
         transcription_status = "completed"
         try:
-            from openai import AsyncOpenAI
-            client = AsyncOpenAI(api_key=api_key.strip())
-            transcription_text = await AudioService._transcribe_audio_with_retry(
-                client, unique_name, audio_bytes
+            transcription_text = await TranscriptionService.transcribe_audio(
+                audio_bytes, unique_name
             )
         except Exception as transcribe_err:
             logger.error(f"Retry transcription failed for message {message_id}: {transcribe_err}")

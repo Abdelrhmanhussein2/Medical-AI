@@ -235,17 +235,12 @@ class TemplateService:
 
                 transcribed = ""
                 if settings.OPENAI_API_KEY and not settings.OPENAI_API_KEY.startswith("sk-your"):
-                    from openai import AsyncOpenAI
-                    client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY.strip())
+                    from app.services.transcription_service import TranscriptionService
                     with open(saved_file_path, "rb") as audio_file:
-                        transcription = await client.audio.transcriptions.create(
-                            file=(unique_name, audio_file.read()),
-                            model="gpt-4o-transcribe",
-                            response_format="text",
-                            language="ar",
-                            prompt="التسجيل عبارة عن محادثة طبية باللغة العربية والإنجليزية، تحتوي على مصطلحات طبية، تشخيص، أسماء مرضى، وأدوية وعيادات."
-                        )
-                        transcribed = str(transcription).strip()
+                        audio_bytes = audio_file.read()
+                    transcribed = await TranscriptionService.transcribe_audio(
+                        audio_bytes, unique_name
+                    )
                 if transcribed:
                     input_text = transcribed
             except Exception as e:

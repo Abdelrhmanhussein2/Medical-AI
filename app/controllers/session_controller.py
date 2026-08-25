@@ -242,17 +242,12 @@ async def process_patient_instructions_audio(
         
     transcribed_text = ""
     try:
-        from openai import AsyncOpenAI
-        client = AsyncOpenAI(api_key=openai_key.strip())
+        from app.services.transcription_service import TranscriptionService
         with open(saved_file_path, "rb") as audio_file:
-            transcription = await client.audio.transcriptions.create(
-                file=(unique_name, audio_file.read()),
-                model="gpt-4o-transcribe",
-                response_format="text",
-                language="ar",
-                prompt="التسجيل عبارة عن محادثة طبية باللغة العربية والإنجليزية، تحتوي على مصطلحات طبية، تشخيص، أسماء مرضى، وأدوية وعيادات."
-            )
-            transcribed_text = str(transcription).strip()
+            audio_bytes = audio_file.read()
+        transcribed_text = await TranscriptionService.transcribe_audio(
+            audio_bytes, unique_name, openai_key
+        )
     except Exception as e:
         if os.path.exists(saved_file_path):
             os.remove(saved_file_path)

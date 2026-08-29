@@ -24,4 +24,5 @@ RUN mkdir -p app/uploads/audio
 EXPOSE 8000
 
 # Run pre-start checks (migrations/stamping) and launch the app
-CMD ["sh", "-c", "python pre_start.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "python pre_start.py && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${WEB_CONCURRENCY:-1}"]
+

@@ -88,7 +88,8 @@ async def login(login_data: LoginRequest, response: Response, request: Request, 
     # 3. Successful login - reset attempts
     await login_rate_limiter.reset_attempts(login_data.email)
     
-    token_dict = auth_service.create_token(user=user, role=role)
+    verified_role = user.get("role", role)
+    token_dict = auth_service.create_token(user=user, role=verified_role)
     
     # Set HttpOnly, Secure, Lax cookie
     response.set_cookie(

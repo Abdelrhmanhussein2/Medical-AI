@@ -49,10 +49,11 @@ async def get_current_user(
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         email: str = payload.get("sub")
-        if email is None:
+        role: Optional[str] = payload.get("role")
+        if email is None or not role:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token payload: missing email subject",
+                detail="رمز الدخول غير صالح أو يفتقر إلى بيانات الصلاحية.",
             )
     except JWTError:
         raise HTTPException(
@@ -60,38 +61,55 @@ async def get_current_user(
             detail="Could not validate credentials",
         )
     
-    # Search for user across tables (since email is unique globally in this schema)
+    # Query ONLY the table matching the token's cryptographically signed role
     async with db.pool.acquire() as connection:
-        # Check doctors
-        doc = await connection.fetchrow("SELECT id, email, name, 'doctor' as role, department_id, is_active, must_change_password FROM doctors WHERE email = $1", email)
-        if doc:
-            if not doc["is_active"]:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="هذا الحساب معطل حالياً من قبل الإدارة."
-                )
-            return dict(doc)
-        # Check departments
-        dept = await connection.fetchrow("SELECT id, email, name, 'department' as role, is_active FROM departments WHERE email = $1", email)
-        if dept:
-            if not dept["is_active"]:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="هذه المنظمة معطلة حالياً من قبل الإدارة."
-                )
-            return dict(dept)
-        # Check admins
-        admin = await connection.fetchrow("SELECT id, email, name, 'admin' as role FROM admins WHERE email = $1", email)
-        if admin:
-            return dict(admin)
-        # Check patients
-        pat = await connection.fetchrow("SELECT id, email, name, 'patient' as role FROM patients WHERE email = $1", email)
-        if pat:
-            return dict(pat)
+        if role == "doctor":
+            doc = await connection.fetchrow(
+                "SELECT id, email, name, 'doctor' as role, department_id, is_active, must_change_password FROM doctors WHERE email = $1", 
+                email
+            )
+            if doc:
+                if not doc["is_active"]:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="هذا الحساب معطل حالياً من قبل الإدارة."
+                    )
+                return dict(doc)
+        elif role in ("department", "org"):
+            dept = await connection.fetchrow(
+                "SELECT id, email, name, 'department' as role, is_active FROM departments WHERE email = $1", 
+                email
+            )
+            if dept:
+                if not dept["is_active"]:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="هذه المنظمة معطلة حالياً من قبل الإدارة."
+                    )
+                return dict(dept)
+        elif role == "admin":
+            admin = await connection.fetchrow(
+                "SELECT id, email, name, 'admin' as role FROM admins WHERE email = $1", 
+                email
+            )
+            if admin:
+                return dict(admin)
+        elif role == "patient":
+            pat = await connection.fetchrow(
+                "SELECT id, email, name, 'patient' as role FROM patients WHERE email = $1", 
+                email
+            )
+            if pat:
+                return dict(pat)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="دور المستخدم غير معروف أو غير مدعوم.",
+            )
 
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="User not found",
+        detail="المستخدم غير موجود أو الصلاحية غير متطابقة مع السجلات.",
     )
 
 

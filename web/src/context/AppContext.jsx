@@ -100,7 +100,12 @@ export const AppProvider = ({ children }) => {
     });
     if (!response.ok) {
       if (response.status === 403) {
+        window.location.href = '/unauthorized';
+        return null;
+      }
+      if (response.status === 401) {
         sessionStorage.clear();
+        setCurrentUser(null);
         window.location.href = '/login';
         return null;
       }

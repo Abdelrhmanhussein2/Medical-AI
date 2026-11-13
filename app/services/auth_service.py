@@ -42,16 +42,25 @@ class AuthService:
                 # Pending doctors can login but might have restricted access, 
                 # we can return the user and let the controller decide what to do.
 
-            return dict(user)
+            user_dict = dict(user)
+            user_dict["role"] = role
+            return user_dict
 
     @staticmethod
-    def create_token(user: dict, role: str) -> Token:
-        access_token = create_access_token(subject=user["email"])
+    def create_token(user: dict, role: Optional[str] = None) -> Token:
+        verified_role = role or user.get("role")
+        if not verified_role:
+            raise ValueError("Role must be specified to create token")
+
+        access_token = create_access_token(
+            subject=user["email"],
+            role=verified_role
+        )
         user_copy = {
             "id": str(user["id"]),
             "name": user["name"],
             "email": user["email"],
-            "role": role
+            "role": verified_role
         }
         return Token(access_token=access_token, token_type="bearer", user=user_copy)
 

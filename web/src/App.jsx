@@ -23,6 +23,7 @@ import PrivacyPage from './pages/PrivacyPage';
 import HelpPage from './pages/HelpPage';
 import RefundPolicyPage from './pages/RefundPolicyPage';
 import PaymentCallback from './pages/PaymentCallback';
+import Unauthorized from './pages/Unauthorized';
 
 // Admin pages (Code-Split using React.lazy)
 const AdminOverview = React.lazy(() => import('./pages/admin/AdminOverview'));
@@ -38,7 +39,15 @@ const OrgSubscriptions = React.lazy(() => import('./pages/org/OrgSubscriptions')
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
 
 function ProtectedRoute({ children, role }) {
-  const { currentUser } = useApp();
+  const { currentUser, sessionLoading } = useApp();
+
+  if (sessionLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-bg-canvas text-primary">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   if (!currentUser) {
     return <Navigate to={role === 'admin' ? '/portal-9x4m' : '/login'} replace />;
@@ -50,9 +59,7 @@ function ProtectedRoute({ children, role }) {
   }
 
   if (role && currentUser.role !== role) {
-    if (currentUser.role === 'admin') return <Navigate to="/admin-overview" replace />;
-    if (currentUser.role === 'org') return <Navigate to="/org-dashboard" replace />;
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return children;
@@ -185,6 +192,7 @@ function AppContent() {
           <Route path="/help" element={<HelpPage />} />
           <Route path="/refund-policy" element={<RefundPolicyPage />} />
           <Route path="/payment/callback" element={<PaymentCallback />} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
 
           <Route path="/change-password" element={
             <ProtectedRoute>

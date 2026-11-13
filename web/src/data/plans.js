@@ -139,14 +139,12 @@ export const PLANS = [
       'Highest usage limits.',
       'Priority customer & tech support.'
     ],
-    badgeAr: 'الأعلى قيمة',
-    badgeEn: 'Highest Limit',
-    highlight: false
+
   }
 ];
 
 export const DOCTOR_PLANS = PLANS.filter(p => ['free', 'starter', 'pro'].includes(p.id));
-export const ORG_PLANS    = PLANS.filter(p => ['free', 'business', 'enterprise'].includes(p.id));
+export const ORG_PLANS = PLANS.filter(p => ['free', 'business', 'enterprise'].includes(p.id));
 
 /**
  * Dynamically merges DB-seeded subscription bundles into static plans configuration.

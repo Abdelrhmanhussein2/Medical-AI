@@ -39,6 +39,7 @@ class ActivityLog(BaseModel):
 class DepartmentDashboardStats(BaseModel):
     total_doctors: int
     active_licenses: int
+    total_seats: Optional[int] = 4
     ai_adoption_rate: int
     monthly_consults: int
     consultation_trends: List[int]

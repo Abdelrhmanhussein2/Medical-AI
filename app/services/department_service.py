@@ -19,6 +19,16 @@ class DepartmentService:
                 "SELECT COUNT(*) FROM doctors WHERE department_id = $1 AND status = 'approved'", department_id
             )
 
+            total_seats = await connection.fetchval(
+                """
+                SELECT total_seats 
+                FROM subscriptions 
+                WHERE department_id = $1 AND status = 'active' AND end_date > now() 
+                LIMIT 1
+                """,
+                department_id
+            ) or 4
+
             monthly_consults = await connection.fetchval(
                 """
                 SELECT COUNT(a.id) 
@@ -140,6 +150,7 @@ class DepartmentService:
             return {
                 "total_doctors": total_doctors,
                 "active_licenses": active_licenses,
+                "total_seats": total_seats,
                 "ai_adoption_rate": ai_adoption_rate,
                 "monthly_consults": monthly_consults,
                 "consultation_trends": consultation_trends,
@@ -151,11 +162,21 @@ class DepartmentService:
     @staticmethod
     async def get_department_doctors(department_id: UUID) -> List[dict]:
         """
-        Get a list of all doctors in the department.
+        Get a list of all doctors in the department, along with their used minutes from sessions.
         """
         async with db.pool.acquire() as connection:
             rows = await connection.fetch(
-                "SELECT * FROM doctors WHERE department_id = $1 ORDER BY created_at DESC", 
+                """
+                SELECT d.*,
+                       COALESCE((
+                           SELECT ROUND(SUM(s.duration_seconds)::numeric / 60)
+                           FROM sessions s
+                           WHERE s.doctor_id = d.id
+                       ), 0)::integer as used_minutes
+                FROM doctors d
+                WHERE d.department_id = $1 
+                ORDER BY d.created_at DESC
+                """, 
                 department_id
             )
             return [dict(row) for row in rows]

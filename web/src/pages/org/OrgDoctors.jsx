@@ -44,7 +44,9 @@ export default function OrgDoctors() {
     const matchesSearch = d.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           d.email?.toLowerCase().includes(searchQuery.toLowerCase());
     const docSpec = d.specialization || d.department || 'General Practice';
-    const matchesSpecialty = selectedSpecialtyFilter === 'all' || docSpec === selectedSpecialtyFilter;
+    const matchesSpecialty = selectedSpecialtyFilter === 'all' || 
+                             docSpec === selectedSpecialtyFilter ||
+                             getSpecialtyLabel(docSpec, true) === getSpecialtyLabel(selectedSpecialtyFilter, true);
     return matchesSearch && matchesSpecialty;
   });
 

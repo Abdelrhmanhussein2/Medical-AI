@@ -87,20 +87,34 @@ export const SPECIALTIES = [
 ];
 
 /**
- * خريطة الترجمة السريعة إنجليزي → عربي
+ * خريطة الترجمة السريعة إنجليزي → عربي مع دعم المسميات الشائعة (Aliases)
  */
-export const SPECIALTY_MAP = Object.fromEntries(
-  SPECIALTIES.map(s => [s.val, s.ar])
-);
+export const SPECIALTY_MAP = {
+  ...Object.fromEntries(SPECIALTIES.map(s => [s.val, s.ar])),
+  'General Practice': 'الطب العام',
+  'General': 'الطب العام',
+  'General Practitioner': 'الطب العام',
+  'GP': 'الطب العام',
+};
+
+/**
+ * خريطة الترجمة العكسية عربي → إنجليزي
+ */
+export const REVERSE_SPECIALTY_MAP = {
+  ...Object.fromEntries(SPECIALTIES.map(s => [s.ar, s.val])),
+  'الطب العام': 'General Medicine',
+};
 
 /**
  * الحصول على تسمية التخصص بناءً على اللغة
- * @param {string} spec - قيمة التخصص بالإنجليزي
+ * @param {string} spec - قيمة التخصص
  * @param {boolean} isArabic - هل اللغة عربية؟
  * @returns {string}
  */
 export const getSpecialtyLabel = (spec, isArabic) => {
   if (!spec) return '';
-  if (!isArabic) return spec;
-  return SPECIALTY_MAP[spec] || spec;
+  if (isArabic) {
+    return SPECIALTY_MAP[spec] || spec;
+  }
+  return REVERSE_SPECIALTY_MAP[spec] || spec;
 };

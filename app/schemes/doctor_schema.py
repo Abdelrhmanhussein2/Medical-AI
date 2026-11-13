@@ -40,6 +40,7 @@ class DoctorResponse(DoctorBase):
     subscription_activated_at: Optional[datetime] = None
     custom_minutes_limit: Optional[int] = None
     custom_tokens_limit: Optional[int] = None
+    used_minutes: Optional[int] = 0
     ehr_system: Optional[str] = None
     created_at: datetime
     updated_at: datetime

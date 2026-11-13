@@ -41,6 +41,7 @@ export default function OrgDashboard({ setActivePage }) {
   const {
     total_doctors,
     active_licenses,
+    total_seats,
     ai_adoption_rate,
     monthly_consults,
     consultation_trends,
@@ -84,7 +85,7 @@ export default function OrgDashboard({ setActivePage }) {
           <div className="flex items-baseline gap-2">
             <span className="text-2xl md:text-3xl text-on-surface font-sans font-black leading-none">{active_licenses || 0}</span>
             <span className="text-[10px] sm:text-xs font-semibold text-secondary truncate max-w-[80px] sm:max-w-none">
-              {isArabic ? '/ المقاعد' : '/ seats'}
+              / {total_seats || 4} {isArabic ? 'مقاعد' : 'seats'}
             </span>
           </div>
         </div>

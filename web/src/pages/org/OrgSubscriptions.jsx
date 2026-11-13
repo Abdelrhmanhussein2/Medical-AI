@@ -191,6 +191,9 @@ export default function OrgSubscriptions() {
       renewalDate: expiryDateVal ? new Date(expiryDateVal).toLocaleDateString() : (orgSubscription?.end_date ? new Date(orgSubscription.end_date).toLocaleDateString() : '—'),
       daysRemaining,
       status: licenseStatus,
+      usedMinutes: doc.used_minutes || 0,
+      customMinutesLimit: doc.custom_minutes_limit,
+      customTokensLimit: doc.custom_tokens_limit,
       rawDoc: doc
     };
   });
@@ -224,15 +227,25 @@ export default function OrgSubscriptions() {
   const pendingCount = docLicenses.filter(l => l.status === 'pending').length;
   const expiringSoonCount = docLicenses.filter(l => l.status === 'expiring').length;
 
+  // Org-wide AI Minutes calculations
+  const totalOrgMinutes = orgSubscription?.allowed_minutes || 5140;
+  const usedOrgMinutes = orgSubscription?.used_minutes || 0;
+  const remainingOrgMinutes = Math.max(0, totalOrgMinutes - usedOrgMinutes);
+  const minutesPct = totalOrgMinutes > 0 ? Math.min(100, Math.round((usedOrgMinutes / totalOrgMinutes) * 100)) : 0;
+
   const openSubscribeModal = (license) => {
     setSelectedDoc(license);
-    setSelectedPlan('business');
-    const d = new Date();
-    d.setFullYear(d.getFullYear() + 1);
-    setExpiryDate(d.toISOString().split('T')[0]);
+    setSelectedPlan(license.planTier && license.planTier !== '—' ? license.planTier : 'business');
+    if (license.rawDoc?.subscription_expiry) {
+      setExpiryDate(new Date(license.rawDoc.subscription_expiry).toISOString().split('T')[0]);
+    } else {
+      const d = new Date();
+      d.setFullYear(d.getFullYear() + 1);
+      setExpiryDate(d.toISOString().split('T')[0]);
+    }
     setSubError('');
-    setCustomMinutes('');
-    setCustomTokens('');
+    setCustomMinutes(license.rawDoc?.custom_minutes_limit !== null && license.rawDoc?.custom_minutes_limit !== undefined ? String(license.rawDoc.custom_minutes_limit) : '');
+    setCustomTokens(license.rawDoc?.custom_tokens_limit !== null && license.rawDoc?.custom_tokens_limit !== undefined ? String(license.rawDoc.custom_tokens_limit) : '');
     setShowSubModal(true);
   };
 
@@ -252,7 +265,9 @@ export default function OrgSubscriptions() {
       setShowSubModal(false);
       setToastAlert({
         type: 'success',
-        message: isArabic ? 'تم تفعيل حساب الطبيب وتعيين صلاحيات الاستهلاك المخصصة بنجاح!' : 'Doctor activated and custom consumption limits set successfully!'
+        message: isArabic 
+          ? (selectedDoc?.status === 'active' ? 'تم تحديث حصة واستخدام الطبيب بنجاح!' : 'تم تفعيل حساب الطبيب وتعيين صلاحيات الاستهلاك المخصصة بنجاح!')
+          : (selectedDoc?.status === 'active' ? 'Doctor quota limits updated successfully!' : 'Doctor activated and custom consumption limits set successfully!')
       });
     } catch (err) {
       setSubError(err.message || (isArabic ? 'فشل تفعيل الاشتراك' : 'Failed to activate subscription'));
@@ -336,7 +351,7 @@ export default function OrgSubscriptions() {
       </header>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-gutter">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-gutter">
         <div className="bg-white border border-border-subtle p-3.5 md:p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden flex flex-col justify-between">
           <div className="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
           <span className="font-headline-md text-xs md:text-sm text-on-surface-variant font-bold leading-tight block">
@@ -354,6 +369,22 @@ export default function OrgSubscriptions() {
         </div>
 
         <div className="bg-white border border-border-subtle p-3.5 md:p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
+          <span className="font-headline-md text-xs md:text-sm text-on-surface-variant font-bold leading-tight block">
+            {isArabic ? 'رصيد دقائق الذكاء الاصطناعي' : 'AI Minutes Quota'}
+          </span>
+          <div className="flex items-baseline gap-1 md:gap-2 flex-wrap">
+            <span className="text-xl md:text-3xl text-on-surface font-sans font-black leading-none" dir="ltr">{usedOrgMinutes} / {totalOrgMinutes}</span>
+            <span className="text-[10px] sm:text-xs font-semibold text-primary">
+              {isArabic ? `${remainingOrgMinutes} دقيقة متبقية` : `${remainingOrgMinutes} min left`}
+            </span>
+          </div>
+          <div className="w-full bg-surface-container rounded-full h-1 overflow-hidden mt-1 shrink-0">
+            <div className="bg-primary h-full rounded-full transition-all duration-500" style={{ width: `${minutesPct}%` }}></div>
+          </div>
+        </div>
+
+        <div className="bg-white border border-border-subtle p-3.5 md:p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden flex flex-col justify-between">
           <div className="absolute right-0 top-0 w-24 h-24 bg-status-warning/5 rounded-full blur-2xl"></div>
           <span className="font-headline-md text-xs md:text-sm text-on-surface-variant font-bold leading-tight block">
             {isArabic ? 'في انتظار التفعيل' : 'Pending Activation'}
@@ -366,9 +397,12 @@ export default function OrgSubscriptions() {
                 : (isArabic ? 'مكتمل' : 'All Active')}
             </span>
           </div>
+          <div className="text-[10px] text-secondary mt-1 truncate">
+            {isArabic ? 'أطباء مسجلون بانتظار المقعد' : 'Awaiting seat activation'}
+          </div>
         </div>
 
-        <div className="col-span-2 sm:col-span-1 bg-white border border-border-subtle p-3.5 md:p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden flex flex-col justify-between">
+        <div className="bg-white border border-border-subtle p-3.5 md:p-6 rounded-xl shadow-sm space-y-2 relative overflow-hidden flex flex-col justify-between">
           <div className="absolute right-0 top-0 w-24 h-24 bg-error/5 rounded-full blur-2xl"></div>
           <span className="font-headline-md text-xs md:text-sm text-on-surface-variant font-bold leading-tight block">
             {isArabic ? 'التراخيص التي تنتهي قريباً' : 'Expiring Licenses'}
@@ -380,6 +414,9 @@ export default function OrgSubscriptions() {
                 ? (isArabic ? 'تجديد' : 'Renew') 
                 : (isArabic ? 'لا يوجد' : 'None')}
             </span>
+          </div>
+          <div className="text-[10px] text-secondary mt-1 truncate">
+            {isArabic ? 'خلال 30 يوماً القادمة' : 'In next 30 days'}
           </div>
         </div>
       </div>
@@ -407,6 +444,7 @@ export default function OrgSubscriptions() {
             <tr>
               <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'الطبيب / الممارس' : 'Doctor / Clinician'}</th>
               <th scope="col" className="hidden sm:table-cell px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'الخطة الحالية' : 'Current Plan'}</th>
+              <th scope="col" className="hidden md:table-cell px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'استهلاك الدقائق / الحصة' : 'Minutes Usage / Quota'}</th>
               <th scope="col" className="hidden sm:table-cell px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'تاريخ الانتهاء' : 'Expiry Date'}</th>
               <th scope="col" className="px-6 py-3 text-xs font-medium text-secondary uppercase tracking-wider">{isArabic ? 'الحالة' : 'Status'}</th>
               <th scope="col" className="relative px-6 py-3"><span className="sr-only">{isArabic ? 'إجراءات' : 'Actions'}</span></th>
@@ -415,18 +453,17 @@ export default function OrgSubscriptions() {
           <tbody className="bg-white divide-y divide-border-subtle text-xs">
             {filteredLicenses.length === 0 ? (
               <tr>
-                <td colSpan="5" className="px-6 py-8 text-center text-secondary text-sm">
+                <td colSpan="6" className="px-6 py-8 text-center text-secondary text-sm">
                   {isArabic ? 'لم يتم العثور على أطباء' : 'No doctors found'}
                 </td>
               </tr>
             ) : (
               filteredLicenses.map((license) => {
-                const canActivate = license.status === 'pending' || license.status === 'expired' || license.status === 'expiring';
                 return (
                   <tr 
                     key={license.id} 
-                    onClick={() => canActivate && openSubscribeModal(license)}
-                    className={`group transition-all duration-200 ${canActivate ? 'hover:bg-primary-light/30 cursor-pointer' : 'hover:bg-surface-container-low'} ${license.status === 'pending' ? 'bg-status-warning/5' : ''}`}
+                    onClick={() => openSubscribeModal(license)}
+                    className={`group transition-all duration-200 hover:bg-primary-light/30 cursor-pointer ${license.status === 'pending' ? 'bg-status-warning/5' : ''}`}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className={`flex items-center gap-3 w-fit ${isArabic ? 'flex-row-reverse mr-0' : 'ml-0'}`}>
@@ -452,6 +489,32 @@ export default function OrgSubscriptions() {
                         <span className="text-secondary font-semibold text-xs">—</span>
                       )}
                     </td>
+                    <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap">
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-xs font-semibold gap-2">
+                          <span className="text-on-surface font-sans" dir="ltr">{license.usedMinutes || 0} {isArabic ? 'دقيقة' : 'min'}</span>
+                          <span className="text-[10px] text-secondary">
+                            {license.customMinutesLimit 
+                              ? (isArabic ? `من ${license.customMinutesLimit} دقيقة` : `/ ${license.customMinutesLimit} min`)
+                              : (isArabic ? 'من رصيد المنظمة' : 'Org pool')}
+                          </span>
+                        </div>
+                        {license.customMinutesLimit ? (
+                          <div className="w-28 bg-surface-container rounded-full h-1.5 overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-300 ${
+                                (license.usedMinutes / license.customMinutesLimit) >= 1 
+                                  ? 'bg-error' 
+                                  : (license.usedMinutes / license.customMinutesLimit) >= 0.8 
+                                  ? 'bg-status-warning' 
+                                  : 'bg-primary'
+                              }`} 
+                              style={{ width: `${Math.min(100, Math.round((license.usedMinutes / license.customMinutesLimit) * 100))}%` }}
+                            ></div>
+                          </div>
+                        ) : null}
+                      </div>
+                    </td>
                     <td className="hidden sm:table-cell px-6 py-4 whitespace-nowrap text-secondary font-semibold">
                       {license.renewalDate}
                     </td>
@@ -460,18 +523,20 @@ export default function OrgSubscriptions() {
                     </td>
                     <td className={`px-6 py-4 whitespace-nowrap text-xs font-semibold ${isArabic ? 'text-left' : 'text-right'}`}>
                       <div className="flex items-center gap-0.5 justify-end">
-                        {canActivate ? (
-                          <span className="text-primary group-hover:text-primary-hover font-bold transition-all flex items-center gap-0.5 justify-end">
-                            <span className="hidden sm:inline">{license.status === 'pending' ? (isArabic ? 'تفعيل الاشتراك' : 'Activate') : (isArabic ? 'تجديد' : 'Renew')}</span>
-                            <span className={`material-symbols-outlined text-[20px] transition-transform duration-200 ${
-                              isArabic ? 'group-hover:-translate-x-1' : 'group-hover:translate-x-1'
-                            }`}>
-                              {isArabic ? 'chevron_left' : 'chevron_right'}
-                            </span>
+                        <span className="text-primary group-hover:text-primary-hover font-bold transition-all flex items-center gap-0.5 justify-end">
+                          <span className="hidden sm:inline">
+                            {license.status === 'pending' 
+                              ? (isArabic ? 'تفعيل الاشتراك' : 'Activate') 
+                              : license.status === 'active'
+                              ? (isArabic ? 'تعديل الحصة' : 'Adjust Quota')
+                              : (isArabic ? 'تجديد' : 'Renew')}
                           </span>
-                        ) : (
-                          <span className="text-secondary font-medium">—</span>
-                        )}
+                          <span className={`material-symbols-outlined text-[20px] transition-transform duration-200 ${
+                            isArabic ? 'group-hover:-translate-x-1' : 'group-hover:translate-x-1'
+                          }`}>
+                            {isArabic ? 'chevron_left' : 'chevron_right'}
+                          </span>
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -489,7 +554,9 @@ export default function OrgSubscriptions() {
             <div className={`px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-bg-canvas shrink-0 ${isArabic ? 'flex-row-reverse' : ''}`}>
               <div>
                 <h3 className="font-headline-md text-base text-primary font-bold">
-                  {isArabic ? 'تفعيل الاشتراك' : 'Activate Subscription'}
+                  {selectedDoc.status === 'active'
+                    ? (isArabic ? 'تعديل حصة ورصيد الطبيب' : 'Adjust Doctor Quota')
+                    : (isArabic ? 'تفعيل الاشتراك' : 'Activate Subscription')}
                 </h3>
                 <p className="text-xs text-secondary mt-0.5">
                   {isArabic ? `للطبيب د. ${selectedDoc.doctorName}` : `for Dr. ${selectedDoc.doctorName}`}
@@ -508,7 +575,21 @@ export default function OrgSubscriptions() {
                 </div>
               )}
 
-
+              {/* Pool info banner */}
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-3.5 space-y-2 text-xs">
+                <div className="flex justify-between items-center text-secondary">
+                  <span>{isArabic ? 'إجمالي رصيد باقة المنظمة:' : 'Total Org Plan Pool:'}</span>
+                  <span className="font-bold text-on-surface font-sans" dir="ltr">{totalOrgMinutes} {isArabic ? 'دقيقة' : 'min'}</span>
+                </div>
+                <div className="flex justify-between items-center text-secondary">
+                  <span>{isArabic ? 'المتبقي غير المستهلك بالمنظمة:' : 'Remaining Org Minutes:'}</span>
+                  <span className="font-bold text-primary font-sans" dir="ltr">{remainingOrgMinutes} {isArabic ? 'دقيقة' : 'min'}</span>
+                </div>
+                <div className="flex justify-between items-center text-secondary pt-1 border-t border-primary/10">
+                  <span>{isArabic ? 'استهلاك هذا الطبيب حتى الآن:' : "Doctor's Current Usage:"}</span>
+                  <span className="font-bold text-on-surface font-sans" dir="ltr">{selectedDoc.usedMinutes || 0} {isArabic ? 'دقيقة' : 'min'}</span>
+                </div>
+              </div>
 
               <div>
                 <label className="block text-xs font-semibold text-on-surface-variant mb-1">
@@ -556,10 +637,12 @@ export default function OrgSubscriptions() {
                   {subLoading ? (
                     <>
                       <span className="material-symbols-outlined animate-spin text-[14px]">progress_activity</span>
-                      {isArabic ? 'جاري التفعيل...' : 'Activating...'}
+                      {isArabic ? 'جاري الحفظ...' : 'Saving...'}
                     </>
                   ) : (
-                    isArabic ? 'تفعيل وتمكين الطبيب' : 'Activate & Enable Doctor'
+                    selectedDoc.status === 'active'
+                      ? (isArabic ? 'حفظ وتعديل الحصة' : 'Save Changes')
+                      : (isArabic ? 'تفعيل وتمكين الطبيب' : 'Activate & Enable Doctor')
                   )}
                 </button>
               </div>

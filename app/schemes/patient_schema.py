@@ -4,8 +4,8 @@ from datetime import date, datetime
 from typing import Optional
 
 class PatientBase(BaseModel):
-    name: str
-    phone: str
+    name: Optional[str] = None
+    phone: Optional[str] = None
     email: Optional[EmailStr] = None
     national_id: Optional[str] = None
     date_of_birth: Optional[date] = None

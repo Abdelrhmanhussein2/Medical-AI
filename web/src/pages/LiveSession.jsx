@@ -3567,10 +3567,16 @@ export default function LiveSession({ appointmentId, setActivePage }) {
 
                 {whatsappShowPhoneInput ? (
                   <div>
+                    {whatsappRecipient === 'patient' && (!patient?.phone && !appointment?.patient_phone) && (
+                      <div className="bg-amber-500/10 border border-amber-500/20 text-amber-800 text-xs p-3 rounded-xl mb-4 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[18px] text-amber-600">info</span>
+                        <span>{isArabic ? 'هذا المراجع ليس لديه رقم هاتف مسجل في النظام. يرجى إدخال الرقم يدوياً لإرسال التقرير.' : 'This patient has no registered phone. Enter recipient number manually to proceed.'}</span>
+                      </div>
+                    )}
                     <p className="text-xs text-secondary mb-4 leading-relaxed">
                       {isArabic 
-                        ? `رقم الهاتف غير مسجل في النظام. يرجى إدخال رقم المستلم مع كود الدولة لإرسال التقرير (مثال: 966501234567):`
-                        : `Phone number is not registered. Please enter recipient's phone number with country code (e.g. 966501234567):`}
+                        ? `يرجى إدخال رقم المستلم مع كود الدولة لإرسال التقرير (مثال: 966501234567):`
+                        : `Please enter recipient's phone number with country code (e.g. 966501234567):`}
                     </p>
                     
                     <div className="mb-5">
@@ -3639,7 +3645,7 @@ export default function LiveSession({ appointmentId, setActivePage }) {
                         className="flex flex-col items-center gap-2.5 p-4 rounded-xl border border-border-subtle bg-surface-container-low hover:bg-success/5 hover:border-success/30 transition-all cursor-pointer group"
                       >
                         <span className="material-symbols-outlined text-[24px] text-success group-hover:scale-105 transition-transform">person_search</span>
-                        <span className="text-xs font-bold text-secondary">{isArabic ? 'إلى المريض' : 'To Patient'}</span>
+                        <span className="text-xs font-bold text-secondary">{isArabic ? 'إلى المراجع' : 'To Patient'}</span>
                         <span className="text-[10px] text-secondary/70">
                           {patient?.phone || appointment?.patient_phone ? (patient?.phone || appointment?.patient_phone) : (isArabic ? 'أدخل الرقم' : 'Enter number')}
                         </span>

@@ -101,6 +101,7 @@ _ROUTER_SYSTEM_PROMPT_TEMPLATE = """\
 - "سجل مواعيدي / جدول مواعيدي / هات مواعيدي" → get_my_appointments أو get_today_schedule (فهذا استعراض للمواعيد وليس حجز book_appointment)
 - "مين المرضى اللي عندي / عرض المرضى / ابحث عن مريض / مرضاي" → search_my_patients (فهذا استعراض أو بحث في سجل المرضى بالعيادة، وليس استعراضاً للمواعيد get_my_appointments أو get_today_schedule إلا إذا حدد الطبيب يوماً أو موعداً معنياً مثل 'مرضى اليوم' أو 'مواعيد اليوم')
 - إذا سأل المساعد "هل تريد تسجيله كمريض جديد؟" وأجاب الطبيب بالموافقة (اه / نعم / سجل / ضيفه) → النية هي ADD_NEW_PATIENT والأداة هي add_new_patient فقط (ولا تضف book_appointment أو search_my_patients لأننا نحتاج تسجيله أولاً)
+- إذا سأل المساعد عن اسم المريض أو رقم هاتفه لحجز موعد أو للتسجيل، ورد الطبيب برفض إعطاء البيانات أو قال "لا / تجاهل الاسم / تجاهله / بدون رقم / بدون اسم / مجهول / احجز وخلاص / سجل علطول / خاص" → النية هي BOOK_APPOINTMENT والأدوات هي [add_new_patient, book_appointment] مع رفع الثقة (confidence) إلى 1.0.
 - إذا أجاب الطبيب برقم هاتف وكان المساعد يسأل عنه لإكمال التسجيل → add_new_patient
 - إذا قال الطبيب "ضيفه / سجله / اضفه" مع "احجزله / بكره / الساعة" في نفس الرسالة، أو إذا طلب حجز موعد وذكر اسم المريض ورقم هاتفه معاً في نفس الرسالة → اختر [add_new_patient, book_appointment] معاً
 
@@ -385,6 +386,15 @@ class SmartRouter:
             if "add_new_patient" not in final_tools:
                 final_tools.append("add_new_patient")
                 final_tools = final_tools[:MAX_TOOLS]
+
+        # Heuristic 2: If user wants to skip/ignore patient details (anonymous registration/booking)
+        has_skip_kw = any(kw in current_user_msg for kw in ["تجاهل", "تجاهله", "تجاهلها", "بدون", "لا", "مجهول", "خاص", "سجل على طول", "احجز على طول", "سجل علطول", "احجز علطول", "مش هقول", "مش عايز"])
+        context_has_booking = any(kw in (last_ai_msg or "") for kw in ["اسم", "هاتف", "تسجيل", "حجز", "موعد", "المريض", "المراجع"])
+        if has_skip_kw and context_has_booking:
+            for tool_name in ["add_new_patient", "book_appointment"]:
+                if tool_name not in final_tools:
+                    final_tools.append(tool_name)
+            final_tools = final_tools[:MAX_TOOLS]
                 
         decision.final_tools = final_tools
 

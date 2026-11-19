@@ -1,3 +1,4 @@
+import random
 from app.core.database import db
 from app.schemes.patient_schema import PatientCreate, PatientUpdate
 from typing import Optional
@@ -9,6 +10,16 @@ class PatientService:
         effective_doctor_id = doctor_id or (str(patient_data.doctor_id) if patient_data.doctor_id else None)
         doc_uuid = UUID(effective_doctor_id) if effective_doctor_id else None
 
+        # Autogenerate anonymous patient name if not provided
+        p_name = patient_data.name.strip() if patient_data.name and patient_data.name.strip() else None
+        if not p_name:
+            if patient_data.file_id and patient_data.file_id.strip():
+                p_name = f"مراجع (ملف: {patient_data.file_id.strip()})"
+            else:
+                p_name = f"مراجع #{random.randint(1000, 9999)}"
+
+        p_phone = patient_data.phone.strip() if patient_data.phone and patient_data.phone.strip() else None
+
         query = """
             INSERT INTO patients (name, phone, email, national_id, date_of_birth, gender, doctor_id, file_id, diseases, habits, general_summary)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -17,8 +28,8 @@ class PatientService:
         async with db.pool.acquire() as connection:
             row = await connection.fetchrow(
                 query,
-                patient_data.name,
-                patient_data.phone,
+                p_name,
+                p_phone,
                 patient_data.email,
                 patient_data.national_id,
                 patient_data.date_of_birth,

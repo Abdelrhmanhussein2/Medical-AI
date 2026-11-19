@@ -141,8 +141,8 @@ export default function Patients({ setActivePage }) {
 
   // Handle Search filter
   const filteredPatients = patients.filter(
-    p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-         p.phone.includes(searchQuery) ||
+    p => (p.name && p.name.toLowerCase().includes(searchQuery.toLowerCase())) || 
+         (p.phone && p.phone.includes(searchQuery)) ||
          (p.file_id && p.file_id.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
@@ -150,24 +150,33 @@ export default function Patients({ setActivePage }) {
     e.preventDefault();
     setError('');
 
-    if (!name || !phone) {
-      setError('الاسم ورقم الهاتف مطلوبين');
-      return;
+    let finalName = name.trim();
+    if (!finalName) {
+      if (fileId && fileId.trim()) {
+        finalName = `مراجع (ملف: ${fileId.trim()})`;
+      } else {
+        const randId = Math.floor(1000 + Math.random() * 9000);
+        finalName = `مراجع #${randId}`;
+      }
     }
 
-    let finalPhone = phone.trim();
-    const country = COUNTRIES.find(c => c.code === selectedCountry);
-    if (country && !finalPhone.startsWith('+')) {
-      if (finalPhone.startsWith('0')) {
-        finalPhone = country.prefix + finalPhone.slice(1);
-      } else {
-        finalPhone = country.prefix + finalPhone;
+    let finalPhone = phone ? phone.trim() : null;
+    if (finalPhone) {
+      const country = COUNTRIES.find(c => c.code === selectedCountry);
+      if (country && !finalPhone.startsWith('+')) {
+        if (finalPhone.startsWith('0')) {
+          finalPhone = country.prefix + finalPhone.slice(1);
+        } else {
+          finalPhone = country.prefix + finalPhone;
+        }
       }
+    } else {
+      finalPhone = null;
     }
 
     try {
       addPatient({
-        name,
+        name: finalName,
         phone: finalPhone,
         email: email || null,
         date_of_birth: dob || null,
@@ -186,7 +195,7 @@ export default function Patients({ setActivePage }) {
       setFileId('');
       setDiseases('');
       setHabits('');
-      setSelectedCountry('EG');
+      setSelectedCountry('SA');
       setShowAddModal(false);
     } catch (err) {
       setError(err.message || 'حدث خطأ');
@@ -362,7 +371,7 @@ export default function Patients({ setActivePage }) {
                     {patient.name}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary">
-                    {patient.phone}
+                    {patient.phone ? patient.phone : <span className="text-[11px] text-secondary/60 italic">{isArabic ? 'غير مسجل' : 'Not registered'}</span>}
                   </td>
                   <td className={`hidden sm:table-cell px-6 py-4 whitespace-nowrap text-sm text-secondary ${isArabic ? 'text-right' : 'text-left'}`}>
                     {patient.date_of_birth || 'N/A'}
@@ -418,19 +427,21 @@ export default function Patients({ setActivePage }) {
               )}
 
               <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'الاسم الكامل *' : 'Full Name *'}</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                  {isArabic ? 'اسم المراجع' : 'Patient Name'}
+                  <span className="text-[10px] text-secondary/70 font-normal mr-1 ml-1">{isArabic ? '(اختياري - سيتم توليد اسم تلقائي إن تُرك فارغاً)' : '(Optional - Auto generated if left blank)'}</span>
+                </label>
                 <input
                   type="text"
-                  required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="محمد علي"
-                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder={isArabic ? "محمد علي أو اتركه لتسجيل هوية خاصة" : "Full Name (or leave blank for private ID)"}
+                  className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'الدولة' : 'Country'}</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'الدولة' : 'Country'}</label>
                 <SearchableSelect
                   options={countryOptions}
                   value={selectedCountry}
@@ -442,14 +453,16 @@ export default function Patients({ setActivePage }) {
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-on-surface-variant mb-1">{isArabic ? 'رقم الهاتف *' : 'Phone Number *'}</label>
+                <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                  {isArabic ? 'رقم الهاتف' : 'Phone Number'}
+                  <span className="text-[10px] text-secondary/70 font-normal mr-1 ml-1">{isArabic ? '(اختياري)' : '(Optional)'}</span>
+                </label>
                 <input
                   type="text"
-                  required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder={COUNTRIES.find(c => c.code === selectedCountry)?.defaultPhone || '+201012345678'}
-                  class="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ltr text-left"
+                  className="w-full px-3 py-2 bg-white border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ltr text-left"
                   dir="ltr"
                 />
               </div>
@@ -579,7 +592,7 @@ export default function Patients({ setActivePage }) {
                     
                     <div className="space-y-3 pt-4 text-xs text-secondary leading-relaxed border-t border-border-subtle">
                       <p><strong className="text-on-surface">{t('file_id')}:</strong> <span className="font-mono text-primary font-bold">{selectedPatient.file_id || '—'}</span></p>
-                      <p><strong className="text-on-surface">{t('phone')}:</strong> {selectedPatient.phone}</p>
+                      <p><strong className="text-on-surface">{t('phone')}:</strong> {selectedPatient.phone || (isArabic ? 'غير مسجل' : 'Not registered')}</p>
                       <p><strong className="text-on-surface">{t('email_address')}:</strong> {selectedPatient.email || '—'}</p>
                       <p><strong className="text-on-surface">{t('dob')}:</strong> {selectedPatient.date_of_birth || '—'}</p>
                       

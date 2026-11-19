@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 # Prerequisite mappings: If Tool A is selected, Tool B should also be included as a helper dependency
 # e.g., To book an appointment, the AI usually needs search_my_patients first if patient_id is not known.
 PREREQUISITE_MAP: Dict[str, List[str]] = {
-    "book_appointment": ["search_my_patients"],
+    "book_appointment": ["search_my_patients", "add_new_patient"],
     "cancel_appointment": ["get_my_appointments"],
     "reschedule_appointment": ["get_my_appointments", "search_my_patients"],
     "get_patient_visits": ["search_my_patients"],

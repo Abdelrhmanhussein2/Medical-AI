@@ -92,7 +92,7 @@ export default function Appointments({ setActivePage }) {
     // Search query filter
     if (searchQuery) {
       const p = patients.find(p => p.id === appt.patient_id);
-      if (!p || !p.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+      if (!p || !(p.name && p.name.toLowerCase().includes(searchQuery.toLowerCase()))) {
         return false;
       }
     }
@@ -304,26 +304,28 @@ export default function Appointments({ setActivePage }) {
     let finalPhone = '';
 
     if (isCreatingNewPatient) {
-      if (!newPatientName.trim() || !newPatientPhone.trim()) {
-        setError('يرجى كتابة الاسم ورقم الهاتف للمراجع الجديد');
-        return;
+      let candidateName = newPatientName.trim();
+      if (!candidateName) {
+        candidateName = `مراجع #${Math.floor(1000 + Math.random() * 9000)}`;
       }
-      try {
-        let finalPhone = newPatientPhone.trim();
+      let candidatePhone = newPatientPhone.trim() || null;
+      if (candidatePhone) {
         const country = COUNTRIES.find(c => c.code === newPatientCountry);
-        if (country && !finalPhone.startsWith('+')) {
-          if (finalPhone.startsWith('0')) {
-            finalPhone = country.prefix + finalPhone.slice(1);
+        if (country && !candidatePhone.startsWith('+')) {
+          if (candidatePhone.startsWith('0')) {
+            candidatePhone = country.prefix + candidatePhone.slice(1);
           } else {
-            finalPhone = country.prefix + finalPhone;
+            candidatePhone = country.prefix + candidatePhone;
           }
         }
+      }
+      try {
         const created = await addPatient({
-          name: newPatientName,
-          phone: finalPhone,
+          name: candidateName,
+          phone: candidatePhone,
         });
         finalPatientId = created.id;
-        finalPhone = created.phone;
+        finalPhone = created.phone || '';
       } catch (err) {
         setError('تعذر إنشاء المراجع الجديد');
         return;
@@ -367,8 +369,8 @@ export default function Appointments({ setActivePage }) {
 
   const filteredSearchPatients = patientQuery.trim()
     ? patients.filter(p =>
-      p.name.toLowerCase().includes(patientQuery.toLowerCase()) ||
-      p.phone.includes(patientQuery)
+      (p.name && p.name.toLowerCase().includes(patientQuery.toLowerCase())) ||
+      (p.phone && p.phone.includes(patientQuery))
     )
     : [];
 
@@ -569,10 +571,10 @@ export default function Appointments({ setActivePage }) {
                     <div class="flex-1 p-5 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
                       <div class="flex items-center gap-4">
                         <div class="w-12 h-12 rounded-full bg-primary-light text-primary flex items-center justify-center font-bold text-lg border border-border-subtle shadow-sm uppercase shrink-0">
-                          {patientObj ? patientObj.name.substring(0, 2) : 'UK'}
+                          {patientObj && patientObj.name ? patientObj.name.substring(0, 2) : 'UK'}
                         </div>
                         <div>
-                          <h3 class="text-lg font-bold text-on-surface mb-1">{patientObj ? patientObj.name : 'Unknown Patient'}</h3>
+                          <h3 class="text-lg font-bold text-on-surface mb-1">{patientObj?.name || 'Unknown Patient'}</h3>
                           <div class="flex items-center flex-wrap gap-2">
                             <span class={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${getTagStyle(appt.description)}`}>
                               {appt.description || 'Routine Checkup'}
@@ -673,7 +675,7 @@ export default function Appointments({ setActivePage }) {
                             class="w-full px-4 py-2 text-left text-xs text-on-surface hover:bg-surface-container-low transition-colors flex justify-between items-center"
                           >
                             <span class="font-bold">{p.name}</span>
-                            <span class="text-secondary">{p.phone}</span>
+                            <span class="text-secondary">{p.phone || (isArabic ? 'بدون هاتف' : 'No phone')}</span>
                           </button>
                         ))}
 
@@ -709,13 +711,15 @@ export default function Appointments({ setActivePage }) {
 
                     <div class="grid grid-cols-1 gap-2">
                       <div>
-                        <label class="block text-[10px] font-bold text-secondary mb-1">{isArabic ? 'اسم المراجع كاملاً *' : 'Patient Full Name *'}</label>
+                        <label class="block text-[10px] font-bold text-secondary mb-1">
+                          {isArabic ? 'اسم المراجع' : 'Patient Name'}
+                          <span className="font-normal text-[9px] mr-1 ml-1">{isArabic ? '(اختياري)' : '(Optional)'}</span>
+                        </label>
                         <input
                           type="text"
-                          required
                           value={newPatientName}
                           onChange={(e) => setNewPatientName(e.target.value)}
-                          placeholder="e.g. احمد حسن"
+                          placeholder={isArabic ? "e.g. أحمد حسن أو اتركه لهوية خاصة" : "e.g. Ahmed (or leave blank for private ID)"}
                           class="w-full px-3 py-1.5 bg-white border border-border-subtle rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                         />
                       </div>
@@ -734,10 +738,12 @@ export default function Appointments({ setActivePage }) {
                         </select>
                       </div>
                       <div>
-                        <label class="block text-[10px] font-bold text-secondary mb-1">{isArabic ? 'رقم هاتف المراجع *' : 'Patient Phone Number *'}</label>
+                        <label class="block text-[10px] font-bold text-secondary mb-1">
+                          {isArabic ? 'رقم هاتف المراجع' : 'Patient Phone Number'}
+                          <span className="font-normal text-[9px] mr-1 ml-1">{isArabic ? '(اختياري)' : '(Optional)'}</span>
+                        </label>
                         <input
                           type="text"
-                          required
                           value={newPatientPhone}
                           onChange={(e) => setNewPatientPhone(e.target.value)}
                           placeholder={COUNTRIES.find(c => c.code === newPatientCountry)?.defaultPhone || '+201012345678'}

@@ -1314,7 +1314,7 @@ export default function AiChat({ initialPatientId, initialThreadId }) {
                       {isArabic ? '-- جلسة عامة (لا يوجد مراجع محدد) --' : '-- General Session (No specific patient) --'}
                     </option>
                     {patients.map(p => (
-                      <option key={p.id} value={p.id}>{p.name} - {p.phone}</option>
+                      <option key={p.id} value={p.id}>{p.name} {p.phone ? `- ${p.phone}` : ''}</option>
                     ))}
                   </select>
                   <p className="text-[10px] text-secondary mt-1 ml-1">
